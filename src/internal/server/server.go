@@ -17,6 +17,7 @@ import (
 	"shmoopicks/src/internal/library"
 	libraryAdapters "shmoopicks/src/internal/library/adapters"
 	"shmoopicks/src/internal/musicbrainz"
+	"shmoopicks/src/internal/review"
 	"shmoopicks/src/internal/spotify"
 	"shmoopicks/src/internal/user"
 
@@ -106,6 +107,10 @@ func Start(ctx context.Context, app app.App) {
 	appMux.Handle("/app/library/dashboard", httpx.HandlerFunc(libraryHandler.GetDashboardPage))
 	appMux.Handle("/app/library/dashboard/feeds-dropdown-content", httpx.HandlerFunc(libraryHandler.GetFeedsDropdown))
 	appMux.Handle("/app/library/dashboard/albums-table", httpx.HandlerFunc(libraryHandler.GetAlbumsTable))
+
+	reviewHandler := review.NewHttpHandler()
+	appMux.Handle("GET /app/review/rating-recommender", httpx.HandlerFunc(reviewHandler.GetRatingRecommender))
+	appMux.Handle("POST /app/review/rating-recommender", httpx.HandlerFunc(reviewHandler.SubmitRatingRecommender))
 
 	// Not found handler, must be registered after all other handlers
 	rootMux.HandleFunc("/", httpx.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

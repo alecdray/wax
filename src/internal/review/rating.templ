@@ -1,0 +1,49 @@
+package review
+
+import "strconv"
+import "shmoopicks/src/internal/core/templates"
+
+// RatingOption — single radio input + label
+templ RatingQuestionRadio(name RatingQuestionKey, opt RatingQuestionOption, isSelected bool) {
+	<label class="flex items-center gap-3 cursor-pointer">
+		<input
+			type="radio"
+			name={ name }
+			value={ strconv.Itoa(opt.Value) }
+			class="radio radio-primary radio-sm"
+			checked?={ isSelected }
+		/>
+		<span class="text-base-content/70">{ opt.Label }</span>
+	</label>
+}
+
+templ RatingQuestionFieldset(question RatingQuestion) {
+	<fieldset class="flex flex-col gap-3">
+		<legend class="text-base-content font-medium mb-2">{ question.Question }</legend>
+		for _, opt := range question.Options {
+			@RatingQuestionRadio(question.Key, opt, question.Value == opt.Value)
+		}
+	</fieldset>
+}
+
+templ RatingRecommenderForm(questions RatingQuestions, score *float64) {
+	<form
+		hx-post="/app/review/rating-recommender"
+		hx-swap="outerHTML"
+		class="flex flex-col gap-8"
+	>
+		for _, q := range questions {
+			@RatingQuestionFieldset(q)
+		}
+		<button class="btn btn-primary">Calculate Score</button>
+		if score != nil {
+			<p>{ *score } - { GetScoreLabel(*score) }</p>
+		}
+	</form>
+}
+
+templ RatingRecommender(questions RatingQuestions, score *float64) {
+	@templates.RootComponent(templates.RootProps{}) {
+		@RatingRecommenderForm(questions, score)
+	}
+}

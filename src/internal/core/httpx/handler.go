@@ -62,6 +62,10 @@ type HandleErrorResponseProps struct {
 }
 
 func HandleErrorResponse(ctx context.Context, w http.ResponseWriter, props HandleErrorResponseProps) {
+	if props.Status == 0 {
+		props.Status = http.StatusInternalServerError
+	}
+
 	w.WriteHeader(props.Status)
 	slog.ErrorContext(ctx, "http error", "error", props.Err, "status", props.Status)
 
