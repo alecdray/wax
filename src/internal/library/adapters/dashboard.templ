@@ -159,7 +159,10 @@ templ AlbumRating(album library.AlbumDTO, isOobSwap bool) {
 	if album.Rating != nil && album.Rating.Rating != nil {
 		<div
 			id={ GetAlbumRatingID(album.ID) }
-			class="badge badge-soft badge-primary text-nowrap"
+			class="badge badge-soft badge-primary text-nowrap cursor-pointer"
+			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s&score=%f", album.ID, *album.Rating.Rating) }
+			hx-trigger="click"
+			hx-swap="none"
 			if isOobSwap {
 				hx-swap-oob="true"
 			}
@@ -169,7 +172,7 @@ templ AlbumRating(album library.AlbumDTO, isOobSwap bool) {
 	} else {
 		<div
 			id={ GetAlbumRatingID(album.ID) }
-			class="badge badge-dash badge-neutral hover:badge-primary hover:cursor-pointer text-nowrap"
+			class="badge badge-dash badge-neutral hover:badge-primary cursor-pointer text-nowrap"
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"

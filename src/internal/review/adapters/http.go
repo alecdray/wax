@@ -57,6 +57,33 @@ func (h *HttpHandler) GetRatingRecommender(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	queryScore := query.Get("score")
+	if queryScore != "" {
+		score, err := strconv.ParseFloat(queryScore, 64)
+		if err != nil {
+			err = fmt.Errorf("failed to parse score query: %w", err)
+			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+				Status: http.StatusBadRequest,
+				Err:    err,
+			})
+			return
+		}
+
+		err = RatingModal(*album, RatingModalProps{
+			Score: &score,
+		}).Render(ctx, w)
+		if err != nil {
+			err = fmt.Errorf("failed to render response: %w", err)
+			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+				Status: http.StatusInternalServerError,
+				Err:    err,
+			})
+			return
+		}
+
+		return
+	}
+
 	err = RatingModal(*album, RatingModalProps{
 		Questions: &review.RatingRecommenderQuestions,
 	}).Render(ctx, w)
