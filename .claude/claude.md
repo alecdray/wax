@@ -43,6 +43,7 @@
 
 - After editing or adding significant logic to a module, review and update the module's README if needed
 - Keep README focused on high-level concepts, architecture, and workflows
+- Avoid exhaustive lists or overly specific descriptions of package contents that will become outdated as code evolves
 - Only add inline code comments when they provide context not evident from the code itself
 - Avoid comments that simply restate what the code does
 - If you notice a pattern or convention that should be documented here, ask the user if it should be added to this file
