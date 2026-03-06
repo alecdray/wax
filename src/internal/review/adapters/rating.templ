@@ -42,11 +42,11 @@ templ RatingRecommenderQuestions(albumId string, questions review.RatingQuestion
 		for _, q := range questions {
 			@RatingQuestionFieldset(q)
 		}
-		<button class="btn btn-primary" type="submit">Calculate Score</button>
+		<button class="btn btn-primary" type="submit">Calculate Rating</button>
 	</form>
 }
 
-templ RatingRecommenderConfirm(album library.AlbumDTO, score float64) {
+templ RatingRecommenderConfirm(album library.AlbumDTO, rating float64) {
 	<form
 		class="flex flex-col gap-4"
 		hx-ext="morph"
@@ -57,14 +57,14 @@ templ RatingRecommenderConfirm(album library.AlbumDTO, score float64) {
 			<legend class="fieldset-legend">Rating</legend>
 			<label class="input w-full">
 				<input
-					name="score"
+					name="rating"
 					type="number"
 					min="0"
 					max="10"
 					class="grow"
 					step="0.1"
 					placeholder="Enter your rating"
-					value={ score }
+					value={ rating }
 					required
 					hx-put={ fmt.Sprintf("/app/review/rating-recommender/rating?albumId=%s", album.ID) }
 					hx-trigger="keyup changed delay:500ms, change delay:500ms"
@@ -73,7 +73,7 @@ templ RatingRecommenderConfirm(album library.AlbumDTO, score float64) {
 					hx-swap="morph"
 					autofocus
 				/>
-				<span class="badge badge-primary badge-soft badge-s">{ review.GetScoreLabel(score) }</span>
+				<span class="badge badge-primary badge-soft badge-s">{ review.GetRatingLabel(rating) }</span>
 			</label>
 			@RatingRecommenderConfirmError("")
 		</fieldset>
@@ -92,7 +92,7 @@ templ RatingRecommenderConfirmError(text string) {
 
 type RatingModalProps struct {
 	Questions *review.RatingQuestions
-	Score     *float64
+	Rating    *float64
 }
 
 templ RatingModal(album library.AlbumDTO, props RatingModalProps) {
@@ -102,7 +102,7 @@ templ RatingModal(album library.AlbumDTO, props RatingModalProps) {
 		})
 	} else {
 		@templates.Modal(RatingModalId, templates.ModalProps{
-			ModalContent: RatingRecommenderConfirm(album, *props.Score),
+			ModalContent: RatingRecommenderConfirm(album, *props.Rating),
 		})
 	}
 }

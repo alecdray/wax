@@ -57,11 +57,11 @@ func (h *HttpHandler) GetRatingRecommender(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	queryScore := query.Get("score")
-	if queryScore != "" {
-		score, err := strconv.ParseFloat(queryScore, 64)
+	queryRating := query.Get("rating")
+	if queryRating != "" {
+		rating, err := strconv.ParseFloat(queryRating, 64)
 		if err != nil {
-			err = fmt.Errorf("failed to parse score query: %w", err)
+			err = fmt.Errorf("failed to parse rating query: %w", err)
 			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 				Status: http.StatusBadRequest,
 				Err:    err,
@@ -70,7 +70,7 @@ func (h *HttpHandler) GetRatingRecommender(w http.ResponseWriter, r *http.Reques
 		}
 
 		err = RatingModal(*album, RatingModalProps{
-			Score: &score,
+			Rating: &rating,
 		}).Render(ctx, w)
 		if err != nil {
 			err = fmt.Errorf("failed to render response: %w", err)
@@ -164,9 +164,9 @@ func (h *HttpHandler) SubmitRatingRecommenderQuestions(w http.ResponseWriter, r 
 		questionsWithValues[i] = question.WithValue(val)
 	}
 
-	score := questionsWithValues.Score()
+	rating := questionsWithValues.Rating()
 
-	err = RatingRecommenderConfirm(*album, score).Render(ctx, w)
+	err = RatingRecommenderConfirm(*album, rating).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
@@ -219,13 +219,13 @@ func (h *HttpHandler) UpdateRatingRecommenderRating(w http.ResponseWriter, r *ht
 	}
 	formData := r.Form
 
-	queryScore := formData.Get("score")
-	score, err := strconv.ParseFloat(queryScore, 64)
+	queryRating := formData.Get("rating")
+	rating, err := strconv.ParseFloat(queryRating, 64)
 	if err != nil {
-		err = fmt.Errorf("failed to parse score query: %w", err)
+		err = fmt.Errorf("failed to parse rating query: %w", err)
 		errText := "Invalid rating"
 
-		if queryScore == "" {
+		if queryRating == "" {
 			errText = "A rating is required"
 		}
 
@@ -237,7 +237,7 @@ func (h *HttpHandler) UpdateRatingRecommenderRating(w http.ResponseWriter, r *ht
 		return
 	}
 
-	if score < 0 || score > 10 {
+	if rating < 0 || rating > 10 {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status:   http.StatusBadRequest,
 			Err:      err,
@@ -246,7 +246,7 @@ func (h *HttpHandler) UpdateRatingRecommenderRating(w http.ResponseWriter, r *ht
 		return
 	}
 
-	err = RatingRecommenderConfirm(*album, score).Render(ctx, w)
+	err = RatingRecommenderConfirm(*album, rating).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
@@ -300,10 +300,10 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 	}
 	formData := r.Form
 
-	queryScore := formData.Get("score")
-	score, err := strconv.ParseFloat(queryScore, 64)
+	queryRating := formData.Get("rating")
+	rating, err := strconv.ParseFloat(queryRating, 64)
 	if err != nil {
-		err = fmt.Errorf("failed to parse score query: %w", err)
+		err = fmt.Errorf("failed to parse rating query: %w", err)
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusBadRequest,
 			Err:    err,
@@ -311,7 +311,7 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 		return
 	}
 
-	rating, err := h.reviewService.UpdateRating(ctx, userId, albumId, score)
+	albumRating, err := h.reviewService.UpdateRating(ctx, userId, albumId, rating)
 	if err != nil {
 		err = fmt.Errorf("failed to update rating: %w", err)
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
@@ -320,7 +320,7 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 		})
 		return
 	}
-	album.Rating = rating
+	album.Rating = albumRating
 
 	err = CloseRatingModal().Render(ctx, w)
 	if err != nil {

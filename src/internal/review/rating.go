@@ -9,25 +9,25 @@ const (
 	// Controls how much extreme answers (1 or 5) are amplified.
 	// Lower values = more powerful extremes, higher values = closer to linear.
 	// Valid range 0.0–1.0, where 1.0 is fully linear.
-	scoreCurveExponent = 0.8
+	ratingCurveExponent = 0.8
 
-	// Minimum possible score — awarded when all answers are 1.
-	scoreFloor = 2.0
+	// Minimum possible rating — awarded when all answers are 1.
+	ratingFloor = 2.0
 
-	// Maximum possible score — awarded when all answers are 5.
-	scoreCeiling = 10.0
+	// Maximum possible rating — awarded when all answers are 5.
+	ratingCeiling = 10.0
 
 	// Weighting for Q1: track-by-track consistency.
-	// Controls how much skips and weak tracks pull the score down.
-	ScoreWeightConsistency = 0.3
+	// Controls how much skips and weak tracks pull the rating down.
+	RatingWeightConsistency = 0.3
 
 	// Weighting for Q2: emotional impact while listening.
 	// Highest weight — the primary differentiator between good and great.
-	ScoreWeightImpact = 0.4
+	RatingWeightImpact = 0.4
 
 	// Weighting for Q3: immediate gut reaction when the album ended.
 	// Captures the overall impression beyond individual tracks.
-	ScoreWeightGutCheck = 0.3
+	RatingWeightGutCheck = 0.3
 )
 
 type RatingQuestionKey string
@@ -57,7 +57,7 @@ type RatingQuestion struct {
 
 func (qs RatingQuestion) CurvedValue() float64 {
 	normalized := (float64(qs.Value) - 3.0) / 2.0
-	curved := math.Copysign(math.Pow(math.Abs(normalized), scoreCurveExponent), normalized)
+	curved := math.Copysign(math.Pow(math.Abs(normalized), ratingCurveExponent), normalized)
 	return curved*2.0 + 3.0
 }
 
@@ -68,13 +68,13 @@ func (qs RatingQuestion) WithValue(value int) RatingQuestion {
 
 type RatingQuestions []RatingQuestion
 
-func (qs RatingQuestions) Score() float64 {
+func (qs RatingQuestions) Rating() float64 {
 	var raw float64
-	for _, score := range qs {
-		raw += score.CurvedValue() * score.Weight
+	for _, question := range qs {
+		raw += question.CurvedValue() * question.Weight
 	}
-	score := scoreFloor + ((raw-1.0)/4.0)*(scoreCeiling-scoreFloor)
-	return math.Round(score*10) / 10
+	rating := ratingFloor + ((raw-1.0)/4.0)*(ratingCeiling-ratingFloor)
+	return math.Round(rating*10) / 10
 }
 
 var RatingRecommenderQuestions RatingQuestions = RatingQuestions{
@@ -88,7 +88,7 @@ var RatingRecommenderQuestions RatingQuestions = RatingQuestions{
 			{4, "Mostly strong with a few weak spots"},
 			{5, "No skips, front to back"},
 		},
-		Weight: ScoreWeightConsistency,
+		Weight: RatingWeightConsistency,
 	},
 	{
 		Key:      RatingQuestionImpact,
@@ -100,7 +100,7 @@ var RatingRecommenderQuestions RatingQuestions = RatingQuestions{
 			{4, "Moved — emotionally or physically"},
 			{5, "Completely absorbed, transported somewhere else"},
 		},
-		Weight: ScoreWeightImpact,
+		Weight: RatingWeightImpact,
 	},
 	{
 		Key:      RatingQuestionGutCheck,
@@ -112,45 +112,45 @@ var RatingRecommenderQuestions RatingQuestions = RatingQuestions{
 			{4, "Impressed"},
 			{5, "I immediately restarted it"},
 		},
-		Weight: ScoreWeightGutCheck,
+		Weight: RatingWeightGutCheck,
 	},
 }
 
-type ScoreLabel string
+type RatingLabel string
 
 const (
-	ScoreLabelDOA                ScoreLabel = "DOA"
-	ScoreLabelNope               ScoreLabel = "Nope"
-	ScoreLabelNotForMe           ScoreLabel = "Not For Me"
-	ScoreLabelHasItsMoments      ScoreLabel = "Has Its Moments"
-	ScoreLabelGoodNotGreat       ScoreLabel = "Good Not Great"
-	ScoreLabelWouldRecommend     ScoreLabel = "Would Recommend"
-	ScoreLabelEssentialListening ScoreLabel = "Essential Listening"
-	ScoreLabelInstantClassic     ScoreLabel = "Instant Classic"
-	ScoreLabelMasterpiece        ScoreLabel = "Masterpiece"
+	RatingLabelDOA                RatingLabel = "DOA"
+	RatingLabelNope               RatingLabel = "Nope"
+	RatingLabelNotForMe           RatingLabel = "Not For Me"
+	RatingLabelHasItsMoments      RatingLabel = "Has Its Moments"
+	RatingLabelGoodNotGreat       RatingLabel = "Good Not Great"
+	RatingLabelWouldRecommend     RatingLabel = "Would Recommend"
+	RatingLabelEssentialListening RatingLabel = "Essential Listening"
+	RatingLabelInstantClassic     RatingLabel = "Instant Classic"
+	RatingLabelMasterpiece        RatingLabel = "Masterpiece"
 )
 
-func GetScoreLabel(score float64) ScoreLabel {
-	clappedScore := utils.Clamp(score, 0, 10)
+func GetRatingLabel(rating float64) RatingLabel {
+	clappedRating := utils.Clamp(rating, 0, 10)
 
 	switch {
-	case clappedScore < 3.0:
-		return ScoreLabelDOA
-	case clappedScore < 4.0:
-		return ScoreLabelNope
-	case clappedScore < 6.0:
-		return ScoreLabelNotForMe
-	case clappedScore < 6.6:
-		return ScoreLabelHasItsMoments
-	case clappedScore < 7.0:
-		return ScoreLabelGoodNotGreat
-	case clappedScore < 8.0:
-		return ScoreLabelWouldRecommend
-	case clappedScore < 9.0:
-		return ScoreLabelEssentialListening
-	case clappedScore < 10.0:
-		return ScoreLabelInstantClassic
+	case clappedRating < 3.0:
+		return RatingLabelDOA
+	case clappedRating < 4.0:
+		return RatingLabelNope
+	case clappedRating < 6.0:
+		return RatingLabelNotForMe
+	case clappedRating < 6.6:
+		return RatingLabelHasItsMoments
+	case clappedRating < 7.0:
+		return RatingLabelGoodNotGreat
+	case clappedRating < 8.0:
+		return RatingLabelWouldRecommend
+	case clappedRating < 9.0:
+		return RatingLabelEssentialListening
+	case clappedRating < 10.0:
+		return RatingLabelInstantClassic
 	default:
-		return ScoreLabelMasterpiece
+		return RatingLabelMasterpiece
 	}
 }
