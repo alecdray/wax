@@ -3,13 +3,13 @@
 ## Code Generation
 
 ### Templates
-- After modifying `.templ` files, run: `templ generate`
+- After modifying `.templ` files, run: `task build/templ`
 - Generated files end in `_templ.go`
 
 ### Database
-- After modifying `.sql` files in `db/queries/`, run: `sqlc generate`
+- After modifying `.sql` files in `db/queries/`, run: `task build/sqlc`
 - After creating migrations in `db/migrations/`, run: `task db/up`
-- Use `goose -dir db/migrations create migration_name sql` to create new migrations
+- Use `task db/create -- migration_name` to create new migrations
 
 ## Architecture Patterns
 
@@ -36,6 +36,7 @@
 ## Development
 
 - Use `task` command for all build/run operations (see `taskfile.yml`)
+- Always prefer `task <name>` over invoking tools directly (e.g. `task build/templ` not `templ generate`)
 - Environment variables documented in `.env.template`
 - Run `task` without arguments to list available commands
 

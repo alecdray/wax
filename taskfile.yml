@@ -15,12 +15,15 @@ tasks:
   build/tailwind:
     cmds:
       - npx @tailwindcss/cli -i ./static/src/main.css -o ./static/public/main.css
+  build/sqlc:
+    cmds:
+      - sqlc generate
   build/server:
     cmds:
       - go build -v -o ./bin/app ./src/cmd/app.go
   build:
     cmds:
-      - task build/templ build/tailwind build/server
+      - task build/templ build/tailwind build/sqlc build/server
   run:
     cmds:
       - go run ./src/cmd/app.go
@@ -54,6 +57,9 @@ tasks:
       - dev/tailwind
       - dev/templ
       - dev/sync-assets
+  db/create:
+    cmds:
+      - goose -dir db/migrations create {{.CLI_ARGS}} sql
   db/up:
     cmds:
       - goose up
