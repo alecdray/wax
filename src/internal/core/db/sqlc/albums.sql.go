@@ -7,26 +7,33 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 	"strings"
 )
 
 const createAlbum = `-- name: CreateAlbum :exec
-INSERT INTO albums (id, spotify_id, title) VALUES (?, ?, ?)
+INSERT INTO albums (id, spotify_id, title, image_url) VALUES (?, ?, ?, ?)
 `
 
 type CreateAlbumParams struct {
 	ID        string
 	SpotifyID string
 	Title     string
+	ImageUrl  sql.NullString
 }
 
 func (q *Queries) CreateAlbum(ctx context.Context, arg CreateAlbumParams) error {
-	_, err := q.db.ExecContext(ctx, createAlbum, arg.ID, arg.SpotifyID, arg.Title)
+	_, err := q.db.ExecContext(ctx, createAlbum,
+		arg.ID,
+		arg.SpotifyID,
+		arg.Title,
+		arg.ImageUrl,
+	)
 	return err
 }
 
 const getAlbum = `-- name: GetAlbum :one
-SELECT id, spotify_id, title, created_at, deleted_at FROM albums WHERE id = ?
+SELECT id, spotify_id, title, created_at, deleted_at, image_url FROM albums WHERE id = ?
 `
 
 func (q *Queries) GetAlbum(ctx context.Context, id string) (Album, error) {
@@ -38,12 +45,13 @@ func (q *Queries) GetAlbum(ctx context.Context, id string) (Album, error) {
 		&i.Title,
 		&i.CreatedAt,
 		&i.DeletedAt,
+		&i.ImageUrl,
 	)
 	return i, err
 }
 
 const getAlbumBySpotifyId = `-- name: GetAlbumBySpotifyId :one
-SELECT id, spotify_id, title, created_at, deleted_at FROM albums WHERE spotify_id = ?
+SELECT id, spotify_id, title, created_at, deleted_at, image_url FROM albums WHERE spotify_id = ?
 `
 
 func (q *Queries) GetAlbumBySpotifyId(ctx context.Context, spotifyID string) (Album, error) {
@@ -55,12 +63,13 @@ func (q *Queries) GetAlbumBySpotifyId(ctx context.Context, spotifyID string) (Al
 		&i.Title,
 		&i.CreatedAt,
 		&i.DeletedAt,
+		&i.ImageUrl,
 	)
 	return i, err
 }
 
 const getAlbumsByIDs = `-- name: GetAlbumsByIDs :many
-SELECT id, spotify_id, title, created_at, deleted_at FROM albums WHERE id IN (/*SLICE:ids*/?)
+SELECT id, spotify_id, title, created_at, deleted_at, image_url FROM albums WHERE id IN (/*SLICE:ids*/?)
 `
 
 func (q *Queries) GetAlbumsByIDs(ctx context.Context, ids []string) ([]Album, error) {
@@ -88,6 +97,7 @@ func (q *Queries) GetAlbumsByIDs(ctx context.Context, ids []string) ([]Album, er
 			&i.Title,
 			&i.CreatedAt,
 			&i.DeletedAt,
+			&i.ImageUrl,
 		); err != nil {
 			return nil, err
 		}
@@ -103,20 +113,26 @@ func (q *Queries) GetAlbumsByIDs(ctx context.Context, ids []string) ([]Album, er
 }
 
 const getOrCreateAlbum = `-- name: GetOrCreateAlbum :one
-INSERT INTO albums (id, spotify_id, title) VALUES (?, ?, ?)
+INSERT INTO albums (id, spotify_id, title, image_url) VALUES (?, ?, ?, ?)
 ON CONFLICT (spotify_id)
-DO UPDATE SET spotify_id = spotify_id
-RETURNING id, spotify_id, title, created_at, deleted_at
+DO UPDATE SET image_url = excluded.image_url
+RETURNING id, spotify_id, title, created_at, deleted_at, image_url
 `
 
 type GetOrCreateAlbumParams struct {
 	ID        string
 	SpotifyID string
 	Title     string
+	ImageUrl  sql.NullString
 }
 
 func (q *Queries) GetOrCreateAlbum(ctx context.Context, arg GetOrCreateAlbumParams) (Album, error) {
-	row := q.db.QueryRowContext(ctx, getOrCreateAlbum, arg.ID, arg.SpotifyID, arg.Title)
+	row := q.db.QueryRowContext(ctx, getOrCreateAlbum,
+		arg.ID,
+		arg.SpotifyID,
+		arg.Title,
+		arg.ImageUrl,
+	)
 	var i Album
 	err := row.Scan(
 		&i.ID,
@@ -124,6 +140,7 @@ func (q *Queries) GetOrCreateAlbum(ctx context.Context, arg GetOrCreateAlbumPara
 		&i.Title,
 		&i.CreatedAt,
 		&i.DeletedAt,
+		&i.ImageUrl,
 	)
 	return i, err
 }

@@ -96,6 +96,7 @@ type AlbumDTO struct {
 	ID        string
 	SpotifyID string
 	Title     string
+	ImageURL  string
 	Artists   []ArtistDTO
 	Tracks    []TrackDTO
 	Releases  ReleaseDTOs
@@ -107,6 +108,7 @@ func NewAlbumDTOFromModel(model sqlc.Album, artists []ArtistDTO, tracks []TrackD
 		ID:        model.ID,
 		SpotifyID: model.SpotifyID,
 		Title:     model.Title,
+		ImageURL:  model.ImageUrl.String,
 		Artists:   artists,
 		Tracks:    tracks,
 		Releases:  releases,
@@ -325,6 +327,7 @@ func (s *Service) AddAlbumsToLibrary(ctx context.Context, userId string, albums 
 				ID:        album.ID,
 				SpotifyID: album.SpotifyID,
 				Title:     album.Title,
+				ImageUrl:  sql.NullString{String: album.ImageURL, Valid: album.ImageURL != ""},
 			})
 			if err != nil {
 				err = fmt.Errorf("failed to get/create album: %w", err)

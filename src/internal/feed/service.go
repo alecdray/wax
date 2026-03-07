@@ -163,10 +163,16 @@ func (s *Service) syncAlbumsToLibrary(ctx contextx.ContextX, feed FeedDTO, syncW
 			addedAt = &_addedAt
 		}
 
+		var imageURL string
+		if len(album.Images) > 0 {
+			imageURL = album.Images[len(album.Images)-1].URL
+		}
+
 		lib := library.AlbumDTO{
 			ID:        uuid.NewString(),
 			SpotifyID: album.ID.String(),
 			Title:     album.Name,
+			ImageURL:  imageURL,
 			Artists:   make([]library.ArtistDTO, len(album.Artists)),
 			Tracks:    []library.TrackDTO{},
 			Releases: []library.ReleaseDTO{

@@ -17,6 +17,7 @@ type Album struct {
 	Title     string
 	CreatedAt time.Time
 	DeletedAt sql.NullTime
+	ImageUrl  sql.NullString
 }
 
 type AlbumArtist struct {

@@ -1,10 +1,10 @@
 -- name: CreateAlbum :exec
-INSERT INTO albums (id, spotify_id, title) VALUES (?, ?, ?);
+INSERT INTO albums (id, spotify_id, title, image_url) VALUES (?, ?, ?, ?);
 
 -- name: GetOrCreateAlbum :one
-INSERT INTO albums (id, spotify_id, title) VALUES (?, ?, ?)
+INSERT INTO albums (id, spotify_id, title, image_url) VALUES (?, ?, ?, ?)
 ON CONFLICT (spotify_id)
-DO UPDATE SET spotify_id = spotify_id
+DO UPDATE SET image_url = excluded.image_url
 RETURNING *;
 
 -- name: GetAlbum :one

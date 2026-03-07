@@ -24,7 +24,7 @@ CREATE TABLE albums (
     title text not null,
     created_at datetime not null default current_timestamp,
     deleted_at datetime
-);
+, image_url TEXT);
 CREATE TABLE tracks (
     id text primary key,
     spotify_id text not null unique,
