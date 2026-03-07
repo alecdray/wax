@@ -22,6 +22,9 @@ RETURNING *;
 -- name: GetFeedsByUserId :many
 select * from feeds where user_id = ?;
 
+-- name: GetFeedByID :one
+select * from feeds where id = ? and user_id = ?;
+
 -- name: GetStaleFeedsBatch :many
 SELECT * FROM feeds
 WHERE last_sync_completed_at IS NOT NULL

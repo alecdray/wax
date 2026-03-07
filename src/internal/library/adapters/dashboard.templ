@@ -28,7 +28,7 @@ func getFeedsDropdownButtonIndicatorColor(feeds []feed.FeedDTO) templates.NeonCo
 		if f.LastSyncStatus.IsSyncFailed() {
 			color = templates.NeonColorError
 			break
-		} else if f.LastSyncStatus.IsUnsyned() || f.IsSyncStale() {
+		} else if f.LastSyncStatus.IsUnsyned() || f.IsSyncStale() || f.LastSyncStatus.IsSyncing() {
 			color = templates.NeonColorWarning
 		}
 	}
@@ -43,6 +43,7 @@ templ FeedsDropdownButton(feeds []feed.FeedDTO, oob bool) {
 		class="btn btn-ghost btn-xs gap-1.5"
 		if oob {
 			hx-swap-oob="true"
+			hx-swap="morph"
 		}
 	>
 		@templates.DatabaseIcon(templates.IconProps{})
@@ -58,7 +59,7 @@ templ FeedsDropdownButton(feeds []feed.FeedDTO, oob bool) {
 }
 
 templ feedsDropdown(feeds []feed.FeedDTO) {
-	<div class="dropdown dropdown-end">
+	<div class="dropdown dropdown-end" hx-ext="morph">
 		@FeedsDropdownButton(feeds, false)
 		<div tabindex="0" class="dropdown-content z-[1] card card-compact bg-base-100 shadow-xl border border-base-300 mt-1">
 			@FeedsDropdownContent(feeds)
@@ -69,10 +70,16 @@ templ feedsDropdown(feeds []feed.FeedDTO) {
 templ FeedsDropdownContent(feeds []feed.FeedDTO) {
 	<div
 		id="feeds-dropdown-content"
+		tabindex="0"
 		class="menu menu-compact w-56 p-2"
+		hx-on:htmx:after-swap="this.focus()"
 		hx-get="/app/library/dashboard/feeds-dropdown-content"
-		hx-trigger="every 30s"
-		hx-swap="outerHTML"
+		if getFeedsDropdownButtonIndicatorColor(feeds) == templates.NeonColorSuccess {
+			hx-trigger="every 30s"
+		} else {
+			hx-trigger="every 5s"
+		}
+		hx-swap="morph"
 	>
 		<div class="menu-title px-2 py-1">
 			<span class="text-xs font-semibold opacity-60">Feed Status</span>
@@ -81,41 +88,53 @@ templ FeedsDropdownContent(feeds []feed.FeedDTO) {
 			<div class="px-2 py-3 text-xs opacity-50">No feeds configured</div>
 		} else {
 			for _, f := range feeds {
-				<div class="flex items-center justify-between px-2 py-2 hover:bg-base-200 rounded-lg">
-					<div class="flex items-center gap-2">
-						if f.LastSyncStatus.IsUnsyned() {
-							<div class="text-warning">
-								@templates.WarningIcon(templates.IconProps{Style: templates.IconStyleOutline})
-							</div>
-						} else if f.LastSyncStatus.IsSyncing() {
-							<div class="text-info">
-								@templates.SpinnerIcon(templates.IconProps{})
-							</div>
-						} else if f.LastSyncStatus == models.FeedSyncStatusFailure {
-							<div class="text-error">
-								@templates.XMarkIcon(templates.IconProps{Style: templates.IconStyleOutline})
-							</div>
-						} else if f.LastSyncStatus.IsSynced() {
-							<div class={ templ.KV("text-success", !f.IsSyncStale()), templ.KV("text-warning", f.IsSyncStale()) }>
-								@templates.CheckIcon(templates.IconProps{Style: templates.IconStyleOutline})
-							</div>
-						}
-						<span class="text-sm font-medium">{ string(f.Kind) }</span>
-					</div>
-					<div class="text-xs opacity-60">
-						if f.LastSyncStatus.IsUnsyned() {
-							Never synced
-						} else if f.LastSyncStatus.IsSyncing() {
-							Syncing...
-						} else if f.LastSyncStatus == models.FeedSyncStatusFailure {
-							Failed
-						} else if f.IsSyncStale() {
-							Stale
+				<li class={ templ.KV("menu-disabled", f.LastSyncStatus.IsSyncing()) }>
+					<button
+						class="flex justify-between"
+						hx-post={ fmt.Sprintf("/app/library/dashboard/feeds/sync?feedId=%s", f.ID) }
+						hx-target="#feeds-dropdown-content"
+						hx-swap="morph"
+						if f.LastSyncStatus.IsSyncing() {
+							disabled
 						} else {
-							Synced
+							title="Click to sync"
 						}
-					</div>
-				</div>
+					>
+						<div class="flex items-center gap-2">
+							if f.LastSyncStatus.IsUnsyned() {
+								<div class="text-warning">
+									@templates.WarningIcon(templates.IconProps{Style: templates.IconStyleOutline})
+								</div>
+							} else if f.LastSyncStatus.IsSyncing() {
+								<div class="text-info">
+									@templates.SpinnerIcon(templates.IconProps{})
+								</div>
+							} else if f.LastSyncStatus == models.FeedSyncStatusFailure {
+								<div class="text-error">
+									@templates.XMarkIcon(templates.IconProps{Style: templates.IconStyleOutline})
+								</div>
+							} else if f.LastSyncStatus.IsSynced() {
+								<div class={ templ.KV("text-success", !f.IsSyncStale()), templ.KV("text-warning", f.IsSyncStale()) }>
+									@templates.CheckIcon(templates.IconProps{Style: templates.IconStyleOutline})
+								</div>
+							}
+							<span class="text-sm font-medium">{ string(f.Kind) }</span>
+						</div>
+						<div class="text-xs opacity-60">
+							if f.LastSyncStatus.IsUnsyned() {
+								Never synced
+							} else if f.LastSyncStatus.IsSyncing() {
+								Syncing...
+							} else if f.LastSyncStatus == models.FeedSyncStatusFailure {
+								Failed
+							} else if f.IsSyncStale() {
+								Stale
+							} else {
+								Synced
+							}
+						</div>
+					</button>
+				</li>
 			}
 		}
 	</div>

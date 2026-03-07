@@ -98,6 +98,17 @@ func (s *Service) UpsertFeed(ctx context.Context, userID string, kind models.Fee
 	return NewFeedDTOFromModel(feed), nil
 }
 
+func (s *Service) GetFeedByID(ctx context.Context, feedID, userID string) (*FeedDTO, error) {
+	feed, err := s.db.Queries().GetFeedByID(ctx, sqlc.GetFeedByIDParams{
+		ID:     feedID,
+		UserID: userID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return NewFeedDTOFromModel(feed), nil
+}
+
 func (s *Service) GetUsersFeeds(ctx context.Context, userID string) ([]FeedDTO, error) {
 	feeds, err := s.db.Queries().GetFeedsByUserId(ctx, userID)
 	if err != nil {

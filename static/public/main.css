@@ -2329,15 +2329,6 @@
     border-bottom-style: var(--tw-border-style);
     border-bottom-width: 1px;
   }
-  .badge-dash {
-    @layer daisyui.l1.l2 {
-      color: var(--badge-color);
-      --badge-bg: #0000;
-      background-image: none;
-      border-color: currentColor;
-      border-style: dashed;
-    }
-  }
   .badge-soft {
     @layer daisyui.l1.l2 {
       color: var(--badge-color, var(--color-base-content));
@@ -2394,9 +2385,6 @@
         --size: calc(var(--size-selector, 0.25rem) * 5);
       }
     }
-  }
-  .p-0 {
-    padding: calc(var(--spacing) * 0);
   }
   .p-2 {
     padding: calc(var(--spacing) * 2);
@@ -2618,12 +2606,6 @@
       --size: calc(var(--size-field, 0.25rem) * 6);
     }
   }
-  .badge-neutral {
-    @layer daisyui.l1.l2 {
-      --badge-color: var(--color-neutral);
-      --badge-fg: var(--color-neutral-content);
-    }
-  }
   .badge-primary {
     @layer daisyui.l1.l2 {
       --badge-color: var(--color-primary);
@@ -2660,6 +2642,16 @@
       @media (hover: hover) {
         color: var(--color-base-content);
       }
+    }
+  }
+  .disabled\:cursor-not-allowed {
+    &:disabled {
+      cursor: not-allowed;
+    }
+  }
+  .disabled\:opacity-60 {
+    &:disabled {
+      opacity: 60%;
     }
   }
 }

@@ -38,6 +38,30 @@ func (q *Queries) CreateFeed(ctx context.Context, arg CreateFeedParams) (Feed, e
 	return i, err
 }
 
+const getFeedByID = `-- name: GetFeedByID :one
+select id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status from feeds where id = ? and user_id = ?
+`
+
+type GetFeedByIDParams struct {
+	ID     string
+	UserID string
+}
+
+func (q *Queries) GetFeedByID(ctx context.Context, arg GetFeedByIDParams) (Feed, error) {
+	row := q.db.QueryRowContext(ctx, getFeedByID, arg.ID, arg.UserID)
+	var i Feed
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Kind,
+		&i.CreatedAt,
+		&i.LastSyncCompletedAt,
+		&i.LastSyncStartedAt,
+		&i.LastSyncStatus,
+	)
+	return i, err
+}
+
 const getFeedsByUserId = `-- name: GetFeedsByUserId :many
 select id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status from feeds where user_id = ?
 `

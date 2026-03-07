@@ -109,6 +109,52 @@ func (h *HttpHandler) GetAlbumsTable(w http.ResponseWriter, r *http.Request) {
 	component.Render(r.Context(), w)
 }
 
+func (h *HttpHandler) TriggerFeedSync(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+
+	userId, err := ctx.UserId()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	feedId := r.URL.Query().Get("feedId")
+	if feedId == "" {
+		http.Error(w, "feedId is required", http.StatusBadRequest)
+		return
+	}
+
+	f, err := h.feedService.GetFeedByID(ctx, feedId, userId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if f.Kind == models.FeedKindSpotify && !f.LastSyncStatus.IsSyncing() {
+		h.taskManager.RegisterAdHocTask(feed.NewSyncSpotifyFeedTask(h.feedService, *f))
+	}
+
+	feeds, err := h.feedService.GetUsersFeeds(ctx, userId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	for i, feed := range feeds {
+		if feed.ID == f.ID {
+			feed.SetSyncing()
+			feeds[i] = feed
+			break
+		}
+	}
+
+	contentComponent := FeedsDropdownContent(feeds)
+	contentComponent.Render(r.Context(), w)
+
+	buttonComponent := FeedsDropdownButton(feeds, true)
+	buttonComponent.Render(r.Context(), w)
+}
+
 func (h *HttpHandler) GetFeedsDropdown(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())
 
