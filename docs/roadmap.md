@@ -2,7 +2,6 @@
 
 ## On Deck
 
-- [ ] [Rankings and reviews] v1
 
 ## Queue
 
@@ -20,6 +19,7 @@
 ## Spun
 
 - [x] [My Library] v1
+- [x] [Rankings and reviews] v1
 
 ## Notes
 

@@ -34,8 +34,8 @@
 - [x] Can give a score out of 10 to each album
 - [x] Optionally can answer 3 questions to get a score suggestion
 - [x] Can update the score
-- [ ] Can add a text review/notes to each album
-- [ ] Can update the review
+- [x] Can add a text review/notes to each album
+- [x] Can update the review
 
 ## v1.1
 
