@@ -117,6 +117,8 @@ func Start(ctx context.Context, app app.App) {
 	appMux.Handle("POST /app/review/rating-recommender/questions", httpx.HandlerFunc(reviewHandler.SubmitRatingRecommenderQuestions))
 	appMux.Handle("PUT /app/review/rating-recommender/rating", httpx.HandlerFunc(reviewHandler.UpdateRatingRecommenderRating))
 	appMux.Handle("POST /app/review/rating-recommender/rating", httpx.HandlerFunc(reviewHandler.SubmitRatingRecommenderRating))
+	appMux.Handle("GET /app/review/notes", httpx.HandlerFunc(reviewHandler.GetReviewNotes))
+	appMux.Handle("POST /app/review/notes", httpx.HandlerFunc(reviewHandler.SubmitReviewNotes))
 
 	// Not found handler, must be registered after all other handlers
 	rootMux.HandleFunc("/", httpx.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -40,6 +40,10 @@
     --rounded-box: 8px;
     --rounded-btn: 4px;
     --rounded-badge: 20px;
+
+    .btn-analog {
+        background-color: transparent;
+    }
 }
 
 .font-brand {

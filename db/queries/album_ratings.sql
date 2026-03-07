@@ -1,7 +1,13 @@
 -- name: UpsertAlbumRating :one
 INSERT INTO album_ratings (id, user_id, album_id, rating) VALUES (?, ?, ?, ?)
 ON CONFLICT (user_id, album_id)
-DO UPDATE SET rating = COALESCE(EXCLUDED.rating, rating), updated_at = current_timestamp
+DO UPDATE SET rating = COALESCE(EXCLUDED.rating, rating), review = COALESCE(review, review), updated_at = current_timestamp
+RETURNING *;
+
+-- name: UpsertAlbumReview :one
+INSERT INTO album_ratings (id, user_id, album_id, review) VALUES (?, ?, ?, ?)
+ON CONFLICT (user_id, album_id)
+DO UPDATE SET review = EXCLUDED.review, updated_at = current_timestamp
 RETURNING *;
 
 -- name: GetUserAlbumRatings :many

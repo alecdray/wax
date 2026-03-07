@@ -13,6 +13,10 @@ func GetAlbumRatingID(albumId string) string {
 	return fmt.Sprintf("album-rating-%s", albumId)
 }
 
+func GetAlbumNotesID(albumId string) string {
+	return fmt.Sprintf("album-notes-%s", albumId)
+}
+
 type DashboardPageProps struct {
 	Feeds   []feed.FeedDTO
 	Library *library.Library
@@ -155,6 +159,36 @@ templ formatIcon(releases library.ReleaseDTOs, format models.ReleaseFormat) {
 	}
 }
 
+templ AlbumNotesIcon(album library.AlbumDTO, isOobSwap bool) {
+	if album.Rating != nil && album.Rating.Review != nil {
+		<button
+			id={ GetAlbumNotesID(album.ID) }
+			class="btn btn-xs btn-ghost text-primary"
+			hx-get={ fmt.Sprintf("/app/review/notes?albumId=%s", album.ID) }
+			hx-trigger="click"
+			hx-swap="none"
+			if isOobSwap {
+				hx-swap-oob="true"
+			}
+		>
+			@templates.NotesIcon(templates.IconProps{Style: templates.IconStyleFill})
+		</button>
+	} else {
+		<button
+			id={ GetAlbumNotesID(album.ID) }
+			class="btn btn-xs btn-ghost text-neutral-content hover:text-base-content"
+			hx-get={ fmt.Sprintf("/app/review/notes?albumId=%s", album.ID) }
+			hx-trigger="click"
+			hx-swap="none"
+			if isOobSwap {
+				hx-swap-oob="true"
+			}
+		>
+			@templates.NotesIcon(templates.IconProps{Style: templates.IconStyleOutline})
+		</button>
+	}
+}
+
 templ AlbumRating(album library.AlbumDTO, isOobSwap bool) {
 	if album.Rating != nil && album.Rating.Rating != nil {
 		<div
@@ -170,9 +204,9 @@ templ AlbumRating(album library.AlbumDTO, isOobSwap bool) {
 			{ *album.Rating.Rating } - { review.GetRatingLabel(*album.Rating.Rating) }
 		</div>
 	} else {
-		<div
+		<button
 			id={ GetAlbumRatingID(album.ID) }
-			class="badge badge-dash badge-neutral hover:badge-primary cursor-pointer text-nowrap"
+			class="btn btn-xs btn-ghost text-neutral-content hover:text-base-content cursor-pointer text-nowrap"
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"
@@ -181,7 +215,7 @@ templ AlbumRating(album library.AlbumDTO, isOobSwap bool) {
 			}
 		>
 			Rate
-		</div>
+		</button>
 	}
 }
 
@@ -209,7 +243,10 @@ templ albumRow(album library.AlbumDTO) {
 			}
 		</td>
 		<td>
-			@AlbumRating(album, false)
+			<div class="flex items-center gap-1">
+				@AlbumNotesIcon(album, false)
+				@AlbumRating(album, false)
+			</div>
 		</td>
 		<td>
 			<div class="flex gap-3 items-center">

@@ -31,6 +31,7 @@ type AlbumRating struct {
 	Rating    sql.NullFloat64
 	CreatedAt time.Time
 	UpdatedAt sql.NullTime
+	Review    sql.NullString
 }
 
 type AlbumTrack struct {

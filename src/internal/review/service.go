@@ -14,6 +14,7 @@ type AlbumRatingDTO struct {
 	UserID  string
 	AlbumID string
 	Rating  *float64
+	Review  *string
 }
 
 func NewAlbumRatingDTOFromModel(model sqlc.AlbumRating) *AlbumRatingDTO {
@@ -25,6 +26,10 @@ func NewAlbumRatingDTOFromModel(model sqlc.AlbumRating) *AlbumRatingDTO {
 
 	if model.Rating.Valid {
 		dto.Rating = &model.Rating.Float64
+	}
+
+	if model.Review.Valid {
+		dto.Review = &model.Review.String
 	}
 
 	return dto
@@ -46,6 +51,20 @@ func (s *Service) UpdateRating(ctx context.Context, userId, albumId string, rati
 		UserID:  userId,
 		AlbumID: albumId,
 		Rating:  sqlx.NewNullFloat64(rating),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return NewAlbumRatingDTOFromModel(model), nil
+}
+
+func (s *Service) UpdateReview(ctx context.Context, userId, albumId string, review string) (*AlbumRatingDTO, error) {
+	model, err := s.db.Queries().UpsertAlbumReview(ctx, sqlc.UpsertAlbumReviewParams{
+		ID:      uuid.NewString(),
+		UserID:  userId,
+		AlbumID: albumId,
+		Review:  sqlx.NewNullString(review),
 	})
 	if err != nil {
 		return nil, err

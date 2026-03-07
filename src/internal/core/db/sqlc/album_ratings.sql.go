@@ -11,7 +11,7 @@ import (
 )
 
 const getUserAlbumRating = `-- name: GetUserAlbumRating :one
-select id, user_id, album_id, rating, created_at, updated_at from album_ratings
+select id, user_id, album_id, rating, created_at, updated_at, review from album_ratings
 where user_id = ?
 and album_id = ?
 `
@@ -31,12 +31,13 @@ func (q *Queries) GetUserAlbumRating(ctx context.Context, arg GetUserAlbumRating
 		&i.Rating,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Review,
 	)
 	return i, err
 }
 
 const getUserAlbumRatingById = `-- name: GetUserAlbumRatingById :one
-select id, user_id, album_id, rating, created_at, updated_at from album_ratings
+select id, user_id, album_id, rating, created_at, updated_at, review from album_ratings
 where id = ?
 `
 
@@ -50,12 +51,13 @@ func (q *Queries) GetUserAlbumRatingById(ctx context.Context, id string) (AlbumR
 		&i.Rating,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Review,
 	)
 	return i, err
 }
 
 const getUserAlbumRatings = `-- name: GetUserAlbumRatings :many
-select id, user_id, album_id, rating, created_at, updated_at from album_ratings
+select id, user_id, album_id, rating, created_at, updated_at, review from album_ratings
 where user_id = ?
 `
 
@@ -75,6 +77,7 @@ func (q *Queries) GetUserAlbumRatings(ctx context.Context, userID string) ([]Alb
 			&i.Rating,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Review,
 		); err != nil {
 			return nil, err
 		}
@@ -92,8 +95,8 @@ func (q *Queries) GetUserAlbumRatings(ctx context.Context, userID string) ([]Alb
 const upsertAlbumRating = `-- name: UpsertAlbumRating :one
 INSERT INTO album_ratings (id, user_id, album_id, rating) VALUES (?, ?, ?, ?)
 ON CONFLICT (user_id, album_id)
-DO UPDATE SET rating = COALESCE(EXCLUDED.rating, rating), updated_at = current_timestamp
-RETURNING id, user_id, album_id, rating, created_at, updated_at
+DO UPDATE SET rating = COALESCE(EXCLUDED.rating, rating), review = COALESCE(review, review), updated_at = current_timestamp
+RETURNING id, user_id, album_id, rating, created_at, updated_at, review
 `
 
 type UpsertAlbumRatingParams struct {
@@ -118,6 +121,41 @@ func (q *Queries) UpsertAlbumRating(ctx context.Context, arg UpsertAlbumRatingPa
 		&i.Rating,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Review,
+	)
+	return i, err
+}
+
+const upsertAlbumReview = `-- name: UpsertAlbumReview :one
+INSERT INTO album_ratings (id, user_id, album_id, review) VALUES (?, ?, ?, ?)
+ON CONFLICT (user_id, album_id)
+DO UPDATE SET review = EXCLUDED.review, updated_at = current_timestamp
+RETURNING id, user_id, album_id, rating, created_at, updated_at, review
+`
+
+type UpsertAlbumReviewParams struct {
+	ID      string
+	UserID  string
+	AlbumID string
+	Review  sql.NullString
+}
+
+func (q *Queries) UpsertAlbumReview(ctx context.Context, arg UpsertAlbumReviewParams) (AlbumRating, error) {
+	row := q.db.QueryRowContext(ctx, upsertAlbumReview,
+		arg.ID,
+		arg.UserID,
+		arg.AlbumID,
+		arg.Review,
+	)
+	var i AlbumRating
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.AlbumID,
+		&i.Rating,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Review,
 	)
 	return i, err
 }

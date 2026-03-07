@@ -87,6 +87,6 @@ CREATE TABLE album_ratings (
     album_id text not null references albums(id) on delete cascade,
     rating float,
     created_at datetime not null default current_timestamp,
-    updated_at datetime,
+    updated_at datetime, review text,
     unique(user_id, album_id)
 );
