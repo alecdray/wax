@@ -19,6 +19,7 @@ type RecentAlbumDTO struct {
 	ID           string
 	SpotifyID    string
 	Title        string
+	Artists      string
 	ImageURL     string
 	LastPlayedAt time.Time
 }
@@ -70,6 +71,24 @@ func (s *Service) upsertPlayHistory(ctx context.Context, userID string, items []
 		})
 		if err != nil {
 			return fmt.Errorf("failed to get/create album track: %w", err)
+		}
+
+		for _, a := range album.Artists {
+			artistModel, err := s.db.Queries().GetOrCreateArtist(ctx, sqlc.GetOrCreateArtistParams{
+				ID:        uuid.NewString(),
+				SpotifyID: a.ID.String(),
+				Name:      a.Name,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to get/create artist %s: %w", a.ID, err)
+			}
+			_, err = s.db.Queries().GetOrCreateAlbumArtist(ctx, sqlc.GetOrCreateAlbumArtistParams{
+				AlbumID:  albumModel.ID,
+				ArtistID: artistModel.ID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to get/create album artist: %w", err)
+			}
 		}
 
 		err = s.db.Queries().UpsertTrackPlay(ctx, sqlc.UpsertTrackPlayParams{
@@ -126,6 +145,7 @@ func (s *Service) GetRecentlyPlayedAlbums(ctx context.Context, userID string) ([
 			ID:           row.ID,
 			SpotifyID:    row.SpotifyID,
 			Title:        row.Title,
+			Artists:      fmt.Sprintf("%s", row.ArtistNames),
 			ImageURL:     row.ImageUrl.String,
 			LastPlayedAt: t,
 		})

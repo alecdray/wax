@@ -64,7 +64,11 @@ func (q *Queries) GetLastPlayedAtByAlbumIds(ctx context.Context, arg GetLastPlay
 }
 
 const getRecentlyPlayedAlbums = `-- name: GetRecentlyPlayedAlbums :many
-SELECT albums.id, albums.spotify_id, albums.title, albums.created_at, albums.deleted_at, albums.image_url, MAX(track_plays.played_at) as last_played_at
+SELECT albums.id, albums.spotify_id, albums.title, albums.created_at, albums.deleted_at, albums.image_url, MAX(track_plays.played_at) as last_played_at,
+    COALESCE((
+        SELECT GROUP_CONCAT(a.name, ', ')
+        FROM (SELECT DISTINCT ar.id, ar.name FROM album_artists aa JOIN artists ar ON ar.id = aa.artist_id WHERE aa.album_id = albums.id) AS a
+    ), '') as artist_names
 FROM track_plays
 JOIN albums ON albums.id = track_plays.album_id
 WHERE track_plays.user_id = ?
@@ -81,6 +85,7 @@ type GetRecentlyPlayedAlbumsRow struct {
 	DeletedAt    sql.NullTime
 	ImageUrl     sql.NullString
 	LastPlayedAt interface{}
+	ArtistNames  interface{}
 }
 
 func (q *Queries) GetRecentlyPlayedAlbums(ctx context.Context, userID string) ([]GetRecentlyPlayedAlbumsRow, error) {
@@ -100,6 +105,7 @@ func (q *Queries) GetRecentlyPlayedAlbums(ctx context.Context, userID string) ([
 			&i.DeletedAt,
 			&i.ImageUrl,
 			&i.LastPlayedAt,
+			&i.ArtistNames,
 		); err != nil {
 			return nil, err
 		}
