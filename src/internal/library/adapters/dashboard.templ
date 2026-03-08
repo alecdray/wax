@@ -6,7 +6,6 @@ import (
 	"shmoopicks/src/internal/core/templates"
 	"shmoopicks/src/internal/feed"
 	"shmoopicks/src/internal/library"
-	"shmoopicks/src/internal/listeninghistory"
 	"shmoopicks/src/internal/review"
 )
 
@@ -18,10 +17,17 @@ func GetAlbumNotesID(albumId string) string {
 	return fmt.Sprintf("album-notes-%s", albumId)
 }
 
+type CarouselView string
+
+const (
+	CarouselViewRecentlyPlayed CarouselView = "recently-played"
+	CarouselViewUnrated        CarouselView = "unrated"
+)
+
 type DashboardPageProps struct {
 	Feeds        []feed.FeedDTO
 	Library      *library.Library
-	RecentAlbums []listeninghistory.RecentAlbumDTO
+	RecentAlbums []library.AlbumSummaryDTO
 }
 
 func getFeedsDropdownButtonIndicatorColor(feeds []feed.FeedDTO) templates.NeonColor {
@@ -457,38 +463,64 @@ templ DashboardHeaderBar(feeds []feed.FeedDTO) {
 	</div>
 }
 
-templ RecentlyPlayedCarousel(albums []listeninghistory.RecentAlbumDTO) {
-	if len(albums) > 0 {
-		<div class="w-full flex-shrink-0 overflow-x-auto">
-			<div class="px-4 text-left">
-				<span class="text-xs font-semibold uppercase tracking-widest text-base-content/50">Recently Spun</span>
-			</div>
-			<div class="carousel carousel-center gap-3 px-4 py-2">
-				for _, album := range albums {
-					<div class="carousel-item">
-						<a
-							href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", album.SpotifyID)) }
-							target="_blank"
-							rel="noopener noreferrer"
-							class="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity w-26"
-						>
-							if album.ImageURL != "" {
-								<div class="avatar">
-									<div class="mask mask-squircle h-24 w-24 flex-shrink-0">
-										<img src={ album.ImageURL } alt={ album.Title }/>
-									</div>
+templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
+	if len(albums) == 0 {
+		<div class="px-4 py-4 text-xs text-base-content/40">{ emptyMsg }</div>
+	} else {
+		<div class="carousel carousel-end gap-3 px-4 py-2 w-full overscroll-x-none">
+			for _, album := range albums {
+				<div class="carousel-item">
+					<a
+						href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", album.SpotifyID)) }
+						target="_blank"
+						rel="noopener noreferrer"
+						class="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity w-26"
+					>
+						if album.ImageURL != "" {
+							<div class="avatar">
+								<div class="mask mask-squircle h-24 w-24 flex-shrink-0">
+									<img src={ album.ImageURL } alt={ album.Title }/>
 								</div>
-							}
-							<span class="text-xs text-nowrap truncate w-full text-left">{ album.Title }</span>
-							if album.Artists != "" {
-								<span class="text-xs text-nowrap truncate w-full text-left text-base-content/40">{ album.Artists }</span>
-							}
-						</a>
-					</div>
-				}
-			</div>
+							</div>
+						}
+						<span class="text-xs text-nowrap truncate w-full text-left">{ album.Title }</span>
+						if album.Artists != "" {
+							<span class="text-xs text-nowrap truncate w-full text-left text-base-content/40">{ album.Artists }</span>
+						}
+					</a>
+				</div>
+			}
 		</div>
 	}
+}
+
+templ CarouselSection(albums []library.AlbumSummaryDTO, active CarouselView) {
+	<div id="carousel-section" class="w-full flex-shrink-0">
+		<div class="flex items-center gap-3 px-4 pb-1">
+			<button
+				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-base-content", active == CarouselViewRecentlyPlayed), templ.KV("text-base-content/40 hover:text-base-content/70 cursor-pointer", active != CarouselViewRecentlyPlayed) }
+				if active != CarouselViewRecentlyPlayed {
+					hx-get="/app/library/dashboard/carousel?view=recently-played"
+					hx-target="#carousel-section"
+					hx-swap="outerHTML"
+				}
+			>Recently Spun</button>
+			<span class="text-base-content/20 cursor-default">|</span>
+			<button
+				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-base-content", active == CarouselViewUnrated), templ.KV("text-base-content/40 hover:text-base-content/70 cursor-pointer", active != CarouselViewUnrated) }
+				if active != CarouselViewUnrated {
+					hx-get="/app/library/dashboard/carousel?view=unrated"
+					hx-target="#carousel-section"
+					hx-swap="outerHTML"
+				}
+			>Unrated</button>
+		</div>
+		if active == CarouselViewUnrated {
+			@carouselStrip(albums, "No unrated albums in your library")
+		} else {
+			@carouselStrip(albums, "No recently played albums")
+		}
+	</div>
 }
 
 templ DashboardPage(props DashboardPageProps) {
@@ -499,7 +531,7 @@ templ DashboardPage(props DashboardPageProps) {
 			@DashboardHeaderBar(props.Feeds)
 			<div class="flex flex-col flex-1 overflow-y-auto py-4 gap-4">
 				@LibraryStats(props.Library)
-				@RecentlyPlayedCarousel(props.RecentAlbums)
+				@CarouselSection(props.RecentAlbums, CarouselViewRecentlyPlayed)
 				if props.Library != nil {
 					@AlbumsTable(props.Library.Albums, "date", "desc")
 				}

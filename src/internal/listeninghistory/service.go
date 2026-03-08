@@ -15,15 +15,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type RecentAlbumDTO struct {
-	ID           string
-	SpotifyID    string
-	Title        string
-	Artists      string
-	ImageURL     string
-	LastPlayedAt time.Time
-}
-
 type Service struct {
 	db             *db.DB
 	spotifyService *spotify.Service
@@ -127,30 +118,6 @@ func (s *Service) GetLastPlayedAtByAlbumIds(ctx context.Context, userID string, 
 		result[row.AlbumID] = t
 	}
 	return result, nil
-}
-
-func (s *Service) GetRecentlyPlayedAlbums(ctx context.Context, userID string) ([]RecentAlbumDTO, error) {
-	rows, err := s.db.Queries().GetRecentlyPlayedAlbums(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get recently played albums: %w", err)
-	}
-
-	dtos := make([]RecentAlbumDTO, 0, len(rows))
-	for _, row := range rows {
-		t, err := parseInterfaceTime(row.LastPlayedAt)
-		if err != nil {
-			continue
-		}
-		dtos = append(dtos, RecentAlbumDTO{
-			ID:           row.ID,
-			SpotifyID:    row.SpotifyID,
-			Title:        row.Title,
-			Artists:      fmt.Sprintf("%s", row.ArtistNames),
-			ImageURL:     row.ImageUrl.String,
-			LastPlayedAt: t,
-		})
-	}
-	return dtos, nil
 }
 
 func (s *Service) SyncUser(ctx contextx.ContextX, userID string) error {

@@ -17,6 +17,14 @@ import (
 	"github.com/google/uuid"
 )
 
+type AlbumSummaryDTO struct {
+	ID        string
+	SpotifyID string
+	Title     string
+	Artists   string
+	ImageURL  string
+}
+
 type ReleaseDTO struct {
 	ID      string
 	AlbumID string
@@ -542,4 +550,42 @@ func (s *Service) GetAlbumInLibrary(ctx context.Context, userId string, albumId 
 	)
 
 	return &albumDto, nil
+}
+
+func (s *Service) GetRecentlyPlayedAlbums(ctx context.Context, userID string) ([]AlbumSummaryDTO, error) {
+	rows, err := s.db.Queries().GetRecentlyPlayedAlbums(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get recently played albums: %w", err)
+	}
+
+	dtos := make([]AlbumSummaryDTO, 0, len(rows))
+	for _, row := range rows {
+		dtos = append(dtos, AlbumSummaryDTO{
+			ID:        row.ID,
+			SpotifyID: row.SpotifyID,
+			Title:     row.Title,
+			Artists:   fmt.Sprintf("%s", row.ArtistNames),
+			ImageURL:  row.ImageUrl.String,
+		})
+	}
+	return dtos, nil
+}
+
+func (s *Service) GetUnratedAlbums(ctx context.Context, userID string) ([]AlbumSummaryDTO, error) {
+	rows, err := s.db.Queries().GetUnratedAlbums(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get unrated albums: %w", err)
+	}
+
+	dtos := make([]AlbumSummaryDTO, 0, len(rows))
+	for _, row := range rows {
+		dtos = append(dtos, AlbumSummaryDTO{
+			ID:        row.ID,
+			SpotifyID: row.SpotifyID,
+			Title:     row.Title,
+			Artists:   fmt.Sprintf("%s", row.ArtistNames),
+			ImageURL:  row.ImageUrl.String,
+		})
+	}
+	return dtos, nil
 }

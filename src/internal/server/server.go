@@ -113,13 +113,13 @@ func Start(ctx context.Context, app app.App) {
 		services.musicbrainz,
 		services.feed,
 		services.library,
-		services.listeningHistory,
 		services.taskManager,
 	)
 	appMux.Handle("/app/library/dashboard", httpx.HandlerFunc(libraryHandler.GetDashboardPage))
 	appMux.Handle("/app/library/dashboard/feeds-dropdown-content", httpx.HandlerFunc(libraryHandler.GetFeedsDropdown))
 	appMux.Handle("POST /app/library/dashboard/feeds/sync", httpx.HandlerFunc(libraryHandler.TriggerFeedSync))
 	appMux.Handle("/app/library/dashboard/albums-table", httpx.HandlerFunc(libraryHandler.GetAlbumsTable))
+	appMux.Handle("GET /app/library/dashboard/carousel", httpx.HandlerFunc(libraryHandler.GetCarousel))
 
 	reviewHandler := reviewAdapters.NewHttpHandler(services.library, services.review)
 	appMux.Handle("GET /app/review/rating-recommender", httpx.HandlerFunc(reviewHandler.GetRatingRecommender))

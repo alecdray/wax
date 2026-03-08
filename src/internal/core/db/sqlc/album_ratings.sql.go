@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const clearAlbumRating = `-- name: ClearAlbumRating :exec
@@ -23,6 +24,64 @@ type ClearAlbumRatingParams struct {
 func (q *Queries) ClearAlbumRating(ctx context.Context, arg ClearAlbumRatingParams) error {
 	_, err := q.db.ExecContext(ctx, clearAlbumRating, arg.UserID, arg.AlbumID)
 	return err
+}
+
+const getUnratedAlbums = `-- name: GetUnratedAlbums :many
+SELECT albums.id, albums.spotify_id, albums.title, albums.created_at, albums.deleted_at, albums.image_url,
+    COALESCE((
+        SELECT GROUP_CONCAT(a.name, ', ')
+        FROM (SELECT DISTINCT ar.id, ar.name FROM album_artists aa JOIN artists ar ON ar.id = aa.artist_id WHERE aa.album_id = albums.id) AS a
+    ), '') as artist_names
+FROM user_releases
+JOIN releases ON releases.id = user_releases.release_id
+JOIN albums ON albums.id = releases.album_id
+LEFT JOIN album_ratings ON album_ratings.album_id = albums.id AND album_ratings.user_id = user_releases.user_id
+WHERE user_releases.user_id = ?
+  AND (album_ratings.id IS NULL OR album_ratings.rating IS NULL)
+GROUP BY albums.id
+ORDER BY MAX(user_releases.added_at) DESC
+LIMIT 20
+`
+
+type GetUnratedAlbumsRow struct {
+	ID          string
+	SpotifyID   string
+	Title       string
+	CreatedAt   time.Time
+	DeletedAt   sql.NullTime
+	ImageUrl    sql.NullString
+	ArtistNames interface{}
+}
+
+func (q *Queries) GetUnratedAlbums(ctx context.Context, userID string) ([]GetUnratedAlbumsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getUnratedAlbums, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUnratedAlbumsRow
+	for rows.Next() {
+		var i GetUnratedAlbumsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SpotifyID,
+			&i.Title,
+			&i.CreatedAt,
+			&i.DeletedAt,
+			&i.ImageUrl,
+			&i.ArtistNames,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getUserAlbumRating = `-- name: GetUserAlbumRating :one
