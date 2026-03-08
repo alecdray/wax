@@ -10,4 +10,4 @@ Could tie this into the Ranklist idea where each tag automatically get's it's ow
 
 ## v1
 
-TBD
+- [ ] Add a flexible tagging systems that can have optional groupings. E.g. ungrouped tags, mood tags, genre tags, etc.

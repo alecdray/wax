@@ -55,3 +55,4 @@ Album details view:
   - [ ] Shelf view
 - [ ] Faceted search
 - [ ] Sync error handling
+- [ ] Add an optional shared field that indicates who shared the music with the user if anyone
