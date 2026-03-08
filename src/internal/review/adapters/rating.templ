@@ -10,6 +10,26 @@ import (
 
 const RatingModalId = "rating-modal"
 
+func ratingConfirmAlpineData(rating *float64) string {
+	initial := "''"
+	if rating != nil {
+		initial = strconv.FormatFloat(*rating, 'f', -1, 64)
+	}
+	key := "["
+	for i, entry := range review.RatingKey {
+		if i > 0 {
+			key += ","
+		}
+		key += fmt.Sprintf("[%s,%s,'%s']",
+			strconv.FormatFloat(entry.MinValue, 'f', -1, 64),
+			strconv.FormatFloat(entry.MaxValue, 'f', -1, 64),
+			string(entry.Label),
+		)
+	}
+	key += "]"
+	return fmt.Sprintf(`{rating: %s, getRatingLabel(v){const n=parseFloat(v);if(isNaN(n))return'';const c=Math.min(10,Math.max(0,n));const k=%s;for(const[mn,mx,l]of k)if(c>=mn&&c<=mx)return l;return k[k.length-1][2]}}`, initial, key)
+}
+
 // RatingOption — single radio input + label
 templ RatingQuestionRadio(name review.RatingQuestionKey, opt review.RatingQuestionOption, isSelected bool) {
 	<label class="flex items-center gap-3 cursor-pointer">
@@ -76,7 +96,7 @@ templ RatingRecommenderConfirm(album library.AlbumDTO, rating *float64) {
 		</div>
 		<fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border px-4">
 			<legend class="fieldset-legend">Rating</legend>
-			<label class="input w-full">
+			<label class="input w-full" x-data={ ratingConfirmAlpineData(rating) }>
 				<input
 					name="rating"
 					type="number"
@@ -89,16 +109,10 @@ templ RatingRecommenderConfirm(album library.AlbumDTO, rating *float64) {
 						value={ *rating }
 					}
 					required
-					hx-put={ fmt.Sprintf("/app/review/rating-recommender/rating?albumId=%s", album.ID) }
-					hx-trigger="keyup changed delay:500ms, change delay:500ms"
-					hx-target="closest form"
-					hx-target-error="next .error"
-					hx-swap="morph"
+					x-model="rating"
 					autofocus
 				/>
-				if rating != nil {
-					<span class="badge badge-primary badge-soft badge-s">{ review.GetRatingLabel(*rating) }</span>
-				}
+				<span class="badge badge-primary badge-soft badge-s" x-show="rating !== ''" x-text="getRatingLabel(rating)"></span>
 			</label>
 			@RatingRecommenderConfirmError("")
 		</fieldset>

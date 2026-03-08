@@ -125,7 +125,6 @@ func Start(ctx context.Context, app app.App) {
 	appMux.Handle("GET /app/review/rating-recommender", httpx.HandlerFunc(reviewHandler.GetRatingRecommender))
 	appMux.Handle("GET /app/review/rating-recommender/questions", httpx.HandlerFunc(reviewHandler.GetRatingRecommenderQuestions))
 	appMux.Handle("POST /app/review/rating-recommender/questions", httpx.HandlerFunc(reviewHandler.SubmitRatingRecommenderQuestions))
-	appMux.Handle("PUT /app/review/rating-recommender/rating", httpx.HandlerFunc(reviewHandler.UpdateRatingRecommenderRating))
 	appMux.Handle("POST /app/review/rating-recommender/rating", httpx.HandlerFunc(reviewHandler.SubmitRatingRecommenderRating))
 	appMux.Handle("DELETE /app/review/rating-recommender/rating", httpx.HandlerFunc(reviewHandler.DeleteRatingRecommenderRating))
 	appMux.Handle("GET /app/review/notes", httpx.HandlerFunc(reviewHandler.GetReviewNotes))
