@@ -25,7 +25,7 @@ templ Modal(id string, props ModalProps) {
 		<dialog id={ FormatCallableID(id) } class="modal" open>
 			<div class="modal-box">
 				<form method="dialog">
-					<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+					<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
 				</form>
 				if props.ModalContent != nil {
 					@props.ModalContent
@@ -38,10 +38,19 @@ templ Modal(id string, props ModalProps) {
 					</div>
 				}
 			</div>
+			<div
+				id={ fmt.Sprintf("%s-script", id) }
+				class="hidden"
+			></div>
 		</dialog>
 	}
 }
 
 templ ForceCloseModal(id string) {
-	<script hx-on:htmx:load={ templ.JSFuncCall(fmt.Sprintf("%s.close", FormatCallableID(id))) }></script>
+	<div
+		id={ fmt.Sprintf("%s-script", id) }
+		class="hidden"
+		hx-on:htmx:load={ templ.JSFuncCall(fmt.Sprintf("%s.close", FormatCallableID(id))) }
+		hx-swap-oob="true"
+	></div>
 }

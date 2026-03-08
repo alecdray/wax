@@ -57,9 +57,10 @@ func (h *HttpHandler) GetRatingRecommender(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	queryRating := query.Get("rating")
-	if queryRating != "" {
-		rating, err := strconv.ParseFloat(queryRating, 64)
+	var rating *float64
+	if query.Has("rating") {
+		queryRating := query.Get("rating")
+		parsedRating, err := strconv.ParseFloat(queryRating, 64)
 		if err != nil {
 			err = fmt.Errorf("failed to parse rating query: %w", err)
 			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
@@ -68,24 +69,11 @@ func (h *HttpHandler) GetRatingRecommender(w http.ResponseWriter, r *http.Reques
 			})
 			return
 		}
-
-		err = RatingModal(*album, RatingModalProps{
-			Rating: &rating,
-		}).Render(ctx, w)
-		if err != nil {
-			err = fmt.Errorf("failed to render response: %w", err)
-			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-				Status: http.StatusInternalServerError,
-				Err:    err,
-			})
-			return
-		}
-
-		return
+		rating = &parsedRating
 	}
 
 	err = RatingModal(*album, RatingModalProps{
-		Questions: &review.RatingRecommenderQuestions,
+		Rating: rating,
 	}).Render(ctx, w)
 	if err != nil {
 		err = fmt.Errorf("failed to render response: %w", err)
@@ -95,6 +83,8 @@ func (h *HttpHandler) GetRatingRecommender(w http.ResponseWriter, r *http.Reques
 		})
 		return
 	}
+
+	return
 }
 
 func (h *HttpHandler) SubmitRatingRecommenderQuestions(w http.ResponseWriter, r *http.Request) {
@@ -166,7 +156,7 @@ func (h *HttpHandler) SubmitRatingRecommenderQuestions(w http.ResponseWriter, r 
 
 	rating := questionsWithValues.Rating()
 
-	err = RatingRecommenderConfirm(*album, rating).Render(ctx, w)
+	err = RatingRecommenderConfirm(*album, &rating).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
@@ -246,7 +236,87 @@ func (h *HttpHandler) UpdateRatingRecommenderRating(w http.ResponseWriter, r *ht
 		return
 	}
 
-	err = RatingRecommenderConfirm(*album, rating).Render(ctx, w)
+	err = RatingRecommenderConfirm(*album, &rating).Render(ctx, w)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    err,
+		})
+		return
+	}
+}
+
+func (h *HttpHandler) GetRatingRecommenderQuestions(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+
+	albumId := r.URL.Query().Get("albumId")
+	if albumId == "" {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    errors.New("missing album ID"),
+		})
+		return
+	}
+
+	err := RatingRecommenderQuestions(albumId, review.RatingRecommenderQuestions).Render(ctx, w)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to render response: %w", err),
+		})
+	}
+}
+
+func (h *HttpHandler) DeleteRatingRecommenderRating(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+
+	userId, err := ctx.UserId()
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get user ID: %w", err),
+		})
+		return
+	}
+
+	albumId := r.URL.Query().Get("albumId")
+	if albumId == "" {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    errors.New("missing album ID"),
+		})
+		return
+	}
+
+	album, err := h.libraryService.GetAlbumInLibrary(ctx, userId, albumId)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get album: %w", err),
+		})
+		return
+	}
+
+	err = h.reviewService.ClearRating(ctx, userId, albumId)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to clear rating: %w", err),
+		})
+		return
+	}
+	album.Rating = nil
+
+	err = CloseRatingModal().Render(ctx, w)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    err,
+		})
+		return
+	}
+
+	err = adapters.AlbumRating(*album, true).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,

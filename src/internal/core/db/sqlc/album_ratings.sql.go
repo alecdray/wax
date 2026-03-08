@@ -10,6 +10,21 @@ import (
 	"database/sql"
 )
 
+const clearAlbumRating = `-- name: ClearAlbumRating :exec
+UPDATE album_ratings SET rating = NULL, updated_at = current_timestamp
+WHERE user_id = ? AND album_id = ?
+`
+
+type ClearAlbumRatingParams struct {
+	UserID  string
+	AlbumID string
+}
+
+func (q *Queries) ClearAlbumRating(ctx context.Context, arg ClearAlbumRatingParams) error {
+	_, err := q.db.ExecContext(ctx, clearAlbumRating, arg.UserID, arg.AlbumID)
+	return err
+}
+
 const getUserAlbumRating = `-- name: GetUserAlbumRating :one
 select id, user_id, album_id, rating, created_at, updated_at, review from album_ratings
 where user_id = ?

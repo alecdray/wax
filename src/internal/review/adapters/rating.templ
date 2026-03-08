@@ -46,13 +46,34 @@ templ RatingRecommenderQuestions(albumId string, questions review.RatingQuestion
 	</form>
 }
 
-templ RatingRecommenderConfirm(album library.AlbumDTO, rating float64) {
+templ RatingRecommenderConfirm(album library.AlbumDTO, rating *float64) {
 	<form
 		class="flex flex-col gap-4"
 		hx-ext="morph"
 		hx-post={ fmt.Sprintf("/app/review/rating-recommender/rating?albumId=%s", album.ID) }
 	>
-		{ album.Title }
+		<div class="flex items-center gap-2">
+			<p class="max-w-[75%] text-ellipsis text-nowrap overflow-hidden">{ album.Title }</p>
+			<div class="flex gap-1">
+				<button
+					class="btn btn-ghost btn-sm btn-square"
+					type="button"
+					hx-get={ fmt.Sprintf("/app/review/rating-recommender/questions?albumId=%s", album.ID) }
+					hx-target="closest form"
+					hx-swap="outerHTML"
+				>
+					@templates.QuestionMarkIcon(templates.IconProps{})
+				</button>
+				<button
+					class="btn btn-ghost btn-sm btn-square text-error"
+					type="button"
+					hx-delete={ fmt.Sprintf("/app/review/rating-recommender/rating?albumId=%s", album.ID) }
+					hx-swap="none"
+				>
+					@templates.TrashIcon(templates.IconProps{})
+				</button>
+			</div>
+		</div>
 		<fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border p-4">
 			<legend class="fieldset-legend">Rating</legend>
 			<label class="input w-full">
@@ -64,7 +85,9 @@ templ RatingRecommenderConfirm(album library.AlbumDTO, rating float64) {
 					class="grow"
 					step="0.1"
 					placeholder="Enter your rating"
-					value={ rating }
+					if rating != nil {
+						value={ *rating }
+					}
 					required
 					hx-put={ fmt.Sprintf("/app/review/rating-recommender/rating?albumId=%s", album.ID) }
 					hx-trigger="keyup changed delay:500ms, change delay:500ms"
@@ -73,7 +96,9 @@ templ RatingRecommenderConfirm(album library.AlbumDTO, rating float64) {
 					hx-swap="morph"
 					autofocus
 				/>
-				<span class="badge badge-primary badge-soft badge-s">{ review.GetRatingLabel(rating) }</span>
+				if rating != nil {
+					<span class="badge badge-primary badge-soft badge-s">{ review.GetRatingLabel(*rating) }</span>
+				}
 			</label>
 			@RatingRecommenderConfirmError("")
 		</fieldset>
@@ -102,7 +127,7 @@ templ RatingModal(album library.AlbumDTO, props RatingModalProps) {
 		})
 	} else {
 		@templates.Modal(RatingModalId, templates.ModalProps{
-			ModalContent: RatingRecommenderConfirm(album, *props.Rating),
+			ModalContent: RatingRecommenderConfirm(album, props.Rating),
 		})
 	}
 }

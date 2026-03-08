@@ -22,3 +22,7 @@ and album_id = ?;
 -- name: GetUserAlbumRatingById :one
 select * from album_ratings
 where id = ?;
+
+-- name: ClearAlbumRating :exec
+UPDATE album_ratings SET rating = NULL, updated_at = current_timestamp
+WHERE user_id = ? AND album_id = ?;

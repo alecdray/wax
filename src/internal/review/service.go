@@ -59,6 +59,13 @@ func (s *Service) UpdateRating(ctx context.Context, userId, albumId string, rati
 	return NewAlbumRatingDTOFromModel(model), nil
 }
 
+func (s *Service) ClearRating(ctx context.Context, userId, albumId string) error {
+	return s.db.Queries().ClearAlbumRating(ctx, sqlc.ClearAlbumRatingParams{
+		UserID:  userId,
+		AlbumID: albumId,
+	})
+}
+
 func (s *Service) UpdateReview(ctx context.Context, userId, albumId string, review string) (*AlbumRatingDTO, error) {
 	model, err := s.db.Queries().UpsertAlbumReview(ctx, sqlc.UpsertAlbumReviewParams{
 		ID:      uuid.NewString(),
