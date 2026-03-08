@@ -41,3 +41,4 @@
 
 - [ ] Score history
 - [ ] Critical vs Personal score
+- [ ] Get a score recommendation by comparing it to other albums with a rating
