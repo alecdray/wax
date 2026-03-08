@@ -86,6 +86,14 @@ type Track struct {
 	DeletedAt sql.NullTime
 }
 
+type TrackPlay struct {
+	ID       string
+	UserID   string
+	TrackID  string
+	AlbumID  string
+	PlayedAt time.Time
+}
+
 type User struct {
 	ID                  string
 	SpotifyID           string

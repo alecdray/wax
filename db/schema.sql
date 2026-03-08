@@ -90,3 +90,11 @@ CREATE TABLE album_ratings (
     updated_at datetime, review text,
     unique(user_id, album_id)
 );
+CREATE TABLE track_plays (
+    id text primary key,
+    user_id text not null references users(id) on delete cascade,
+    track_id text not null references tracks(id) on delete cascade,
+    album_id text not null references albums(id) on delete cascade,
+    played_at datetime not null,
+    unique(user_id, track_id, played_at)
+);

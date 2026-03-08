@@ -98,41 +98,15 @@ func (s *Service) GetRecentlySavedAlbums(ctx contextx.ContextX, userId string, w
 	return userAlbums, nil
 }
 
-func (s *Service) GetRecentlyPlayedTracks(ctx contextx.ContextX, userId string, window time.Duration) ([]spotify.RecentlyPlayedItem, error) {
+func (s *Service) GetRecentlyPlayedTracks(ctx contextx.ContextX, userId string) ([]spotify.RecentlyPlayedItem, error) {
 	client, err := s.Client(ctx, userId)
 	if err != nil {
 		return nil, err
 	}
 
-	var recentlyPlayedTracks []spotify.RecentlyPlayedItem = nil
-	minTime := time.Now().Add(-window)
-	maxTime := time.Now()
-	for recentlyPlayedTracks == nil || maxTime.After(minTime) {
-		tracks, err := client.PlayerRecentlyPlayedOpt(ctx, &spotify.RecentlyPlayedOptions{
-			Limit:         50,
-			BeforeEpochMs: maxTime.UnixMilli(),
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		if len(tracks) == 0 {
-			break
-		} else if recentlyPlayedTracks == nil {
-			recentlyPlayedTracks = make([]spotify.RecentlyPlayedItem, 0, len(tracks))
-		}
-
-		for _, track := range tracks {
-			if track.PlayedAt.After(minTime) {
-				recentlyPlayedTracks = append(recentlyPlayedTracks, track)
-			}
-
-			if track.PlayedAt.Before(maxTime) {
-				maxTime = track.PlayedAt
-			}
-		}
-	}
-	return recentlyPlayedTracks, nil
+	return client.PlayerRecentlyPlayedOpt(ctx, &spotify.RecentlyPlayedOptions{
+		Limit: 50,
+	})
 }
 
 func (s *Service) GetUsersSavedAlbums(ctx contextx.ContextX, userId string) ([]spotify.SavedAlbum, error) {

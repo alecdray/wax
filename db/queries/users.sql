@@ -13,3 +13,7 @@ SELECT * FROM users WHERE id = ?;
 
 -- name: GetUserBySpotifyId :one
 SELECT * FROM users WHERE spotify_id = ?;
+
+-- name: GetUsersWithSpotifyToken :many
+SELECT * FROM users
+WHERE spotify_refresh_token IS NOT NULL AND deleted_at IS NULL;

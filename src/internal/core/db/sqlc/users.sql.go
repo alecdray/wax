@@ -67,6 +67,40 @@ func (q *Queries) GetUserBySpotifyId(ctx context.Context, spotifyID string) (Use
 	return i, err
 }
 
+const getUsersWithSpotifyToken = `-- name: GetUsersWithSpotifyToken :many
+SELECT id, spotify_id, created_at, deleted_at, spotify_refresh_token FROM users
+WHERE spotify_refresh_token IS NOT NULL AND deleted_at IS NULL
+`
+
+func (q *Queries) GetUsersWithSpotifyToken(ctx context.Context) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, getUsersWithSpotifyToken)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.SpotifyID,
+			&i.CreatedAt,
+			&i.DeletedAt,
+			&i.SpotifyRefreshToken,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertSpotifyUser = `-- name: UpsertSpotifyUser :one
 INSERT INTO users (id, spotify_id, spotify_refresh_token) VALUES (?, ?, ?)
 ON CONFLICT (spotify_id)
