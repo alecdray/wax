@@ -275,10 +275,7 @@ templ albumRow(album library.AlbumDTO) {
 			}
 		</td>
 		<td>
-			<div class="flex items-center gap-1">
-				@AlbumNotesIcon(album, false)
-				@AlbumRating(album, false)
-			</div>
+			@AlbumRating(album, false)
 		</td>
 		<td>
 			<div class="flex gap-3 items-center">
@@ -292,6 +289,30 @@ templ albumRow(album library.AlbumDTO) {
 			if oldest := album.Releases.OldestAddedAtDate(); oldest != nil {
 				<span class="text-sm">{ oldest.Format("Jan 2, 2006") }</span>
 			}
+		</td>
+		<td class="text-right">
+			<div class="dropdown dropdown-end">
+				<div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-square">
+					@templates.EllipsisVerticalIcon(templates.IconProps{})
+				</div>
+				<ul tabindex="0" class="dropdown-content z-[1] menu menu-compact bg-base-100 rounded-box w-36 shadow-xl border border-base-300 mt-1 p-1">
+					<li>
+						<button
+							class="flex items-center gap-2 text-sm"
+							hx-get={ fmt.Sprintf("/app/review/notes?albumId=%s", album.ID) }
+							hx-trigger="click"
+							hx-swap="none"
+						>
+							if album.Rating != nil && album.Rating.Review != nil {
+								@templates.NotesIcon(templates.IconProps{Style: templates.IconStyleFill})
+							} else {
+								@templates.NotesIcon(templates.IconProps{Style: templates.IconStyleOutline})
+							}
+							Notes
+						</button>
+					</li>
+				</ul>
+			</div>
 		</td>
 	</tr>
 }
@@ -354,6 +375,7 @@ templ AlbumsTable(albums []library.AlbumDTO, sortedBy string, sortedDir string) 
 						@albumsTableSortableHeader("date", sortedBy, sortedDir) {
 							<span>Date Added</span>
 						}
+						<th></th>
 					</tr>
 				</thead>
 				<tbody id="albums-tbody">
