@@ -2893,15 +2893,17 @@
     transform: translateX(0);
   }
   to {
-    transform: translateX(var(--ticker-offset, -50%));
+    transform: translateX(var(--scroll-to, -50%));
   }
 }
 .ticker-track {
-  animation: ticker-scroll 30s linear infinite;
   width: max-content;
   will-change: transform;
 }
-.ticker-container:hover .ticker-track {
+.ticker-track.scrolling {
+  animation: ticker-scroll var(--duration, 30s) linear infinite;
+}
+.ticker-container:hover .ticker-track.scrolling {
   animation-play-state: paused;
 }
 @layer base {

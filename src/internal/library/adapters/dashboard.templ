@@ -459,59 +459,28 @@ templ DashboardHeaderBar(feeds []feed.FeedDTO) {
 
 templ RecentlyPlayedTicker(albums []listeninghistory.RecentAlbumDTO) {
 	if len(albums) > 0 {
-		<div class="w-full bg-base-200 border-b border-base-300 h-10 flex-shrink-0 overflow-hidden flex items-center">
-			<div class="ticker-container overflow-hidden flex-1">
-				<div id="ticker-track" class="ticker-track flex items-center">
-					<div id="ticker-copy" class="flex items-center">
-						for _, album := range albums {
-							<a
-								href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", album.SpotifyID)) }
-								target="_blank"
-								rel="noopener noreferrer"
-								class="flex items-center gap-2 flex-shrink-0 hover:opacity-80 transition-opacity mr-6"
-							>
-								if album.ImageURL != "" {
-									<div class="avatar">
-										<div class="mask mask-squircle h-6 w-6 flex-shrink-0">
-											<img src={ album.ImageURL } alt={ album.Title }/>
-										</div>
-									</div>
-								}
-								<span class="text-xs text-nowrap">{ album.Title }</span>
-							</a>
+		<div class="w-full bg-base-200 border-b border-base-300 h-10 flex-shrink-0 overflow-hidden flex items-center ticker-container">
+			<div id="ticker-track" class="ticker-track flex items-center">
+				for _, album := range albums {
+					<a
+						href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", album.SpotifyID)) }
+						target="_blank"
+						rel="noopener noreferrer"
+						class="flex items-center gap-2 flex-shrink-0 hover:opacity-80 transition-opacity mr-6"
+					>
+						if album.ImageURL != "" {
+							<div class="avatar">
+								<div class="mask mask-squircle h-6 w-6 flex-shrink-0">
+									<img src={ album.ImageURL } alt={ album.Title }/>
+								</div>
+							</div>
 						}
-					</div>
-					<div class="flex items-center" aria-hidden="true">
-						for _, album := range albums {
-							<a
-								href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", album.SpotifyID)) }
-								target="_blank"
-								rel="noopener noreferrer"
-								class="flex items-center gap-2 flex-shrink-0 hover:opacity-80 transition-opacity mr-6"
-							>
-								if album.ImageURL != "" {
-									<div class="avatar">
-										<div class="mask mask-squircle h-6 w-6 flex-shrink-0">
-											<img src={ album.ImageURL } alt={ album.Title }/>
-										</div>
-									</div>
-								}
-								<span class="text-xs text-nowrap">{ album.Title }</span>
-							</a>
-						}
-					</div>
-				</div>
+						<span class="text-xs text-nowrap">{ album.Title }</span>
+					</a>
+				}
 			</div>
 		</div>
-		<script>
-			(function() {
-				var copy = document.getElementById('ticker-copy');
-				var track = document.getElementById('ticker-track');
-				if (copy && track) {
-					track.style.setProperty('--ticker-offset', '-' + copy.getBoundingClientRect().width + 'px');
-				}
-			})();
-		</script>
+		<script src="/static/ticker.js"></script>
 	}
 }
 

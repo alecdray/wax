@@ -41,7 +41,7 @@ func (t SyncListeningHistoryTask) Run(ctx contextx.ContextX) error {
 }
 
 func (t SyncListeningHistoryTask) Schedule() *task.CronExpression {
-	schedule := task.CronExpression("* * * * *") // Every hour
+	schedule := task.CronExpression("0 * * * *") // Every hour
 	return &schedule
 }
 
