@@ -11,6 +11,7 @@ import (
 	"shmoopicks/src/internal/core/utils"
 	"shmoopicks/src/internal/listeninghistory"
 	"shmoopicks/src/internal/review"
+	"shmoopicks/src/internal/tags"
 	"sort"
 	"time"
 
@@ -110,6 +111,7 @@ type AlbumDTO struct {
 	Tracks       []TrackDTO
 	Releases     ReleaseDTOs
 	Rating       *review.AlbumRatingDTO
+	Tags         []tags.TagDTO
 	LastPlayedAt *time.Time
 }
 
@@ -270,14 +272,16 @@ func (l *Library) tracks() []TrackDTO {
 }
 
 type Service struct {
-	db                     *db.DB
+	db                      *db.DB
 	listeningHistoryService *listeninghistory.Service
+	tagsService             *tags.Service
 }
 
-func NewService(db *db.DB, listeningHistoryService *listeninghistory.Service) *Service {
+func NewService(db *db.DB, listeningHistoryService *listeninghistory.Service, tagsService *tags.Service) *Service {
 	return &Service{
-		db:                     db,
+		db:                      db,
 		listeningHistoryService: listeningHistoryService,
+		tagsService:             tagsService,
 	}
 }
 
@@ -355,6 +359,12 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 		return nil, err
 	}
 
+	tagsByAlbumId, err := s.tagsService.GetAlbumTagsByAlbumIds(ctx, userId, albumIds)
+	if err != nil {
+		err = fmt.Errorf("failed to get album tags: %w", err)
+		return nil, err
+	}
+
 	var albumDTOs []AlbumDTO
 	for _, album := range albums {
 		dto := NewAlbumDTOFromModel(
@@ -367,6 +377,7 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 		if t, ok := lastPlayedAtByAlbumId[album.ID]; ok {
 			dto.LastPlayedAt = &t
 		}
+		dto.Tags = tagsByAlbumId[album.ID]
 		albumDTOs = append(albumDTOs, dto)
 	}
 
@@ -548,6 +559,13 @@ func (s *Service) GetAlbumInLibrary(ctx context.Context, userId string, albumId 
 		releasesDtos,
 		review.NewAlbumRatingDTOFromModel(rating),
 	)
+
+	albumTags, err := s.tagsService.GetAlbumTags(ctx, userId, albumId)
+	if err != nil {
+		err = fmt.Errorf("failed to get album tags: %w", err)
+		return nil, err
+	}
+	albumDto.Tags = albumTags
 
 	return &albumDto, nil
 }

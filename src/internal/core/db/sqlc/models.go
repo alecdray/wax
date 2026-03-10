@@ -35,6 +35,14 @@ type AlbumRating struct {
 	Review    sql.NullString
 }
 
+type AlbumTag struct {
+	ID        string
+	UserID    string
+	AlbumID   string
+	TagID     string
+	CreatedAt time.Time
+}
+
 type AlbumTrack struct {
 	AlbumID string
 	TrackID string
@@ -76,6 +84,21 @@ type Release struct {
 type SqliteSequence struct {
 	Name interface{}
 	Seq  interface{}
+}
+
+type Tag struct {
+	ID        string
+	UserID    string
+	Name      string
+	GroupID   sql.NullString
+	CreatedAt time.Time
+}
+
+type TagGroup struct {
+	ID        string
+	UserID    string
+	Name      string
+	CreatedAt time.Time
 }
 
 type Track struct {

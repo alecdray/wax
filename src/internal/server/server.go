@@ -21,6 +21,8 @@ import (
 	"shmoopicks/src/internal/review"
 	reviewAdapters "shmoopicks/src/internal/review/adapters"
 	"shmoopicks/src/internal/spotify"
+	"shmoopicks/src/internal/tags"
+	tagsAdapters "shmoopicks/src/internal/tags/adapters"
 	"shmoopicks/src/internal/user"
 
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
@@ -36,6 +38,7 @@ type services struct {
 	feed             *feed.Service
 	review           *review.Service
 	listeningHistory *listeninghistory.Service
+	tags             *tags.Service
 }
 
 func NewServices(app app.App, db *db.DB) *services {
@@ -72,7 +75,9 @@ func NewServices(app app.App, db *db.DB) *services {
 		listeninghistory.NewSyncListeningHistoryTask(s.listeningHistory),
 	)
 
-	s.library = library.NewService(db, s.listeningHistory)
+	s.tags = tags.NewService(db)
+
+	s.library = library.NewService(db, s.listeningHistory, s.tags)
 
 	s.feed = feed.NewService(db, s.spotify, s.library)
 	s.taskManager.RegisterCronTask(
@@ -120,6 +125,10 @@ func Start(ctx context.Context, app app.App) {
 	appMux.Handle("POST /app/library/dashboard/feeds/sync", httpx.HandlerFunc(libraryHandler.TriggerFeedSync))
 	appMux.Handle("/app/library/dashboard/albums-table", httpx.HandlerFunc(libraryHandler.GetAlbumsTable))
 	appMux.Handle("GET /app/library/dashboard/carousel", httpx.HandlerFunc(libraryHandler.GetCarousel))
+
+	tagsHandler := tagsAdapters.NewHttpHandler(services.library, services.tags)
+	appMux.Handle("GET /app/tags/album", httpx.HandlerFunc(tagsHandler.GetTagsModal))
+	appMux.Handle("POST /app/tags/album", httpx.HandlerFunc(tagsHandler.SubmitAlbumTags))
 
 	reviewHandler := reviewAdapters.NewHttpHandler(services.library, services.review)
 	appMux.Handle("GET /app/review/rating-recommender", httpx.HandlerFunc(reviewHandler.GetRatingRecommender))

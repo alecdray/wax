@@ -17,6 +17,35 @@ func GetAlbumNotesID(albumId string) string {
 	return fmt.Sprintf("album-notes-%s", albumId)
 }
 
+func GetAlbumTagsID(albumId string) string {
+	return fmt.Sprintf("album-tags-%s", albumId)
+}
+
+const maxTagsInAlbumTagsCell = 2
+
+templ AlbumTagsCell(album library.AlbumDTO, isOobSwap bool) {
+	<div
+		id={ GetAlbumTagsID(album.ID) }
+		class="flex gap-1"
+		if isOobSwap {
+			hx-swap-oob="true"
+		}
+	>
+		if len(album.Tags) == 0 {
+			<span class="text-xs text-base-content/30">—</span>
+		} else {
+			for i, tag := range album.Tags {
+				if i < maxTagsInAlbumTagsCell {
+					<span class="badge badge-sm badge-ghost text-xs">{ tag.Name }</span>
+				}
+			}
+			if len(album.Tags) > maxTagsInAlbumTagsCell {
+				<span class="badge badge-sm badge-ghost text-xs text-base-content/50">+{ fmt.Sprintf("%d", len(album.Tags)-maxTagsInAlbumTagsCell) }</span>
+			}
+		}
+	</div>
+}
+
 type CarouselView string
 
 const (
@@ -303,6 +332,9 @@ templ albumRow(album library.AlbumDTO) {
 				<span class="text-sm">{ album.LastPlayedAt.Format("Jan 2, 2006") }</span>
 			}
 		</td>
+		<td>
+			@AlbumTagsCell(album, false)
+		</td>
 		<td class="text-right">
 			<div class="dropdown dropdown-end">
 				<div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-square">
@@ -322,6 +354,17 @@ templ albumRow(album library.AlbumDTO) {
 								@templates.NotesIcon(templates.IconProps{Style: templates.IconStyleOutline})
 							}
 							Notes
+						</button>
+					</li>
+					<li>
+						<button
+							class="flex items-center gap-2 text-sm"
+							hx-get={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
+							hx-trigger="click"
+							hx-swap="none"
+						>
+							@templates.TagIcon(templates.IconProps{})
+							Tags
 						</button>
 					</li>
 				</ul>
@@ -397,6 +440,7 @@ templ AlbumsTable(albums []library.AlbumDTO, sortedBy string, sortedDir string) 
 						@albumsTableSortableHeader("lastPlayed", sortedBy, sortedDir) {
 							<span>Last Played</span>
 						}
+						<th>Tags</th>
 						<th></th>
 					</tr>
 				</thead>

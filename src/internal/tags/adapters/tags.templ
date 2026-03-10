@@ -1,0 +1,180 @@
+package adapters
+
+import (
+	"encoding/json"
+	"fmt"
+	"shmoopicks/src/internal/core/templates"
+	"shmoopicks/src/internal/library"
+	"shmoopicks/src/internal/tags"
+)
+
+const TagsModalId = "tags-modal"
+
+func tagsAlpineData(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO) string {
+	// Build initial chips from album's current tags
+	type chip struct {
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		GroupID string `json:"groupId"`
+	}
+
+	initialChips := make([]chip, 0, len(album.Tags))
+	for _, t := range album.Tags {
+		groupID := ""
+		if t.Group != nil {
+			groupID = t.Group.ID
+		}
+		initialChips = append(initialChips, chip{ID: t.ID, Name: t.Name, GroupID: groupID})
+	}
+
+	// Build all-tags list for autocomplete
+	type tagOpt struct {
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		GroupID string `json:"groupId"`
+	}
+	allTagOpts := make([]tagOpt, 0, len(allTags))
+	for _, t := range allTags {
+		groupID := ""
+		if t.Group != nil {
+			groupID = t.Group.ID
+		}
+		allTagOpts = append(allTagOpts, tagOpt{ID: t.ID, Name: t.Name, GroupID: groupID})
+	}
+
+	// Build groups list
+	type groupOpt struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	groupOpts := make([]groupOpt, 0, len(tagGroups))
+	for _, g := range tagGroups {
+		groupOpts = append(groupOpts, groupOpt{ID: g.ID, Name: g.Name})
+	}
+
+	chipsJSON, _ := json.Marshal(initialChips)
+	tagsJSON, _ := json.Marshal(allTagOpts)
+	groupsJSON, _ := json.Marshal(groupOpts)
+
+	return fmt.Sprintf(`{
+		chips: %s,
+		allTags: %s,
+		groups: %s,
+		query: '',
+		activeGroupId: '',
+		get filteredTags() {
+			const q = this.query.toLowerCase().trim();
+			const used = new Set(this.chips.map(c => c.name.toLowerCase()));
+			return this.allTags.filter(t =>
+				!used.has(t.name.toLowerCase()) &&
+				(q === '' || t.name.toLowerCase().includes(q))
+			).slice(0, 8);
+		},
+		addTag(name, id, groupId) {
+			const n = name.trim();
+			if (!n) return;
+			if (this.chips.some(c => c.name.toLowerCase() === n.toLowerCase())) return;
+			this.chips.push({ id: id || '', name: n, groupId: groupId || this.activeGroupId });
+			this.query = '';
+		},
+		removeChip(index) { this.chips.splice(index, 1); },
+		onKeydown(e) {
+			if ((e.key === 'Enter' || e.key === ',') && this.query.trim()) {
+				e.preventDefault();
+				this.addTag(this.query.trim(), '', this.activeGroupId);
+			} else if (e.key === 'Backspace' && this.query === '' && this.chips.length > 0) {
+				this.chips.pop();
+			}
+		},
+		groupName(groupId) {
+			if (!groupId) return '';
+			const g = this.groups.find(g => g.id === groupId);
+			return g ? g.name : '';
+		}
+	}`, string(chipsJSON), string(tagsJSON), string(groupsJSON))
+}
+
+templ TagsForm(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO) {
+	<div x-data={ tagsAlpineData(album, allTags, tagGroups) }>
+		<!-- Group selector -->
+		if len(tagGroups) > 0 {
+			<div class="flex gap-2 mb-3 flex-wrap">
+				<button
+					type="button"
+					class="btn btn-xs"
+					:class="activeGroupId === '' ? 'btn-primary' : 'btn-ghost'"
+					@click="activeGroupId = ''"
+				>Ungrouped</button>
+				<template x-for="g in groups" :key="g.id">
+					<button
+						type="button"
+						class="btn btn-xs"
+						:class="activeGroupId === g.id ? 'btn-primary' : 'btn-ghost'"
+						@click="activeGroupId = g.id"
+						x-text="g.name"
+					></button>
+				</template>
+			</div>
+		}
+		<!-- Chip display + input -->
+		<div class="fieldset bg-base-200 border-base-300 rounded-box border p-3 mb-4">
+			<legend class="fieldset-legend">Tags</legend>
+			<div class="flex flex-wrap gap-1.5 mb-2">
+				<template x-for="(chip, i) in chips" :key="i">
+					<span class="badge badge-soft badge-primary gap-1 text-sm">
+						<span x-text="chip.name"></span>
+						<span x-show="groupName(chip.groupId)" class="text-xs opacity-60" x-text="'(' + groupName(chip.groupId) + ')'"></span>
+						<button type="button" class="ml-1 opacity-60 hover:opacity-100" @click="removeChip(i)">✕</button>
+					</span>
+				</template>
+			</div>
+			<input
+				type="text"
+				class="input input-sm w-full"
+				placeholder="Type a tag and press Enter..."
+				x-model="query"
+				@keydown="onKeydown($event)"
+			/>
+			<!-- Autocomplete dropdown -->
+			<div x-show="filteredTags.length > 0 && query.length > 0" class="mt-1 bg-base-100 border border-base-300 rounded-box shadow-lg max-h-40 overflow-y-auto">
+				<template x-for="t in filteredTags" :key="t.id">
+					<button
+						type="button"
+						class="w-full text-left px-3 py-1.5 text-sm hover:bg-base-200 flex items-center gap-2"
+						@click="addTag(t.name, t.id, t.groupId); query = ''"
+					>
+						<span x-text="t.name"></span>
+						<span x-show="t.groupId" class="text-xs opacity-50" x-text="'(' + groupName(t.groupId) + ')'"></span>
+					</button>
+				</template>
+			</div>
+		</div>
+		<!-- Hidden inputs for form submission -->
+		<template x-for="chip in chips" :key="chip.name">
+			<input type="hidden" name="tag[]" :value="chip.name + '|' + chip.groupId"/>
+		</template>
+		<button
+			type="submit"
+			class="btn btn-primary w-full"
+		>Save Tags</button>
+	</div>
+}
+
+templ TagsFormWrapper(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO) {
+	<form
+		class="flex flex-col gap-2"
+		hx-post={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
+	>
+		@TagsForm(album, allTags, tagGroups)
+	</form>
+}
+
+templ TagsModal(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO) {
+	@templates.Modal(TagsModalId, templates.ModalProps{
+		ModalContent: TagsFormWrapper(album, allTags, tagGroups),
+	})
+}
+
+templ CloseTagsModal() {
+	@templates.ForceCloseModal(TagsModalId)
+}
