@@ -60,6 +60,44 @@ This project uses [Task](https://taskfile.dev/) for build automation. Run `task`
 
 See `.env.template` for required configuration and detailed documentation of all environment variables.
 
+## Deployment
+
+### Docker
+
+Build the image (also compiles Tailwind CSS):
+
+```sh
+task docker/build
+```
+
+Run the container:
+
+```sh
+task docker/run
+```
+
+Secrets are read from your `.env` file. Set `DOCKER_DATA_DIR` in `.env` to control where the SQLite database is stored on the host (defaults to `/data`).
+
+### Docker Compose
+
+A `docker-compose.example.yml` is provided as a starting point:
+
+```sh
+cp docker-compose.example.yml docker-compose.yml
+docker compose up -d
+```
+
+Docker Compose reads secrets from your `.env` file automatically.
+
+The SQLite database is persisted in a named Docker volume (`app-data`). To use a host directory instead, replace the `app-data` volume mount with a bind mount (e.g. `./data:/data`).
+
+Generate secrets with:
+
+```sh
+openssl rand -hex 32  # JWT_SECRET
+openssl rand -hex 32  # SPOTIFY_TOKEN_SECRET
+```
+
 ## Roadmap
 
 See [docs/roadmap.md](./docs/roadmap.md) for planned features and development progress.

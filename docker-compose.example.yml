@@ -1,0 +1,24 @@
+services:
+  app:
+    image: shmoopicks
+    build: .
+    ports:
+      - "${PORT:-4691}:${PORT:-4691}"
+    volumes:
+      - ${DOCKER_DATA_DIR:-app-data}:/data
+    environment:
+      ENV: ${ENV:-production}
+      PORT: ${PORT:-4691}
+      DB_PATH: /data/db.sql
+      GOOSE_DRIVER: sqlite3
+      GOOSE_DBSTRING: /data/db.sql
+      GOOSE_MIGRATION_DIR: ./db/migrations
+      SPOTIFY_ID: ${SPOTIFY_ID}
+      SPOTIFY_SECRET: ${SPOTIFY_SECRET}
+      CONTACT_EMAIL: ${CONTACT_EMAIL}
+      JWT_SECRET: ${JWT_SECRET}
+      SPOTIFY_TOKEN_SECRET: ${SPOTIFY_TOKEN_SECRET}
+    restart: unless-stopped
+
+volumes:
+  app-data:

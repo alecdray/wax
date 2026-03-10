@@ -57,6 +57,23 @@ tasks:
       - dev/tailwind
       - dev/templ
       - dev/sync-assets
+  docker/build:
+    cmds:
+      - task build/tailwind
+      - docker build -t shmoopicks .
+  docker/run:
+    cmds:
+      - >
+        docker run -d
+        -p $PORT:$PORT
+        -v ${DOCKER_DATA_DIR:-/data}:/data
+        -e ENV=${ENV:-production}
+        -e SPOTIFY_ID=$SPOTIFY_ID
+        -e SPOTIFY_SECRET=$SPOTIFY_SECRET
+        -e JWT_SECRET=$JWT_SECRET
+        -e SPOTIFY_TOKEN_SECRET=$SPOTIFY_TOKEN_SECRET
+        -e CONTACT_EMAIL=$CONTACT_EMAIL
+        shmoopicks
   db/create:
     cmds:
       - goose -dir db/migrations create {{.CLI_ARGS}} sql
