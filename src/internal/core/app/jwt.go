@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"shmoopicks/src/internal/core/timex"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 
 const (
 	jwtCookieName = "shmoopicks_token"
+	jwtTTL        = 1 * timex.Day
 )
 
 // Claims struct to encode in JWT
@@ -23,7 +25,7 @@ type Claims struct {
 func NewClaims() *Claims {
 	return &Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(jwtTTL)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
 			Issuer:    "shmoopicks",
@@ -44,19 +46,20 @@ func (c *Claims) JWT(secret string) (string, error) {
 	return tokenString, nil
 }
 
-func (c *Claims) Save(secret string, w http.ResponseWriter) error {
-	jwt, err := c.JWT(secret)
+func (c *Claims) Save(cfg Config, w http.ResponseWriter) error {
+	c.ExpiresAt = jwt.NewNumericDate(time.Now().Add(jwtTTL))
+	token, err := c.JWT(cfg.JwtSecret)
 	if err != nil {
 		return fmt.Errorf("failed to generate JWT: %w", err)
 	}
 
 	cookie := &http.Cookie{
 		Name:     jwtCookieName,
-		Value:    jwt,
-		Path:     "/",                  // Cookie available for entire domain
-		MaxAge:   86400,                // 24 hours
-		HttpOnly: true,                 // Prevents JavaScript access (XSS protection)
-		Secure:   false,                // Only send over HTTPS (set to false in development)
+		Value:    token,
+		Path:     "/", // Cookie available for entire domain
+		MaxAge:   int(jwtTTL.Seconds()),
+		HttpOnly: true,
+		Secure:   cfg.Env == EnvProd,
 		SameSite: http.SameSiteLaxMode, // CSRF protection, allows same-site redirects
 	}
 	http.SetCookie(w, cookie)
@@ -65,14 +68,14 @@ func (c *Claims) Save(secret string, w http.ResponseWriter) error {
 }
 
 // clearTokenCookie removes the JWT cookie (for logout)
-func (c *Claims) Delete(w http.ResponseWriter) {
+func (c *Claims) Delete(cfg Config, w http.ResponseWriter) {
 	cookie := &http.Cookie{
 		Name:     jwtCookieName,
 		Value:    "",
 		Path:     "/", // Must match the path used when setting the cookie
 		MaxAge:   -1,  // Delete cookie
 		HttpOnly: true,
-		Secure:   false,
+		Secure:   cfg.Env == EnvProd,
 		SameSite: http.SameSiteLaxMode,
 	}
 	http.SetCookie(w, cookie)

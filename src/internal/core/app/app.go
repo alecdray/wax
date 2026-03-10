@@ -25,7 +25,7 @@ func (app App) Config() Config {
 
 func (app *App) SetClaims(w http.ResponseWriter, claims *Claims) error {
 	app.claims = claims
-	err := app.claims.Save(app.config.JwtSecret, w)
+	err := app.claims.Save(app.config, w)
 	if err != nil {
 		return fmt.Errorf("failed to save JWT: %w", err)
 	}
@@ -37,6 +37,6 @@ func (app App) Claims() *Claims {
 }
 
 func (app *App) DeleteClaims(w http.ResponseWriter) {
-	app.claims.Delete(w)
+	app.claims.Delete(app.config, w)
 	app.claims = nil
 }
