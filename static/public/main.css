@@ -2478,9 +2478,6 @@
       font-weight: 600;
     }
   }
-  .mb-1 {
-    margin-bottom: calc(var(--spacing) * 1);
-  }
   .mb-2 {
     margin-bottom: calc(var(--spacing) * 2);
   }
@@ -2705,14 +2702,8 @@
   .max-h-40 {
     max-height: calc(var(--spacing) * 40);
   }
-  .min-h-0 {
-    min-height: calc(var(--spacing) * 0);
-  }
   .min-h-32 {
     min-height: calc(var(--spacing) * 32);
-  }
-  .w-1\/2 {
-    width: calc(1 / 2 * 100%);
   }
   .w-2 {
     width: calc(var(--spacing) * 2);
@@ -2794,9 +2785,6 @@
   .cursor-default {
     cursor: default;
   }
-  .cursor-none {
-    cursor: none;
-  }
   .cursor-pointer {
     cursor: pointer;
   }
@@ -2839,17 +2827,11 @@
   .items-center {
     align-items: center;
   }
-  .items-start {
-    align-items: flex-start;
-  }
   .justify-between {
     justify-content: space-between;
   }
   .justify-center {
     justify-content: center;
-  }
-  .gap-0\.5 {
-    gap: calc(var(--spacing) * 0.5);
   }
   .gap-1 {
     gap: calc(var(--spacing) * 1);
@@ -2979,9 +2961,6 @@
       }
     }
   }
-  .p-0 {
-    padding: calc(var(--spacing) * 0);
-  }
   .p-1 {
     padding: calc(var(--spacing) * 1);
   }
@@ -3023,9 +3002,6 @@
       }
     }
   }
-  .px-0 {
-    padding-inline: calc(var(--spacing) * 0);
-  }
   .px-2 {
     padding-inline: calc(var(--spacing) * 2);
   }
@@ -3037,9 +3013,6 @@
   }
   .px-6 {
     padding-inline: calc(var(--spacing) * 6);
-  }
-  .py-0\.5 {
-    padding-block: calc(var(--spacing) * 0.5);
   }
   .py-1 {
     padding-block: calc(var(--spacing) * 1);
@@ -3055,12 +3028,6 @@
   }
   .py-4 {
     padding-block: calc(var(--spacing) * 4);
-  }
-  .pr-4 {
-    padding-right: calc(var(--spacing) * 4);
-  }
-  .pr-6 {
-    padding-right: calc(var(--spacing) * 6);
   }
   .pb-1 {
     padding-bottom: calc(var(--spacing) * 1);
@@ -3310,10 +3277,6 @@
       --btn-color: var(--color-primary);
       --btn-fg: var(--color-primary-content);
     }
-  }
-  .select-none {
-    -webkit-user-select: none;
-    user-select: none;
   }
   .radio-primary {
     @layer daisyui.l1.l2 {
