@@ -25,8 +25,8 @@ templ LoginPage(props LoginPageProps) {
 			</div>
 		</div>
 		<div class="p-5 h-full flex items-center justify-center">
-			<a href={ props.authUrl }>
-				<button class="btn btn-primary">Login</button>
+			<a data-testid="login-link" href={ props.authUrl }>
+				<button data-testid="login-button" class="btn btn-primary">Login</button>
 			</a>
 		</div>
 	}

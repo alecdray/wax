@@ -36,4 +36,8 @@ bin/
 tmp/
 *_templ.go
 
+# Playwright
+test-results/
+playwright-report/
+
 static/public/main.css
