@@ -1,0 +1,156 @@
+package adapters
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/core/templates"
+	"github.com/alecdray/wax/src/internal/library"
+)
+
+templ AlbumDetailHeaderBar() {
+	<div class="bg-base-100 border-b border-base-300 h-11 w-full flex-shrink-0 sticky top-0 z-10" hx-boost="true">
+		<div class="h-full flex items-center justify-between px-6">
+			<div class="flex items-center gap-4">
+				@templates.NeonTextEffect(templates.NeonColorPrimary, templates.NeonHoverEffectDim) {
+					<a href="/home" class="text-lg font-brand">wax</a>
+				}
+				<div class="h-4 w-px bg-base-300"></div>
+				<div class="tooltip tooltip-bottom" data-tip="Library">
+					<a href="/app/library/dashboard" data-testid="album-detail-back-link" class="btn btn-ghost btn-xs btn-square">
+						@templates.CollectionIcon(templates.IconProps{Style: templates.IconStyleOutline})
+					</a>
+				</div>
+			</div>
+			<div class="flex items-center gap-2">
+				<div class="dropdown dropdown-end">
+					<div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle">
+						@templates.UserIcon(templates.IconProps{Style: templates.IconStyleOutline})
+					</div>
+					<ul tabindex="0" class="dropdown-content z-[1] menu menu-compact bg-base-100 rounded-box w-32 shadow-xl border border-base-300 mt-1">
+						<li><a href="/logout" class="text-xs">Logout</a></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+templ AlbumDetailPage(album library.AlbumDTO) {
+	@templates.RootComponent(templates.RootProps{
+		Title: templates.CreatePageTitle(album.Title),
+	}) {
+		<div class="w-full flex flex-col">
+			@AlbumDetailHeaderBar()
+			<div class="flex flex-col max-w-2xl mx-auto w-full px-4 py-6 gap-6">
+				// Album header: cover art + title + artists
+				<div class="flex gap-4 items-start">
+					if album.ImageURL != "" {
+						<div class="avatar flex-shrink-0" data-testid="album-detail-cover">
+							<div class="mask mask-squircle h-28 w-28">
+								<img src={ album.ImageURL } alt={ album.Title }/>
+							</div>
+						</div>
+					} else {
+						<div class="avatar avatar-placeholder flex-shrink-0" data-testid="album-detail-cover">
+							<div class="mask mask-squircle h-28 w-28 bg-base-300"></div>
+						</div>
+					}
+					<div class="flex flex-col gap-2 min-w-0 pt-1">
+						<div class="flex items-start gap-2">
+							<h1 class="text-xl font-semibold leading-tight" data-testid="album-detail-title">{ album.Title }</h1>
+							<a
+								href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", album.SpotifyID)) }
+								target="_blank"
+								rel="noopener noreferrer"
+								class="text-base-content/30 hover:text-base-content flex-shrink-0 mt-1"
+								title="Open in Spotify"
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+									<path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5"></path>
+									<path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"></path>
+								</svg>
+							</a>
+						</div>
+						if len(album.Artists) > 0 {
+							<div class="flex flex-wrap gap-x-1 gap-y-0.5" data-testid="album-detail-artists">
+								for i, artist := range album.Artists {
+									if i > 0 {
+										<span class="text-sm text-base-content/40">,</span>
+									}
+									<a
+										href={ templ.URL(fmt.Sprintf("https://open.spotify.com/artist/%s", artist.SpotifyID)) }
+										target="_blank"
+										rel="noopener noreferrer"
+										class="text-sm text-base-content/70 hover:text-base-content"
+									>{ artist.Name }</a>
+								}
+							</div>
+						}
+					</div>
+				</div>
+				// Rating
+				<div class="flex flex-col gap-2" data-testid="album-detail-rating">
+					<span class="text-xs font-semibold uppercase tracking-wider text-base-content/40">Rating</span>
+					@AlbumRating(album, false)
+				</div>
+				// Notes
+				<div class="flex flex-col gap-2" data-testid="album-detail-notes">
+					<div class="flex items-center justify-between">
+						<span class="text-xs font-semibold uppercase tracking-wider text-base-content/40">Notes</span>
+						@AlbumNotesIcon(album, false)
+					</div>
+					if album.Rating != nil && album.Rating.Review != nil {
+						<p class="text-sm text-base-content/70 whitespace-pre-wrap">{ *album.Rating.Review }</p>
+					}
+				</div>
+				// Tags
+				<div class="flex flex-col gap-2" data-testid="album-detail-tags">
+					<div class="flex items-center justify-between">
+						<span class="text-xs font-semibold uppercase tracking-wider text-base-content/40">Tags</span>
+						<button
+							data-testid="album-detail-tags-edit"
+							class="btn btn-ghost btn-xs"
+							hx-get={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
+							hx-trigger="click"
+							hx-swap="none"
+						>
+							@templates.TagIcon(templates.IconProps{})
+						</button>
+					</div>
+					@AlbumTagsCell(album, false)
+				</div>
+				// Formats
+				<div class="flex flex-col gap-2">
+					<span class="text-xs font-semibold uppercase tracking-wider text-base-content/40">In Your Library</span>
+					<div class="flex flex-wrap gap-2" data-testid="album-detail-releases">
+						for _, release := range album.Releases {
+							@releaseFormatBadge(release)
+						}
+					</div>
+				</div>
+				// Dates
+				<div class="flex flex-col gap-1">
+					if oldest := album.Releases.OldestAddedAtDate(); oldest != nil {
+						<span class="text-xs text-base-content/50">Added { oldest.Format("Jan 2, 2006") }</span>
+					}
+					if album.LastPlayedAt != nil {
+						<span class="text-xs text-base-content/50" data-testid="album-detail-last-played">Last played { album.LastPlayedAt.Format("Jan 2, 2006") }</span>
+					}
+				</div>
+				// Track list
+				if len(album.Tracks) > 0 {
+					<div class="flex flex-col gap-2">
+						<span class="text-xs font-semibold uppercase tracking-wider text-base-content/40">Tracks</span>
+						<div class="flex flex-col divide-y divide-base-300">
+							for i, track := range album.Tracks {
+								<div class="flex items-center gap-3 py-2">
+									<span class="text-xs text-base-content/30 w-5 text-right flex-shrink-0">{ fmt.Sprintf("%d", i+1) }</span>
+									<span class="text-sm">{ track.Title }</span>
+								</div>
+							}
+						</div>
+					</div>
+				}
+			</div>
+		</div>
+	}
+}

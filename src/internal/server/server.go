@@ -128,6 +128,7 @@ func Start(ctx context.Context, app app.App) {
 	appMux.Handle("/app/library/dashboard/albums-table", httpx.HandlerFunc(libraryHandler.GetAlbumsTable))
 	appMux.Handle("GET /app/library/dashboard/albums-page", httpx.HandlerFunc(libraryHandler.GetAlbumsPage))
 	appMux.Handle("GET /app/library/dashboard/carousel", httpx.HandlerFunc(libraryHandler.GetCarousel))
+	appMux.Handle("GET /app/library/albums/{albumId}", httpx.HandlerFunc(libraryHandler.GetAlbumDetailPage))
 
 	tagsHandler := tagsAdapters.NewHttpHandler(services.library, services.tags)
 	appMux.Handle("GET /app/tags/album", httpx.HandlerFunc(tagsHandler.GetTagsModal))

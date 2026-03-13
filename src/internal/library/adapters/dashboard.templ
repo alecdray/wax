@@ -291,11 +291,21 @@ templ albumRow(album library.AlbumDTO) {
 						<div class="mask mask-squircle h-10 w-10 flex-shrink-0 bg-base-300"></div>
 					</div>
 				}
-				<a
-					href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", album.SpotifyID)) }
-					target="_blank"
-					rel="noopener noreferrer"
-				>{ album.Title }</a>
+				<div class="flex items-center gap-1.5">
+					<a href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) } data-testid="album-row-title-link">{ album.Title }</a>
+					<a
+						href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", album.SpotifyID)) }
+						target="_blank"
+						rel="noopener noreferrer"
+						class="text-base-content/25 hover:text-base-content flex-shrink-0"
+						title="Open in Spotify"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+							<path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5"></path>
+							<path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"></path>
+						</svg>
+					</a>
+				</div>
 			</div>
 		</td>
 		<td>
@@ -526,10 +536,10 @@ templ DashboardHeaderBar(feeds []feed.FeedDTO) {
 				}
 				<div class="h-4 w-px bg-base-300"></div>
 				<div class="flex items-center gap-1">
-					<div class="tooltip tooltip-bottom" data-tip="Home">
-						<a href="/home" class="btn btn-ghost btn-xs btn-square">
-							@templates.HomeIcon(templates.IconProps{Style: templates.IconStyleOutline})
-						</a>
+					<div class="tooltip tooltip-bottom" data-tip="Library">
+						<div class="btn btn-ghost btn-xs btn-square opacity-30 pointer-events-none">
+							@templates.CollectionIcon(templates.IconProps{Style: templates.IconStyleFill})
+						</div>
 					</div>
 				</div>
 			</div>

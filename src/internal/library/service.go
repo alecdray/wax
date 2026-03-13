@@ -580,6 +580,15 @@ func (s *Service) GetAlbumInLibrary(ctx context.Context, userId string, albumId 
 	}
 	albumDto.Tags = albumTags
 
+	lastPlayedAtByAlbumId, err := s.listeningHistoryService.GetLastPlayedAtByAlbumIds(ctx, userId, []string{albumId})
+	if err != nil {
+		err = fmt.Errorf("failed to get last played at: %w", err)
+		return nil, err
+	}
+	if t, ok := lastPlayedAtByAlbumId[albumId]; ok {
+		albumDto.LastPlayedAt = &t
+	}
+
 	return &albumDto, nil
 }
 

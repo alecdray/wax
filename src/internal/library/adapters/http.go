@@ -1,6 +1,8 @@
 package adapters
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"github.com/alecdray/wax/src/internal/core/contextx"
@@ -240,6 +242,29 @@ func (h *HttpHandler) GetAlbumsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	albumsTableBody(page, offset, sortBy, dir).Render(r.Context(), w)
+}
+
+func (h *HttpHandler) GetAlbumDetailPage(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+
+	userId, err := ctx.UserId()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	albumId := r.PathValue("albumId")
+	album, err := h.libraryService.GetAlbumInLibrary(ctx, userId, albumId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) || err.Error() == "album not in library" {
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	AlbumDetailPage(*album).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetFeedsDropdown(w http.ResponseWriter, r *http.Request) {
