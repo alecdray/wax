@@ -29,7 +29,7 @@ tasks:
       - go run ./src/cmd/app.go
   dev/templ:
     cmds:
-      - templ generate --watch --proxy="http://localhost:$PORT" --open-browser=false -v
+      - templ generate --watch --proxy="http://localhost:$PORT" --open-browser=false -v 2>&1 | tee ./tmp/dev-templ.log
   dev/server:
     cmds:
       - >
@@ -40,9 +40,10 @@ tasks:
         --build.exclude_dir "node_modules"
         --build.include_ext "go"
         --build.stop_on_error false
+        2>&1 | tee ./tmp/dev-server.log
   dev/tailwind:
     cmds:
-      - npx --yes @tailwindcss/cli -i ./static/src/main.css -o ./static/public/main.css --watch
+      - npx --yes @tailwindcss/cli -i ./static/src/main.css -o ./static/public/main.css --watch 2>&1 | tee ./tmp/dev-tailwind.log
   dev/sync-assets:
     cmds:
       - >
@@ -82,6 +83,18 @@ tasks:
       - goose up
       - sqlite3 $GOOSE_DBSTRING .schema > ./db/schema.sql
       - sqlc generate
+  test/unit:
+    desc: Run Go unit tests
+    cmds:
+      - go test ./src/...
+  test/e2e:
+    desc: Run Playwright E2E tests (requires app running on port 4691)
+    cmds:
+      - npx playwright test {{.CLI_ARGS}}
+  test:
+    desc: Run all tests
+    cmds:
+      - task test/unit
   git/commit:
     cmds:
       - git commit -m "{{.CLI_ARGS}}"
