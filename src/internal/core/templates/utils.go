@@ -2,12 +2,18 @@ package templates
 
 import (
 	"fmt"
+	"os"
 	"strings"
 )
 
-// CSSVersion is appended to static CSS URLs for cache busting.
-// Set this at startup (e.g. from the file's mod time).
-var CSSVersion string
+var cssVersion string
+
+// InitCSSVersion sets the CSS cache-busting version from the mod time of the given file path.
+func InitCSSVersion(path string) {
+	if info, err := os.Stat(path); err == nil {
+		cssVersion = fmt.Sprintf("%d", info.ModTime().Unix())
+	}
+}
 
 func CreatePageTitle(title string) string {
 	if title == "" {
