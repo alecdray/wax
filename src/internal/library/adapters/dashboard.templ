@@ -613,9 +613,9 @@ templ DashboardPage(props DashboardPageProps) {
 	@templates.RootComponent(templates.RootProps{
 		Title: templates.CreatePageTitle("Dashboard"),
 	}) {
-		<div class="w-full flex flex-col md:h-dvh md:overflow-hidden">
+		<div class="w-full flex flex-col">
 			@DashboardHeaderBar(props.Feeds)
-			<div class="flex flex-col py-4 gap-4 md:flex-1 md:overflow-y-auto">
+			<div class="flex flex-col py-4 gap-4">
 				@LibraryStats(props.Library)
 				@CarouselSection(props.RecentAlbums, CarouselViewRecentlyPlayed)
 				if props.Library != nil {
