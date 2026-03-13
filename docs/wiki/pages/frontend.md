@@ -8,6 +8,7 @@ links:
   - architecture
   - features
   - vision
+  - roadmap
 ---
 
 [wiki](../wiki.md)
@@ -41,6 +42,10 @@ This means most user interactions (rating an album, adding a tag, opening a revi
 ## Pages & Views
 
 The primary view is the **library dashboard** — a sortable, browsable table/grid of the user's albums. From there users open individual album detail pages. See [features](./features.md) for the full breakdown of views and sort options.
+
+## Known Limitations
+
+The UI is not optimized for mobile web — layout, navigation, and interactions are designed primarily for desktop browsers. Mobile support is on the [roadmap](./roadmap.md).
 
 ## Static Assets
 

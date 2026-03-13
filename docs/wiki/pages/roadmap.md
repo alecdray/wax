@@ -29,9 +29,11 @@ Planned features in rough priority order. See [features](./features.md) for what
 | **Sleeve Notes** | Attach free-form notes to any library entity |
 | **Linked Albums** | Connect albums to each other, building a personal music graph |
 | **My Library v1.1** | Faceted search, physical media, multiple view modes |
+| **Mobile Support** | Responsive layouts and interactions for mobile web — current UI is desktop-only |
 
 ## Ideas & Open Questions
 
+- **Progressive Web App (PWA)** — open question: whether to convert Wax to a PWA for offline support and installability; decision deferred until mobile support is further along
 - **Dual-axis rating** — separate scores for objective quality vs. personal enjoyment ("it's a masterpiece but I never play it")
 - **Timestamped reviews** — reviews as journal entries to track how opinions evolve
 - **Linked Albums as a graph** — similar to Obsidian's graph view, surface connections between records
