@@ -7,6 +7,7 @@ description: >
 links:
   - architecture
   - frontend
+  - features
 ---
 
 [wiki](../wiki.md)
