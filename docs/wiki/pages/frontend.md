@@ -44,9 +44,11 @@ This means most user interactions (rating an album, adding a tag, opening a revi
 
 The primary view is the **library dashboard** — a sortable, browsable table/grid of the user's albums. From there users open individual album detail pages. See [features](./features.md) for the full breakdown of views and sort options.
 
-## Known Limitations
+## Responsive Design
 
-The UI is not optimized for mobile web — layout, navigation, and interactions are designed primarily for desktop browsers. Mobile support is on the [roadmap](./roadmap.md).
+The UI supports both desktop and mobile. On mobile, the dashboard uses natural document scroll with a sticky header. The album table collapses to its most essential columns, with secondary information accessible via the per-row actions menu. Desktop retains a fixed-height inner-scroll layout.
+
+The current mobile experience adapts the desktop table layout. A purpose-built view for small screens is a noted future direction — see [roadmap](./roadmap.md).
 
 ## Static Assets
 

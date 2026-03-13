@@ -4,7 +4,9 @@ The wiki is the source of truth for the product and architecture of Wax. It capt
 
 ## Scope
 
-The wiki covers **product** and **architecture** — not code implementation. It should be possible to understand Wax completely from the wiki without reading any source code. Implementation details (specific functions, SQL queries, file paths) do not belong here; the code is the source of truth for those.
+The wiki covers **product** and **architecture** — not code implementation. It should be possible to understand Wax completely from the wiki without reading any source code. Implementation details (specific functions, SQL queries, file paths, CSS class names, library-specific tokens or configuration values) do not belong here; the code is the source of truth for those.
+
+Write at the level of concepts and behaviour, not mechanics. Ask: "would this sentence need to change if we refactored the implementation without changing the user experience?" If yes, it probably doesn't belong here.
 
 ## Structure
 

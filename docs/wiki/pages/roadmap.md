@@ -28,12 +28,12 @@ Planned features in rough priority order. See [features](./features.md) for what
 | **Sleeve Notes** | Attach free-form notes to any library entity |
 | **Linked Albums** | Connect albums to each other, building a personal music graph |
 | **My Library v1.1** | Faceted search, physical media, multiple view modes |
-| **Mobile Support** | Responsive layouts and interactions for mobile web — current UI is desktop-only; lazy-loading albums on scroll to address dashboard performance on mobile |
 
 ## Ideas & Open Questions
 
 - **Stats & Insights visualizations** — listening heatmap (GitHub-style activity grid by day/month), genre evolution timeline showing how tastes shifted year over year, top artists by decade, "record DNA" radar chart showing where a library skews across tempo/energy/mood/era
-- **Progressive Web App (PWA)** — open question: whether to convert Wax to a PWA for offline support and installability; decision deferred until mobile support is further along
+- **Mobile-first album view** — the current album table (with column collapse and horizontal scroll) is a pragmatic mobile solution, but a table is a desktop-oriented pattern; a purpose-built card or list view for small screens is worth building as mobile usage grows
+- **Progressive Web App (PWA)** — open question: whether to convert Wax to a PWA for offline support and installability; deferred until the mobile experience is more fully developed
 - **Rating history** — instead of a single current score, append each rating update as a timestamped entry so the full arc of how an opinion changed is preserved; each entry can carry a note explaining why the rating changed
 - **Comparative ranking** — derive a rating by pitting an album against others the user has already rated; a series of "is this better than that?" questions produces a score grounded in relative preference rather than an abstract 0–10 pick
 - **Dual-axis rating** — separate scores for objective quality vs. personal enjoyment ("it's a masterpiece but I never play it")
