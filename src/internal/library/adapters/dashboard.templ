@@ -54,9 +54,10 @@ const (
 )
 
 type DashboardPageProps struct {
-	Feeds        []feed.FeedDTO
-	Library      *library.Library
-	RecentAlbums []library.AlbumSummaryDTO
+	Feeds           []feed.FeedDTO
+	Library         *library.Library
+	RecentAlbums    []library.AlbumSummaryDTO
+	FirstPageAlbums []library.AlbumDTO
 }
 
 func getFeedsDropdownButtonIndicatorColor(feeds []feed.FeedDTO) templates.NeonColor {
@@ -314,7 +315,7 @@ templ albumRow(album library.AlbumDTO) {
 		<td>
 			@AlbumRating(album, false)
 		</td>
-		<td>
+		<td class="hidden md:table-cell">
 			<div class="flex gap-3 items-center">
 				@formatIcon(album.Releases, models.ReleaseFormatDigital)
 				@formatIcon(album.Releases, models.ReleaseFormatVinyl)
@@ -322,17 +323,17 @@ templ albumRow(album library.AlbumDTO) {
 				@formatIcon(album.Releases, models.ReleaseFormatCassette)
 			</div>
 		</td>
-		<td>
+		<td class="hidden md:table-cell">
 			if oldest := album.Releases.OldestAddedAtDate(); oldest != nil {
 				<span class="text-sm">{ oldest.Format("Jan 2, 2006") }</span>
 			}
 		</td>
-		<td>
+		<td class="hidden md:table-cell">
 			if album.LastPlayedAt != nil {
 				<span class="text-sm">{ album.LastPlayedAt.Format("Jan 2, 2006") }</span>
 			}
 		</td>
-		<td>
+		<td class="hidden md:table-cell">
 			@AlbumTagsCell(album, false)
 		</td>
 		<td class="text-right">
@@ -340,7 +341,7 @@ templ albumRow(album library.AlbumDTO) {
 				<div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-square">
 					@templates.EllipsisVerticalIcon(templates.IconProps{})
 				</div>
-				<ul tabindex="0" class="dropdown-content z-[1] menu menu-compact bg-base-100 rounded-box w-36 shadow-xl border border-base-300 mt-1 p-1">
+				<ul tabindex="0" class="dropdown-content z-[1] menu menu-compact bg-base-100 rounded-box w-48 shadow-xl border border-base-300 mt-1 p-1">
 					<li>
 						<button
 							class="flex items-center gap-2 text-sm"
@@ -367,30 +368,71 @@ templ albumRow(album library.AlbumDTO) {
 							Tags
 						</button>
 					</li>
+					<li class="md:hidden"><hr class="my-1 border-base-300"/></li>
+					<li class="md:hidden">
+						<div class="flex flex-wrap gap-1 px-1 py-0.5 pointer-events-none">
+							for _, format := range []models.ReleaseFormat{models.ReleaseFormatDigital, models.ReleaseFormatVinyl, models.ReleaseFormatCD, models.ReleaseFormatCassette} {
+								if release := album.Releases.FindFormat(format); release != nil && release.AddedAt != nil {
+									<div class="badge badge-sm gap-1">
+										@releaseFormatIcon(release.Format)
+										<span class="text-xs capitalize">{ string(release.Format) }</span>
+									</div>
+								}
+							}
+						</div>
+					</li>
+					<li class="md:hidden">
+						<div class="px-1 py-0.5 text-xs opacity-60 pointer-events-none">
+							if oldest := album.Releases.OldestAddedAtDate(); oldest != nil {
+								Added: { oldest.Format("Jan 2, 2006") }
+							} else {
+								<span class="opacity-40">No date</span>
+							}
+						</div>
+					</li>
+					<li class="md:hidden">
+						<div class="px-1 py-0.5 text-xs opacity-60 pointer-events-none">
+							if album.LastPlayedAt != nil {
+								Last played: { album.LastPlayedAt.Format("Jan 2, 2006") }
+							} else {
+								<span class="opacity-40">Never played</span>
+							}
+						</div>
+					</li>
 				</ul>
 			</div>
 		</td>
 	</tr>
 }
 
-templ albumsTableBody(albums []library.AlbumDTO) {
+templ albumsTableBody(albums []library.AlbumDTO, offset int, sortBy string, sortDir string) {
 	if len(albums) == 0 {
-		<tr>
-			<td colspan="4" class="text-center opacity-50">No albums in your library</td>
-		</tr>
+		if offset == 0 {
+			<tr>
+				<td colspan="8" class="text-center opacity-50">No albums in your library</td>
+			</tr>
+		}
 	} else {
 		for _, album := range albums {
 			@albumRow(album)
 		}
+		if len(albums) == library.AlbumsPageSize {
+			<tr
+				hx-get={ fmt.Sprintf("/app/library/dashboard/albums-page?offset=%d&sortBy=%s&dir=%s", offset+library.AlbumsPageSize, sortBy, sortDir) }
+				hx-trigger="revealed"
+				hx-swap="outerHTML"
+			>
+				<td colspan="8"></td>
+			</tr>
+		}
 	}
 }
 
-templ albumsTableSortableHeader(colName, sortedBy, sortedDir string) {
+templ albumsTableSortableHeader(colName, sortedBy, sortedDir, extraClass string) {
 	<th
-		class="cursor-pointer hover:bg-base-200"
+		class={ "cursor-pointer hover:bg-base-200", extraClass }
 		hx-target="#album-table"
 		hx-swap="outerHTML"
-		class="inline-block mr-1"
 		if sortedBy == colName && sortedDir == "desc" {
 			hx-get={ fmt.Sprintf("/app/library/dashboard/albums-table?sortBy=%s&dir=asc", colName) }
 		} else {
@@ -414,7 +456,7 @@ templ albumsTableSortableHeader(colName, sortedBy, sortedDir string) {
 
 templ AlbumsTable(albums []library.AlbumDTO, sortedBy string, sortedDir string) {
 	<div id="album-table" class="w-full px-4">
-		<div class="w-full border border-base-300 rounded-xl overflow-hidden">
+		<div class="w-full border border-base-300 rounded-xl overflow-x-auto">
 			<table class="table table-zebra w-full">
 				// <colgroup>
 				// 	<col style="width: 35%"/>
@@ -424,28 +466,28 @@ templ AlbumsTable(albums []library.AlbumDTO, sortedBy string, sortedDir string) 
 				// </colgroup>
 				<thead>
 					<tr>
-						@albumsTableSortableHeader("album", sortedBy, sortedDir) {
+						@albumsTableSortableHeader("album", sortedBy, sortedDir, "") {
 							<span>Album</span>
 						}
-						@albumsTableSortableHeader("artist", sortedBy, sortedDir) {
+						@albumsTableSortableHeader("artist", sortedBy, sortedDir, "") {
 							<span>Artists</span>
 						}
-						@albumsTableSortableHeader("rating", sortedBy, sortedDir) {
+						@albumsTableSortableHeader("rating", sortedBy, sortedDir, "") {
 							<span>Rating</span>
 						}
-						<th>Formats</th>
-						@albumsTableSortableHeader("date", sortedBy, sortedDir) {
+						<th class="hidden md:table-cell">Formats</th>
+						@albumsTableSortableHeader("date", sortedBy, sortedDir, "hidden md:table-cell") {
 							<span>Date Added</span>
 						}
-						@albumsTableSortableHeader("lastPlayed", sortedBy, sortedDir) {
+						@albumsTableSortableHeader("lastPlayed", sortedBy, sortedDir, "hidden md:table-cell") {
 							<span>Last Played</span>
 						}
-						<th>Tags</th>
+						<th class="hidden md:table-cell">Tags</th>
 						<th></th>
 					</tr>
 				</thead>
 				<tbody id="albums-tbody">
-					@albumsTableBody(albums)
+					@albumsTableBody(albums, 0, sortedBy, sortedDir)
 				</tbody>
 			</table>
 		</div>
@@ -476,7 +518,7 @@ templ LibraryStats(lib *library.Library) {
 }
 
 templ DashboardHeaderBar(feeds []feed.FeedDTO) {
-	<div class="bg-base-100 border-b border-base-300 h-11 w-full flex-shrink-0" hx-boost="true">
+	<div class="bg-base-100 border-b border-base-300 h-11 w-full flex-shrink-0 sticky top-0 z-10" hx-boost="true">
 		<div class="h-full flex items-center justify-between px-6">
 			<div class="flex items-center gap-4">
 				@templates.NeonTextEffect(templates.NeonColorPrimary, templates.NeonHoverEffectDim) {
@@ -571,13 +613,13 @@ templ DashboardPage(props DashboardPageProps) {
 	@templates.RootComponent(templates.RootProps{
 		Title: templates.CreatePageTitle("Dashboard"),
 	}) {
-		<div class="h-screen w-full flex flex-col overflow-hidden">
+		<div class="w-full flex flex-col md:h-dvh md:overflow-hidden">
 			@DashboardHeaderBar(props.Feeds)
-			<div class="flex flex-col flex-1 overflow-y-auto py-4 gap-4">
+			<div class="flex flex-col py-4 gap-4 md:flex-1 md:overflow-y-auto">
 				@LibraryStats(props.Library)
 				@CarouselSection(props.RecentAlbums, CarouselViewRecentlyPlayed)
 				if props.Library != nil {
-					@AlbumsTable(props.Library.Albums, "date", "desc")
+					@AlbumsTable(props.FirstPageAlbums, "date", "desc")
 				}
 			</div>
 		</div>

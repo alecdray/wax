@@ -11,7 +11,10 @@
       "Bash(grep *)",
       "Read(docs/wiki/**)",
       "Edit(docs/wiki/**)",
-      "Write(docs/wiki/**)"
+      "Write(docs/wiki/**)",
+      "Read(docs/specs/**)",
+      "Edit(docs/specs/**)",
+      "Write(docs/specs/**)"
     ]
   }
 }

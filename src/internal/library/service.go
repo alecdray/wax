@@ -128,7 +128,20 @@ func NewAlbumDTOFromModel(model sqlc.Album, artists []ArtistDTO, tracks []TrackD
 	}
 }
 
+const AlbumsPageSize = 20
+
 type AlbumDTOs []AlbumDTO
+
+func (albums AlbumDTOs) Page(offset int) AlbumDTOs {
+	if offset >= len(albums) {
+		return nil
+	}
+	end := offset + AlbumsPageSize
+	if end > len(albums) {
+		end = len(albums)
+	}
+	return albums[offset:end]
+}
 
 func (albums AlbumDTOs) SortByTitle(ascending bool) {
 	sort.Slice(albums, func(i, j int) bool {

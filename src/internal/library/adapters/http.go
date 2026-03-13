@@ -68,9 +68,10 @@ func (h *HttpHandler) GetDashboardPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dashboardPage := DashboardPage(DashboardPageProps{
-		Library:      lib,
-		Feeds:        feeds,
-		RecentAlbums: recentAlbums,
+		Library:         lib,
+		Feeds:           feeds,
+		RecentAlbums:    recentAlbums,
+		FirstPageAlbums: lib.Albums.Page(0),
 	})
 	dashboardPage.Render(r.Context(), w)
 }
@@ -147,7 +148,7 @@ func (h *HttpHandler) GetAlbumsTable(w http.ResponseWriter, r *http.Request) {
 		albums.SortByLastPlayed(ascending)
 	}
 
-	component := AlbumsTable(albums, sortBy, dir)
+	component := AlbumsTable(albums.Page(0), sortBy, dir)
 	component.Render(r.Context(), w)
 }
 
@@ -195,6 +196,50 @@ func (h *HttpHandler) TriggerFeedSync(w http.ResponseWriter, r *http.Request) {
 
 	buttonComponent := FeedsDropdownButton(feeds, true)
 	buttonComponent.Render(r.Context(), w)
+}
+
+func (h *HttpHandler) GetAlbumsPage(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+
+	userId, err := ctx.UserId()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	lib, err := h.libraryService.GetLibrary(ctx, userId)
+	if err != nil {
+		err = fmt.Errorf("failed to get library: %w", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	sortBy := r.URL.Query().Get("sortBy")
+	dir := r.URL.Query().Get("dir")
+	offset := 0
+	fmt.Sscanf(r.URL.Query().Get("offset"), "%d", &offset)
+
+	ascending := dir != "desc"
+	albums := lib.Albums
+	switch sortBy {
+	case "album":
+		albums.SortByTitle(ascending)
+	case "artist":
+		albums.SortByArtist(ascending)
+	case "rating":
+		albums.SortByRating(ascending)
+	case "date":
+		albums.SortByDate(ascending)
+	case "lastPlayed":
+		albums.SortByLastPlayed(ascending)
+	}
+
+	page := albums.Page(offset)
+	if len(page) == 0 {
+		return
+	}
+
+	albumsTableBody(page, offset, sortBy, dir).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetFeedsDropdown(w http.ResponseWriter, r *http.Request) {
