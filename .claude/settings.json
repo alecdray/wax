@@ -9,6 +9,7 @@
       "Bash(git commit *)",
       "Bash(echo *)",
       "Bash(grep *)",
+      "Bash(find *)",
       "Read(docs/wiki/**)",
       "Edit(docs/wiki/**)",
       "Write(docs/wiki/**)",
