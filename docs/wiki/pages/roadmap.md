@@ -23,7 +23,7 @@ Planned features in rough priority order. See [features](./features.md) for what
 | **Listening History** | Hourly Spotify sync, last-played on dashboard, ticker bar — see [integrations](./integrations.md) for Spotify constraints |
 | **Ranklists** | User-curated ranked lists of albums |
 | **Shelves** | Organize albums into named custom shelves |
-| **Stats & Insights** | Library analytics and listening patterns |
+| **Stats & Insights** | Analytics across library, listening history, ratings, ranklists, and shelves |
 | **Notifications** | In-app notifications for events (sync, activity) |
 | **Wishlist** | Track albums you want but don't own yet |
 | **Sleeve Notes** | Attach free-form notes to any library entity |
@@ -33,6 +33,7 @@ Planned features in rough priority order. See [features](./features.md) for what
 
 ## Ideas & Open Questions
 
+- **Stats & Insights visualizations** — listening heatmap (GitHub-style activity grid by day/month), genre evolution timeline showing how tastes shifted year over year, top artists by decade, "record DNA" radar chart showing where a library skews across tempo/energy/mood/era
 - **Progressive Web App (PWA)** — open question: whether to convert Wax to a PWA for offline support and installability; decision deferred until mobile support is further along
 - **Dual-axis rating** — separate scores for objective quality vs. personal enjoyment ("it's a masterpiece but I never play it")
 - **Timestamped reviews** — reviews as journal entries to track how opinions evolve
