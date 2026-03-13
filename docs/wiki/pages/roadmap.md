@@ -20,7 +20,6 @@ Planned features in rough priority order. See [features](./features.md) for what
 
 | Feature | Summary |
 |---|---|
-| **Album Detail Page** | Dedicated per-album page showing all library info, Spotify link, rating and review, and notes; replaces the table row as the primary way to interact with an album and improves mobile usability |
 | **Ranklists** | User-curated ranked lists of albums |
 | **Shelves** | Organize albums into named custom shelves |
 | **Stats & Insights** | Analytics across library, listening history, ratings, ranklists, and shelves |

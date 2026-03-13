@@ -24,7 +24,7 @@ The core of the app. A user's library is their collection of music — albums, a
 
 - Digital media is automatically synced from Spotify on a recurring schedule
 - Users can browse and sort their library by title, artist, rating, date added, and last played
-- Albums open in Spotify directly from the library
+- Album titles link to the album's detail page; Spotify remains accessible via an icon on both the table row and the detail page
 - Albums load in batches of 20 using infinite scroll — additional albums load automatically as the user scrolls to the bottom of the table
 
 A carousel above the library table offers two togglable views for surfacing albums worth acting on:
@@ -35,6 +35,20 @@ A carousel above the library table offers two togglable views for surfacing albu
 | **Unrated** | Albums in the library with no [rating](#rankings--reviews) yet — a prompt to rate what you've been playing |
 
 Each carousel item shows album art, title, and artist, and links directly to the album in Spotify.
+
+---
+
+## Album Detail
+
+Each album in the library has a dedicated detail page showing all information Wax holds for it:
+
+- Cover art, title, and artists (with Spotify links)
+- Release formats in the user's library with the date each was added
+- Rating, review notes, and tags — all editable from the page via the same modals used on the dashboard
+- Last played date (when listening history is available)
+- Track list
+
+The page is designed mobile-first with a stacked layout. Albums not in the user's library return a 404.
 
 ---
 
