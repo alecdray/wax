@@ -22,19 +22,25 @@ Shipped features in production today.
 
 The core of the app. A user's library is their collection of music — albums, artists, tracks, and releases (format variants: digital, vinyl, CD, cassette).
 
+A stats bar at the top of the dashboard shows the user's total artist, album, and track counts at a glance.
+
 - Digital media is automatically synced from Spotify on a recurring schedule
-- Users can browse and sort their library by title, artist, rating, date added, and last played
+- Users can browse and sort their library by title, artist, rating, date added, and last played — clicking a column header reloads the table with the new sort applied
 - Album titles link to the album's detail page; Spotify remains accessible via an icon on both the table row and the detail page
 - Albums load in batches of 20 using infinite scroll — additional albums load automatically as the user scrolls to the bottom of the table
+
+Each table row exposes per-row actions:
+- A rating control — shown as a score badge if the album is already rated, or a "Rate" button if not — opens the [rating modal](#rankings--reviews) directly
+- Notes and Tags are accessible via an ellipsis (⋯) dropdown menu on each row
 
 A carousel above the library table offers two togglable views for surfacing albums worth acting on:
 
 | View | What it shows |
 |---|---|
-| **Recently Spun** | Albums from [listening history](#listening-history), in reverse-chronological order; default view |
+| **Recently Spun** | Albums from [listening history](#listening-history), in reverse-chronological order; default view on load |
 | **Unrated** | Albums in the library with no [rating](#rankings--reviews) yet — a prompt to rate what you've been playing |
 
-Each carousel item shows album art, title, and artist, and links directly to the album in Spotify.
+Each carousel item shows album art, title, and artist, and links directly to the album in Spotify. Switching tabs swaps the carousel content without a full page reload; only the inactive tab is clickable at any time.
 
 ---
 
@@ -70,6 +76,20 @@ Users can rate and review albums in their library.
 - 0–10 score per album, manually set or guided by a 3-question questionnaire (scoring approach inspired by [Pitchfork](https://pitchfork.com/news/how-to-rate-albums-using-pitchfork-scores/))
 - Free-text review notes attached to the rating
 - Rating and review are independently updatable
+
+### Rating Modal
+
+The rating modal is the primary entry point for scoring an album. It always opens to the **confirm form**, regardless of whether the album already has a rating — there is no "questionnaire first" path.
+
+The confirm form contains:
+- A numeric score input (0–10, step 0.1) with a live label (e.g. "Heavy Rotation") that updates as the score changes
+- A "Lock in" button to save the rating
+- A **?** button that navigates to the questionnaire within the modal
+- A trash button that deletes an existing rating and closes the modal
+
+After a successful save, the modal closes automatically.
+
+The **review notes** modal is separate — it contains a textarea (up to 2,000 characters) and a "Save Notes" button. It also closes automatically after a successful save.
 
 ### Rating Questionnaire
 
@@ -111,4 +131,14 @@ Users can apply custom tags to albums for flexible organization and discovery.
 - No limit on tags per album or tags per group
 - Two built-in tag group concepts: **Sound** (genre, style, influences) and **Mood** (context, feeling, occasion)
 - Users define their own tags within these groups
+
+### Tagging Modal
+
+The tags modal is accessible from the ellipsis dropdown on each library row and from the tags button on the album detail page.
+
+- Tags are entered in a text input; pressing **Enter** or **comma** converts the current text into a chip shown above the input
+- **Backspace** on an empty input removes the last chip
+- An autocomplete dropdown appears while typing, suggesting existing tags (up to 8 results, excluding already-selected tags)
+- A tag can optionally be assigned to a group by clicking a group button before or after the chip is created
+- Clicking **Save Tags** submits all chips and closes the modal
 
