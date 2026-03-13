@@ -5,9 +5,9 @@ description: >
   speculative directions. Does not belong here: descriptions of what already works (→ features),
   or technical implementation plans (→ architecture).
 links:
-  - vision
-  - features
-  - integrations
+  - "[vision](vision.md)"
+  - "[features](features.md)"
+  - "[integrations](integrations.md)"
 ---
 
 [wiki](../wiki.md)

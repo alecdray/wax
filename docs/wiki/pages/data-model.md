@@ -5,9 +5,9 @@ description: >
   here: how entities are queried or stored (→ architecture), what users can do with them
   (→ features), or where data comes from (→ integrations).
 links:
-  - features
-  - architecture
-  - integrations
+  - "[features](features.md)"
+  - "[architecture](architecture.md)"
+  - "[integrations](integrations.md)"
 ---
 
 [wiki](../wiki.md)

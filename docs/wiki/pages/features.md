@@ -5,11 +5,11 @@ description: >
   planned or in-queue work (→ roadmap), implementation internals (→ architecture), or data
   structure definitions (→ data-model).
 links:
-  - roadmap
-  - vision
-  - data-model
-  - frontend
-  - integrations
+  - "[roadmap](roadmap.md)"
+  - "[vision](vision.md)"
+  - "[data-model](data-model.md)"
+  - "[frontend](frontend.md)"
+  - "[integrations](integrations.md)"
 ---
 
 [wiki](../wiki.md)

@@ -5,10 +5,10 @@ description: >
   decisions. Does not belong here: feature descriptions (→ features), server-side request
   handling (→ architecture), or product philosophy (→ vision).
 links:
-  - architecture
-  - features
-  - vision
-  - roadmap
+  - "[architecture](architecture.md)"
+  - "[features](features.md)"
+  - "[vision](vision.md)"
+  - "[roadmap](roadmap.md)"
 ---
 
 [wiki](../wiki.md)

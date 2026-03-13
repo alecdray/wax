@@ -31,7 +31,7 @@ Every page must have YAML frontmatter with the following fields:
 
 **`description`** *(required)* — defines the scope of the page. Should answer the question "does this note belong here?" and explicitly state what does *not* belong and where those things go instead.
 
-**`links`** *(optional)* — related pages, by filename without `.md`.
+**`links`** *(optional)* — related pages, as markdown links to the file.
 
 ```yaml
 ---
@@ -39,8 +39,8 @@ description: >
   What belongs here and what does not. Should answer the question:
   "does this note belong in this page?"
 links:
-  - page-a
-  - page-b
+  - "[page-a](page-a.md)"
+  - "[page-b](page-b.md)"
 ---
 ```
 

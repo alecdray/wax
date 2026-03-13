@@ -4,8 +4,8 @@ description: >
   every decision. Belongs here: product purpose, target user, core values, non-goals. Does not
   belong here: how features work, implementation details, or roadmap items.
 links:
-  - features
-  - roadmap
+  - "[features](features.md)"
+  - "[roadmap](roadmap.md)"
 ---
 
 [wiki](../wiki.md)
