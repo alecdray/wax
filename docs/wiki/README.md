@@ -79,6 +79,12 @@ Information lives in exactly one place. If a concept is relevant to multiple pag
 
 When deciding where something belongs, read the `description` frontmatter of candidate pages. If a page's description says "does not belong here → see X", put it in X.
 
+## Preserving Historical Context
+
+When a wiki edit removes or significantly changes information, consider whether the old context is still useful for understanding *why* the current state looks the way it does. If so, record the decision before making the change.
+
+Not every edit needs an entry. Use judgement: if a future reader encountering the current state might be confused about why it is the way it is, record the decision.
+
 ## Adding a New Page
 
 1. Create the file in `pages/` with frontmatter, a parent link, and content.
