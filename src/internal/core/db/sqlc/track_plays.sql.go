@@ -68,7 +68,12 @@ SELECT albums.id, albums.spotify_id, albums.title, albums.created_at, albums.del
     COALESCE((
         SELECT GROUP_CONCAT(a.name, ', ')
         FROM (SELECT DISTINCT ar.id, ar.name FROM album_artists aa JOIN artists ar ON ar.id = aa.artist_id WHERE aa.album_id = albums.id) AS a
-    ), '') as artist_names
+    ), '') as artist_names,
+    EXISTS (
+        SELECT 1 FROM user_releases
+        JOIN releases ON releases.id = user_releases.release_id
+        WHERE releases.album_id = albums.id AND user_releases.user_id = track_plays.user_id
+    ) as in_library
 FROM track_plays
 JOIN albums ON albums.id = track_plays.album_id
 WHERE track_plays.user_id = ?
@@ -86,6 +91,7 @@ type GetRecentlyPlayedAlbumsRow struct {
 	ImageUrl     sql.NullString
 	LastPlayedAt interface{}
 	ArtistNames  interface{}
+	InLibrary    int64
 }
 
 func (q *Queries) GetRecentlyPlayedAlbums(ctx context.Context, userID string) ([]GetRecentlyPlayedAlbumsRow, error) {
@@ -106,6 +112,7 @@ func (q *Queries) GetRecentlyPlayedAlbums(ctx context.Context, userID string) ([
 			&i.ImageUrl,
 			&i.LastPlayedAt,
 			&i.ArtistNames,
+			&i.InLibrary,
 		); err != nil {
 			return nil, err
 		}

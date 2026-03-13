@@ -24,6 +24,7 @@ type AlbumSummaryDTO struct {
 	Title     string
 	Artists   string
 	ImageURL  string
+	InLibrary bool
 }
 
 type ReleaseDTO struct {
@@ -606,6 +607,7 @@ func (s *Service) GetRecentlyPlayedAlbums(ctx context.Context, userID string) ([
 			Title:     row.Title,
 			Artists:   fmt.Sprintf("%s", row.ArtistNames),
 			ImageURL:  row.ImageUrl.String,
+			InLibrary: row.InLibrary != 0,
 		})
 	}
 	return dtos, nil
@@ -625,6 +627,7 @@ func (s *Service) GetUnratedAlbums(ctx context.Context, userID string) ([]AlbumS
 			Title:     row.Title,
 			Artists:   fmt.Sprintf("%s", row.ArtistNames),
 			ImageURL:  row.ImageUrl.String,
+			InLibrary: true,
 		})
 	}
 	return dtos, nil
