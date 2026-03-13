@@ -29,29 +29,29 @@ How the system is structured at a high level.
 
 ## Module Structure
 
-The application is organized into vertical modules under `src/internal/`. Each module owns a domain area end-to-end.
+The application is organized into vertical modules, each owning a domain area end-to-end.
 
-```
-server/         — HTTP server, routing, service wiring
-core/           — Shared infrastructure (context, HTTP utils, DB, tasks)
-auth/           — Login flow, JWT issuance
-user/           — User account management
-library/        — Music collection (albums, artists, tracks, releases)
-review/         — Album ratings and reviews
-tags/           — User tagging system
-feed/           — Data sync from external sources
-spotify/        — Spotify API client
-musicbrainz/    — MusicBrainz metadata client
-listeninghistory/ — Play history tracking
-```
+| Module | Responsibility |
+|---|---|
+| server | HTTP server, routing, service wiring |
+| core | Shared infrastructure (context, HTTP utils, DB, tasks) |
+| auth | Login flow, JWT issuance |
+| user | User account management |
+| library | Music collection (albums, artists, tracks, releases) |
+| review | Album ratings and reviews |
+| tags | User tagging system |
+| feed | Data sync from external sources |
+| spotify | Spotify API client |
+| musicbrainz | MusicBrainz metadata client |
+| listeninghistory | Play history tracking |
 
 ## Key Patterns
 
 ### Service Layer
-Each module exposes a `Service` struct that holds all business logic. Services are instantiated once at startup and injected where needed. There is no global state.
+Each module exposes a service that holds all business logic. Services are instantiated once at startup and injected where needed. There is no global state.
 
 ### Adapters
-HTTP handlers and HTML templates live in an `adapters/` subdirectory within each module. This separates the delivery mechanism (HTTP/HTML) from business logic.
+HTTP handlers and HTML templates are kept separate from business logic within each module. This separates the delivery mechanism (HTTP/HTML) from the domain.
 
 ### Request Flow
 
@@ -67,7 +67,7 @@ HTTP Request
 ```
 
 ### Context
-A custom context type (`ContextX`) wraps the standard Go context and carries the authenticated user ID and app config throughout the request lifecycle.
+A custom context type wraps the standard Go context and carries the authenticated user ID and app config throughout the request lifecycle.
 
 ### Error Handling
 Errors are returned as HTML fragments for HTMX-driven pages, or JSON for API endpoints. A shared utility ensures consistent error responses across all handlers. See [frontend](./frontend.md) for the interaction model.

@@ -2,32 +2,7 @@
 
 > Source of truth for product, architecture, and direction.
 
-## Graph
-
-```mermaid
-graph TD
-    VISION[vision]
-    FEATURES[features]
-    ROADMAP[roadmap]
-    DATA_MODEL[data-model]
-    ARCHITECTURE[architecture]
-    INTEGRATIONS[integrations]
-    FRONTEND[frontend]
-
-    VISION --> FEATURES
-    VISION --> ROADMAP
-    FEATURES --> DATA_MODEL
-    FEATURES --> FRONTEND
-    ROADMAP --> FEATURES
-    DATA_MODEL --> ARCHITECTURE
-    DATA_MODEL --> FEATURES
-    ARCHITECTURE --> INTEGRATIONS
-    ARCHITECTURE --> FRONTEND
-    INTEGRATIONS --> DATA_MODEL
-    FRONTEND --> ARCHITECTURE
-```
-
-## Nodes
+## Pages
 
 | Node | Description |
 |---|---|

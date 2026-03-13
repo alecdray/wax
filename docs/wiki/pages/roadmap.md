@@ -41,4 +41,7 @@ Planned features in rough priority order. See [features](./features.md) for what
 - **Shared by / shared with** — optional field to track who introduced you to a record
 - **Social features** — Goodreads-style network, but secondary to personal library depth
 - **Last.fm integration** — extended listening history, working around Spotify's 50-track limit (see [integrations](./integrations.md))
+- **Wikipedia** — album background and history on album detail pages
+- **Pitchfork / NPR** — critical reviews surfaced on album detail pages
+- **YouTube** — live performances and interviews on album detail pages
 

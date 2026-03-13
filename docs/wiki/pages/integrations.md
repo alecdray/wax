@@ -7,6 +7,7 @@ description: >
 links:
   - architecture
   - data-model
+  - roadmap
 ---
 
 [wiki](../wiki.md)
@@ -38,11 +39,4 @@ A secondary metadata source used for enrichment beyond what Spotify provides.
 
 - Open music encyclopedia (no auth required)
 - Used to fill gaps in album/artist metadata
-
-## Future Integrations (Possible)
-
-- **Wikipedia** — album background, history
-- **Pitchfork / NPR** — critical reviews
-- **YouTube** — live performances, interviews
-- **Last.fm** — extended listening history (could solve the Spotify 50-track limit)
 

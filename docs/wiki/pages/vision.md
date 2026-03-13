@@ -37,5 +37,5 @@ Music listeners who want more than play counts and algorithmic recommendations. 
 
 ## Future Horizon
 
-The long-term vision leans toward helping users discover depth: sleeve notes, influences, mood associations, linked albums, attached articles. Think of it like a personal music journal that grows richer over time.
+The long-term vision leans toward helping users discover depth — building a personal music journal that grows richer over time. See [roadmap](./roadmap.md) for planned features in this direction.
 

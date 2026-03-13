@@ -31,7 +31,7 @@ Every page must have YAML frontmatter with the following fields:
 
 **`description`** *(required)* — defines the scope of the page. Should answer the question "does this note belong here?" and explicitly state what does *not* belong and where those things go instead.
 
-**`links`** *(optional)* — related pages, by filename without `.md`. These represent bidirectional relationships — if page A links to page B, page B should link back to page A.
+**`links`** *(optional)* — related pages, by filename without `.md`.
 
 ```yaml
 ---
@@ -60,7 +60,7 @@ Keep content on an existing page unless one of these is true:
 - **The topic is referenced from multiple pages** — if two or more pages need to link to the same concept, that concept should be its own page rather than living inside one of them.
 - **The scope is clearly distinct** — if you find yourself writing content that keeps bumping against the boundaries of the current page's `description`, that's a signal the content belongs elsewhere.
 
-When breaking out a page, set the parent link to the page it came from and add it to the graph in `wiki.md`.
+When breaking out a page, set the parent link to the page it came from. Only add it to the Pages table in `wiki.md` if it is a top-level page (i.e. its parent is `wiki.md`).
 
 ## No Duplication
 
@@ -71,6 +71,5 @@ When deciding where something belongs, read the `description` frontmatter of can
 ## Adding a New Page
 
 1. Create the file in `pages/` with frontmatter, a parent link, and content.
-2. Add a node and its edges to the graph in `wiki.md`.
-3. Add a row to the Nodes table in `wiki.md`.
-4. Add cross-links in any existing pages that relate to the new one.
+2. If the page's parent is `wiki.md`, add a row to the Pages table in `wiki.md`.
+3. Add cross-links in any existing pages that relate to the new one.
