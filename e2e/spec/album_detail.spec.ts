@@ -10,7 +10,8 @@ const albumId = process.env.E2E_TEST_ALBUM_ID;
 const albumWithHistoryId = process.env.E2E_TEST_ALBUM_WITH_HISTORY_ID ?? albumId;
 
 test('Viewing an album in the library', async ({ context, page }) => {
-  if (!userId || !albumId) test.skip(true, 'E2E_TEST_USER_ID and E2E_TEST_ALBUM_ID must be set');
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
@@ -23,7 +24,7 @@ test('Viewing an album in the library', async ({ context, page }) => {
 });
 
 test('Navigating to the detail page from the dashboard', async ({ context, page }) => {
-  if (!userId) test.skip(true, 'E2E_TEST_USER_ID must be set');
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto('/app/library/dashboard');
@@ -35,7 +36,8 @@ test('Navigating to the detail page from the dashboard', async ({ context, page 
 });
 
 test('Rating an album from the detail page', async ({ context, page }) => {
-  if (!userId || !albumId) test.skip(true, 'E2E_TEST_USER_ID and E2E_TEST_ALBUM_ID must be set');
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
@@ -47,7 +49,8 @@ test('Rating an album from the detail page', async ({ context, page }) => {
 });
 
 test('Editing notes from the detail page', async ({ context, page }) => {
-  if (!userId || !albumId) test.skip(true, 'E2E_TEST_USER_ID and E2E_TEST_ALBUM_ID must be set');
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
@@ -58,7 +61,8 @@ test('Editing notes from the detail page', async ({ context, page }) => {
 });
 
 test('Editing tags from the detail page', async ({ context, page }) => {
-  if (!userId || !albumId) test.skip(true, 'E2E_TEST_USER_ID and E2E_TEST_ALBUM_ID must be set');
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
@@ -69,7 +73,7 @@ test('Editing tags from the detail page', async ({ context, page }) => {
 });
 
 test('Accessing an album not in the library', async ({ context, page }) => {
-  if (!userId) test.skip(true, 'E2E_TEST_USER_ID must be set');
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   const response = await page.goto('/app/library/albums/00000000-0000-0000-0000-000000000000');
@@ -78,7 +82,8 @@ test('Accessing an album not in the library', async ({ context, page }) => {
 });
 
 test('Last played date is shown when available', async ({ context, page }) => {
-  if (!userId || !albumWithHistoryId) test.skip(true, 'E2E_TEST_USER_ID and E2E_TEST_ALBUM_WITH_HISTORY_ID (or E2E_TEST_ALBUM_ID) must be set');
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumWithHistoryId, 'E2E_TEST_ALBUM_WITH_HISTORY_ID (or E2E_TEST_ALBUM_ID) must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumWithHistoryId}`);
@@ -87,7 +92,8 @@ test('Last played date is shown when available', async ({ context, page }) => {
 });
 
 test('Last played date is absent when not available', async ({ context, page }) => {
-  if (!userId || !albumId) test.skip(true, 'E2E_TEST_USER_ID and E2E_TEST_ALBUM_ID must be set');
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
@@ -96,7 +102,8 @@ test('Last played date is absent when not available', async ({ context, page }) 
 });
 
 test('Back navigation to the dashboard', async ({ context, page }) => {
-  if (!userId || !albumId) test.skip(true, 'E2E_TEST_USER_ID and E2E_TEST_ALBUM_ID must be set');
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);

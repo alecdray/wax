@@ -21,7 +21,7 @@ test('Login page has the app title', async ({ page }) => {
 
 test('Authenticated user is redirected to the library', async ({ context, page }) => {
   const userId = process.env.E2E_TEST_USER_ID;
-  if (!userId) test.skip(true, 'E2E_TEST_USER_ID is not set');
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto('/');
