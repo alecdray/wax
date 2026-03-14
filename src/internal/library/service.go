@@ -112,6 +112,7 @@ type AlbumDTO struct {
 	Tracks       []TrackDTO
 	Releases     ReleaseDTOs
 	Rating       *review.AlbumRatingDTO
+	RatingLog    []*review.AlbumRatingDTO
 	Tags         []tags.TagDTO
 	LastPlayedAt *time.Time
 }
@@ -356,7 +357,10 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 		tracksByAlbumId[track.AlbumID] = append(tracksByAlbumId[track.AlbumID], NewTrackDTOFromModel(track.Track))
 	}
 
-	ratings, err := s.db.Queries().GetUserAlbumRatings(ctx, userId)
+	ratings, err := s.db.Queries().GetLatestUserAlbumRatings(ctx, sqlc.GetLatestUserAlbumRatingsParams{
+		UserID:   userId,
+		UserID_2: userId,
+	})
 	if err != nil {
 		err = fmt.Errorf("failed to get ratings: %w", err)
 		return nil, err
@@ -555,15 +559,31 @@ func (s *Service) GetAlbumInLibrary(ctx context.Context, userId string, albumId 
 		trackDtos[i] = NewTrackDTOFromModel(track.Track)
 	}
 
-	rating, err := s.db.Queries().GetUserAlbumRating(ctx, sqlc.GetUserAlbumRatingParams{
+	latestRating, err := s.db.Queries().GetLatestUserAlbumRating(ctx, sqlc.GetLatestUserAlbumRatingParams{
 		UserID:  userId,
 		AlbumID: album.ID,
 	})
-	if errors.Is(sql.ErrNoRows, err) {
-		// pass
+	var ratingDTO *review.AlbumRatingDTO
+	if errors.Is(err, sql.ErrNoRows) {
+		// no rating
 	} else if err != nil {
-		err = fmt.Errorf("failed to get ratings: %w", err)
+		err = fmt.Errorf("failed to get rating: %w", err)
 		return nil, err
+	} else {
+		ratingDTO = review.NewAlbumRatingDTOFromModel(latestRating)
+	}
+
+	ratingLogRows, err := s.db.Queries().GetUserAlbumRatingLog(ctx, sqlc.GetUserAlbumRatingLogParams{
+		UserID:  userId,
+		AlbumID: album.ID,
+	})
+	if err != nil {
+		err = fmt.Errorf("failed to get rating log: %w", err)
+		return nil, err
+	}
+	ratingLog := make([]*review.AlbumRatingDTO, len(ratingLogRows))
+	for i, row := range ratingLogRows {
+		ratingLog[i] = review.NewAlbumRatingDTOFromModel(row)
 	}
 
 	albumDto := NewAlbumDTOFromModel(
@@ -571,8 +591,9 @@ func (s *Service) GetAlbumInLibrary(ctx context.Context, userId string, albumId 
 		artistDtos,
 		trackDtos,
 		releasesDtos,
-		review.NewAlbumRatingDTOFromModel(rating),
+		ratingDTO,
 	)
+	albumDto.RatingLog = ratingLog
 
 	albumTags, err := s.tagsService.GetAlbumTags(ctx, userId, albumId)
 	if err != nil {
@@ -614,7 +635,11 @@ func (s *Service) GetRecentlyPlayedAlbums(ctx context.Context, userID string) ([
 }
 
 func (s *Service) GetUnratedAlbums(ctx context.Context, userID string) ([]AlbumSummaryDTO, error) {
-	rows, err := s.db.Queries().GetUnratedAlbums(ctx, userID)
+	rows, err := s.db.Queries().GetUnratedAlbums(ctx, sqlc.GetUnratedAlbumsParams{
+		UserID:   userID,
+		UserID_2: userID,
+		UserID_3: userID,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get unrated albums: %w", err)
 	}

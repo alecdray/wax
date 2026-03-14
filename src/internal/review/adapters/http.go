@@ -188,188 +188,6 @@ func (h *HttpHandler) GetRatingRecommenderQuestions(w http.ResponseWriter, r *ht
 	}
 }
 
-func (h *HttpHandler) DeleteRatingRecommenderRating(w http.ResponseWriter, r *http.Request) {
-	ctx := contextx.NewContextX(r.Context())
-
-	userId, err := ctx.UserId()
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusBadRequest,
-			Err:    fmt.Errorf("failed to get user ID: %w", err),
-		})
-		return
-	}
-
-	albumId := r.URL.Query().Get("albumId")
-	if albumId == "" {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusBadRequest,
-			Err:    errors.New("missing album ID"),
-		})
-		return
-	}
-
-	album, err := h.libraryService.GetAlbumInLibrary(ctx, userId, albumId)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusBadRequest,
-			Err:    fmt.Errorf("failed to get album: %w", err),
-		})
-		return
-	}
-
-	err = h.reviewService.ClearRating(ctx, userId, albumId)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    fmt.Errorf("failed to clear rating: %w", err),
-		})
-		return
-	}
-	album.Rating = nil
-
-	err = CloseRatingModal().Render(ctx, w)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    err,
-		})
-		return
-	}
-
-	err = adapters.AlbumRating(*album, true).Render(ctx, w)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    err,
-		})
-		return
-	}
-}
-
-func (h *HttpHandler) GetReviewNotes(w http.ResponseWriter, r *http.Request) {
-	ctx := contextx.NewContextX(r.Context())
-
-	userId, err := ctx.UserId()
-	if err != nil {
-		err = fmt.Errorf("failed to get user ID: %w", err)
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusBadRequest,
-			Err:    err,
-		})
-		return
-	}
-
-	albumId := r.URL.Query().Get("albumId")
-	if albumId == "" {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusBadRequest,
-			Err:    errors.New("missing album ID"),
-		})
-		return
-	}
-
-	album, err := h.libraryService.GetAlbumInLibrary(ctx, userId, albumId)
-	if err != nil {
-		err = fmt.Errorf("failed to get album: %w", err)
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusBadRequest,
-			Err:    err,
-		})
-		return
-	}
-
-	err = ReviewNotesModal(*album).Render(ctx, w)
-	if err != nil {
-		err = fmt.Errorf("failed to render response: %w", err)
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    err,
-		})
-		return
-	}
-}
-
-func (h *HttpHandler) SubmitReviewNotes(w http.ResponseWriter, r *http.Request) {
-	ctx := contextx.NewContextX(r.Context())
-
-	userId, err := ctx.UserId()
-	if err != nil {
-		err = fmt.Errorf("failed to get user ID: %w", err)
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusBadRequest,
-			Err:    err,
-		})
-		return
-	}
-
-	albumId := r.URL.Query().Get("albumId")
-	if albumId == "" {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusBadRequest,
-			Err:    errors.New("missing album ID"),
-		})
-		return
-	}
-
-	album, err := h.libraryService.GetAlbumInLibrary(ctx, userId, albumId)
-	if err != nil {
-		err = fmt.Errorf("failed to get album: %w", err)
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusBadRequest,
-			Err:    err,
-		})
-		return
-	}
-
-	err = r.ParseForm()
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusBadRequest,
-			Err:    err,
-		})
-		return
-	}
-
-	reviewText := r.Form.Get("review")
-	if len(reviewText) > 2000 {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusBadRequest,
-			Err:    errors.New("review exceeds 2000 character limit"),
-		})
-		return
-	}
-
-	albumRating, err := h.reviewService.UpdateReview(ctx, userId, albumId, reviewText)
-	if err != nil {
-		err = fmt.Errorf("failed to update review: %w", err)
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    err,
-		})
-		return
-	}
-	album.Rating = albumRating
-
-	err = CloseReviewNotesModal().Render(ctx, w)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    err,
-		})
-		return
-	}
-
-	err = adapters.AlbumNotesIcon(*album, true).Render(ctx, w)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    err,
-		})
-		return
-	}
-}
-
 func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())
 
@@ -390,16 +208,6 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusBadRequest,
 			Err:    errors.New("missing album ID"),
-		})
-		return
-	}
-
-	album, err := h.libraryService.GetAlbumInLibrary(ctx, userId, albumId)
-	if err != nil {
-		err = fmt.Errorf("failed to get album: %w", err)
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusBadRequest,
-			Err:    err,
 		})
 		return
 	}
@@ -425,9 +233,28 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 		return
 	}
 
-	albumRating, err := h.reviewService.UpdateRating(ctx, userId, albumId, rating)
+	note := formData.Get("note")
+	if len(note) > 2000 {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    errors.New("note exceeds 2000 character limit"),
+		})
+		return
+	}
+
+	albumRating, err := h.reviewService.AddRating(ctx, userId, albumId, rating, note)
 	if err != nil {
-		err = fmt.Errorf("failed to update rating: %w", err)
+		err = fmt.Errorf("failed to add rating: %w", err)
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    err,
+		})
+		return
+	}
+
+	album, err := h.libraryService.GetAlbumInLibrary(ctx, userId, albumId)
+	if err != nil {
+		err = fmt.Errorf("failed to get album: %w", err)
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusBadRequest,
 			Err:    err,
@@ -446,6 +273,82 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 	}
 
 	err = adapters.AlbumRating(*album, true).Render(ctx, w)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    err,
+		})
+		return
+	}
+
+	err = adapters.AlbumRatingHistory(*album, true).Render(ctx, w)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    err,
+		})
+		return
+	}
+}
+
+func (h *HttpHandler) DeleteRatingLogEntry(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+
+	userId, err := ctx.UserId()
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get user ID: %w", err),
+		})
+		return
+	}
+
+	entryId := r.PathValue("id")
+	if entryId == "" {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    errors.New("missing entry ID"),
+		})
+		return
+	}
+
+	albumId := r.URL.Query().Get("albumId")
+	if albumId == "" {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    errors.New("missing album ID"),
+		})
+		return
+	}
+
+	err = h.reviewService.DeleteRatingEntry(ctx, userId, entryId)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to delete rating entry: %w", err),
+		})
+		return
+	}
+
+	album, err := h.libraryService.GetAlbumInLibrary(ctx, userId, albumId)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get album: %w", err),
+		})
+		return
+	}
+
+	err = adapters.AlbumRating(*album, true).Render(ctx, w)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    err,
+		})
+		return
+	}
+
+	err = adapters.AlbumRatingHistory(*album, true).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,

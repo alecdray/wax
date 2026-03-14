@@ -1,7 +1,7 @@
 Feature: Album Detail Page
 
   A dedicated page for a single album in the user's library, surfacing all
-  album metadata, ratings, notes, tags, and release formats in a mobile-friendly layout.
+  album metadata, ratings, rating history, tags, and release formats in a mobile-friendly layout.
 
   Scenario: Viewing an album in the library
     Given a logged-in user with at least one album in their library
@@ -20,10 +20,6 @@ Feature: Album Detail Page
     When they click the Rate button
     Then the rating modal opens
 
-  Scenario: Editing notes from the detail page
-    Given a logged-in user on an album detail page
-    When they click the notes button
-    Then the notes modal opens
 
   Scenario: Editing tags from the detail page
     Given a logged-in user on an album detail page

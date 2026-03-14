@@ -66,17 +66,6 @@ test('Opening the rating modal from an album row', async ({ context, page }) => 
   await expect(page.locator('dialog[open]')).toBeVisible();
 });
 
-test('Opening the notes modal from an album row', async ({ context, page }) => {
-  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
-
-  await loginAs(context, userId!);
-  await page.goto('/app/library/dashboard');
-
-  await page.getByTestId('album-row-menu').first().click();
-  await page.getByTestId('album-row-notes-button').first().click();
-
-  await expect(page.locator('dialog[open]')).toBeVisible();
-});
 
 test('Opening the tags modal from an album row', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();

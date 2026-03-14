@@ -11,19 +11,91 @@ import (
 	"time"
 )
 
-const clearAlbumRating = `-- name: ClearAlbumRating :exec
-UPDATE album_ratings SET rating = NULL, updated_at = current_timestamp
-WHERE user_id = ? AND album_id = ?
+const deleteAlbumRatingLogEntry = `-- name: DeleteAlbumRatingLogEntry :exec
+DELETE FROM album_rating_log
+WHERE id = ? AND user_id = ?
 `
 
-type ClearAlbumRatingParams struct {
+type DeleteAlbumRatingLogEntryParams struct {
+	ID     string
+	UserID string
+}
+
+func (q *Queries) DeleteAlbumRatingLogEntry(ctx context.Context, arg DeleteAlbumRatingLogEntryParams) error {
+	_, err := q.db.ExecContext(ctx, deleteAlbumRatingLogEntry, arg.ID, arg.UserID)
+	return err
+}
+
+const getLatestUserAlbumRating = `-- name: GetLatestUserAlbumRating :one
+SELECT id, user_id, album_id, rating, note, created_at FROM album_rating_log
+WHERE user_id = ? AND album_id = ?
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type GetLatestUserAlbumRatingParams struct {
 	UserID  string
 	AlbumID string
 }
 
-func (q *Queries) ClearAlbumRating(ctx context.Context, arg ClearAlbumRatingParams) error {
-	_, err := q.db.ExecContext(ctx, clearAlbumRating, arg.UserID, arg.AlbumID)
-	return err
+func (q *Queries) GetLatestUserAlbumRating(ctx context.Context, arg GetLatestUserAlbumRatingParams) (AlbumRatingLog, error) {
+	row := q.db.QueryRowContext(ctx, getLatestUserAlbumRating, arg.UserID, arg.AlbumID)
+	var i AlbumRatingLog
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.AlbumID,
+		&i.Rating,
+		&i.Note,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getLatestUserAlbumRatings = `-- name: GetLatestUserAlbumRatings :many
+SELECT arl.id, arl.user_id, arl.album_id, arl.rating, arl.note, arl.created_at FROM album_rating_log arl
+JOIN (
+    SELECT arl2.album_id, MAX(arl2.created_at) AS max_created_at
+    FROM album_rating_log arl2
+    WHERE arl2.user_id = ?
+    GROUP BY arl2.album_id
+) latest ON arl.album_id = latest.album_id AND arl.created_at = latest.max_created_at
+WHERE arl.user_id = ?
+`
+
+type GetLatestUserAlbumRatingsParams struct {
+	UserID   string
+	UserID_2 string
+}
+
+func (q *Queries) GetLatestUserAlbumRatings(ctx context.Context, arg GetLatestUserAlbumRatingsParams) ([]AlbumRatingLog, error) {
+	rows, err := q.db.QueryContext(ctx, getLatestUserAlbumRatings, arg.UserID, arg.UserID_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AlbumRatingLog
+	for rows.Next() {
+		var i AlbumRatingLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.AlbumID,
+			&i.Rating,
+			&i.Note,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getUnratedAlbums = `-- name: GetUnratedAlbums :many
@@ -35,14 +107,30 @@ SELECT albums.id, albums.spotify_id, albums.title, albums.created_at, albums.del
 FROM user_releases
 JOIN releases ON releases.id = user_releases.release_id
 JOIN albums ON albums.id = releases.album_id
-LEFT JOIN album_ratings ON album_ratings.album_id = albums.id AND album_ratings.user_id = user_releases.user_id
+LEFT JOIN (
+    SELECT arl.album_id, arl.user_id
+    FROM album_rating_log arl
+    JOIN (
+        SELECT arl2.album_id, MAX(arl2.created_at) AS max_created_at
+        FROM album_rating_log arl2
+        WHERE arl2.user_id = ?
+        GROUP BY arl2.album_id
+    ) latest ON arl.album_id = latest.album_id AND arl.created_at = latest.max_created_at
+    WHERE arl.user_id = ?
+) latest_rating ON latest_rating.album_id = albums.id AND latest_rating.user_id = user_releases.user_id
 LEFT JOIN track_plays ON track_plays.album_id = albums.id AND track_plays.user_id = user_releases.user_id
 WHERE user_releases.user_id = ?
-  AND (album_ratings.id IS NULL OR album_ratings.rating IS NULL)
+  AND latest_rating.album_id IS NULL
 GROUP BY albums.id
 ORDER BY MAX(track_plays.played_at) DESC NULLS LAST, MAX(user_releases.added_at) DESC
 LIMIT 20
 `
+
+type GetUnratedAlbumsParams struct {
+	UserID   string
+	UserID_2 string
+	UserID_3 string
+}
 
 type GetUnratedAlbumsRow struct {
 	ID          string
@@ -54,8 +142,8 @@ type GetUnratedAlbumsRow struct {
 	ArtistNames interface{}
 }
 
-func (q *Queries) GetUnratedAlbums(ctx context.Context, userID string) ([]GetUnratedAlbumsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getUnratedAlbums, userID)
+func (q *Queries) GetUnratedAlbums(ctx context.Context, arg GetUnratedAlbumsParams) ([]GetUnratedAlbumsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getUnratedAlbums, arg.UserID, arg.UserID_2, arg.UserID_3)
 	if err != nil {
 		return nil, err
 	}
@@ -85,74 +173,33 @@ func (q *Queries) GetUnratedAlbums(ctx context.Context, userID string) ([]GetUnr
 	return items, nil
 }
 
-const getUserAlbumRating = `-- name: GetUserAlbumRating :one
-select id, user_id, album_id, rating, created_at, updated_at, review from album_ratings
-where user_id = ?
-and album_id = ?
+const getUserAlbumRatingLog = `-- name: GetUserAlbumRatingLog :many
+SELECT id, user_id, album_id, rating, note, created_at FROM album_rating_log
+WHERE user_id = ? AND album_id = ?
+ORDER BY created_at DESC
 `
 
-type GetUserAlbumRatingParams struct {
+type GetUserAlbumRatingLogParams struct {
 	UserID  string
 	AlbumID string
 }
 
-func (q *Queries) GetUserAlbumRating(ctx context.Context, arg GetUserAlbumRatingParams) (AlbumRating, error) {
-	row := q.db.QueryRowContext(ctx, getUserAlbumRating, arg.UserID, arg.AlbumID)
-	var i AlbumRating
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.AlbumID,
-		&i.Rating,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Review,
-	)
-	return i, err
-}
-
-const getUserAlbumRatingById = `-- name: GetUserAlbumRatingById :one
-select id, user_id, album_id, rating, created_at, updated_at, review from album_ratings
-where id = ?
-`
-
-func (q *Queries) GetUserAlbumRatingById(ctx context.Context, id string) (AlbumRating, error) {
-	row := q.db.QueryRowContext(ctx, getUserAlbumRatingById, id)
-	var i AlbumRating
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.AlbumID,
-		&i.Rating,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Review,
-	)
-	return i, err
-}
-
-const getUserAlbumRatings = `-- name: GetUserAlbumRatings :many
-select id, user_id, album_id, rating, created_at, updated_at, review from album_ratings
-where user_id = ?
-`
-
-func (q *Queries) GetUserAlbumRatings(ctx context.Context, userID string) ([]AlbumRating, error) {
-	rows, err := q.db.QueryContext(ctx, getUserAlbumRatings, userID)
+func (q *Queries) GetUserAlbumRatingLog(ctx context.Context, arg GetUserAlbumRatingLogParams) ([]AlbumRatingLog, error) {
+	rows, err := q.db.QueryContext(ctx, getUserAlbumRatingLog, arg.UserID, arg.AlbumID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []AlbumRating
+	var items []AlbumRatingLog
 	for rows.Next() {
-		var i AlbumRating
+		var i AlbumRatingLog
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
 			&i.AlbumID,
 			&i.Rating,
+			&i.Note,
 			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.Review,
 		); err != nil {
 			return nil, err
 		}
@@ -167,70 +214,36 @@ func (q *Queries) GetUserAlbumRatings(ctx context.Context, userID string) ([]Alb
 	return items, nil
 }
 
-const upsertAlbumRating = `-- name: UpsertAlbumRating :one
-INSERT INTO album_ratings (id, user_id, album_id, rating) VALUES (?, ?, ?, ?)
-ON CONFLICT (user_id, album_id)
-DO UPDATE SET rating = COALESCE(EXCLUDED.rating, rating), review = COALESCE(review, review), updated_at = current_timestamp
-RETURNING id, user_id, album_id, rating, created_at, updated_at, review
+const insertAlbumRatingLogEntry = `-- name: InsertAlbumRatingLogEntry :one
+INSERT INTO album_rating_log (id, user_id, album_id, rating, note, created_at)
+VALUES (?, ?, ?, ?, ?, current_timestamp)
+RETURNING id, user_id, album_id, rating, note, created_at
 `
 
-type UpsertAlbumRatingParams struct {
+type InsertAlbumRatingLogEntryParams struct {
 	ID      string
 	UserID  string
 	AlbumID string
-	Rating  sql.NullFloat64
+	Rating  float64
+	Note    sql.NullString
 }
 
-func (q *Queries) UpsertAlbumRating(ctx context.Context, arg UpsertAlbumRatingParams) (AlbumRating, error) {
-	row := q.db.QueryRowContext(ctx, upsertAlbumRating,
+func (q *Queries) InsertAlbumRatingLogEntry(ctx context.Context, arg InsertAlbumRatingLogEntryParams) (AlbumRatingLog, error) {
+	row := q.db.QueryRowContext(ctx, insertAlbumRatingLogEntry,
 		arg.ID,
 		arg.UserID,
 		arg.AlbumID,
 		arg.Rating,
+		arg.Note,
 	)
-	var i AlbumRating
+	var i AlbumRatingLog
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.AlbumID,
 		&i.Rating,
+		&i.Note,
 		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Review,
-	)
-	return i, err
-}
-
-const upsertAlbumReview = `-- name: UpsertAlbumReview :one
-INSERT INTO album_ratings (id, user_id, album_id, review) VALUES (?, ?, ?, ?)
-ON CONFLICT (user_id, album_id)
-DO UPDATE SET review = EXCLUDED.review, updated_at = current_timestamp
-RETURNING id, user_id, album_id, rating, created_at, updated_at, review
-`
-
-type UpsertAlbumReviewParams struct {
-	ID      string
-	UserID  string
-	AlbumID string
-	Review  sql.NullString
-}
-
-func (q *Queries) UpsertAlbumReview(ctx context.Context, arg UpsertAlbumReviewParams) (AlbumRating, error) {
-	row := q.db.QueryRowContext(ctx, upsertAlbumReview,
-		arg.ID,
-		arg.UserID,
-		arg.AlbumID,
-		arg.Review,
-	)
-	var i AlbumRating
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.AlbumID,
-		&i.Rating,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Review,
 	)
 	return i, err
 }

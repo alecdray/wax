@@ -86,15 +86,6 @@ templ RatingRecommenderConfirm(album library.AlbumDTO, rating *float64) {
         >
           @templates.QuestionMarkIcon(templates.IconProps{})
         </button>
-        <button
-          class="btn btn-ghost btn-sm btn-square text-error"
-          type="button"
-          data-testid="rating-delete"
-          hx-delete={ fmt.Sprintf("/app/review/rating-recommender/rating?albumId=%s", album.ID) }
-          hx-swap="none"
-        >
-          @templates.TrashIcon(templates.IconProps{})
-        </button>
       </div>
     </div>
     <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border px-4">
@@ -118,12 +109,9 @@ templ RatingRecommenderConfirm(album library.AlbumDTO, rating *float64) {
         />
         <span class="badge badge-primary badge-soft badge-s" x-show="rating !== ''" x-text="getRatingLabel(rating)"></span>
       </label>
-      @RatingRecommenderConfirmError("")
-    </fieldset>
-    <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border px-4">
       <div class="collapse collapse-arrow">
         <input type="checkbox"/>
-        <div class="collapse-title">Rating key</div>
+        <div class="collapse-title text-xs">Rating key</div>
         <div class="collapse-content">
           <table class="table table-xs">
             <tbody>
@@ -137,6 +125,17 @@ templ RatingRecommenderConfirm(album library.AlbumDTO, rating *float64) {
           </table>
         </div>
       </div>
+      @RatingRecommenderConfirmError("")
+    </fieldset>
+    <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border px-4">
+      <legend class="fieldset-legend">Note <span class="font-normal text-base-content/40">(optional)</span></legend>
+      <textarea
+        name="note"
+        data-testid="rating-note"
+        class="textarea w-full min-h-20"
+        placeholder="Add a note about this rating..."
+        maxlength="2000"
+      ></textarea>
     </fieldset>
     <button
       class="btn btn-primary w-full"

@@ -140,9 +140,7 @@ func Start(ctx context.Context, app app.App) {
 	appMux.Handle("GET /app/review/rating-recommender/questions", httpx.HandlerFunc(reviewHandler.GetRatingRecommenderQuestions))
 	appMux.Handle("POST /app/review/rating-recommender/questions", httpx.HandlerFunc(reviewHandler.SubmitRatingRecommenderQuestions))
 	appMux.Handle("POST /app/review/rating-recommender/rating", httpx.HandlerFunc(reviewHandler.SubmitRatingRecommenderRating))
-	appMux.Handle("DELETE /app/review/rating-recommender/rating", httpx.HandlerFunc(reviewHandler.DeleteRatingRecommenderRating))
-	appMux.Handle("GET /app/review/notes", httpx.HandlerFunc(reviewHandler.GetReviewNotes))
-	appMux.Handle("POST /app/review/notes", httpx.HandlerFunc(reviewHandler.SubmitReviewNotes))
+	appMux.Handle("DELETE /app/review/rating-log/{id}", httpx.HandlerFunc(reviewHandler.DeleteRatingLogEntry))
 
 	// Not found handler, must be registered after all other handlers
 	rootMux.HandleFunc("/", httpx.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

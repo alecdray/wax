@@ -42,23 +42,11 @@ test('Rating an album from the detail page', async ({ context, page }) => {
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  // Click the rating trigger (either the badge or the "Rate" button)
   await page.getByTestId('album-detail-rating').locator('[hx-get*="rating-recommender"]').click();
 
   await expect(page.locator('dialog[open]')).toBeVisible();
 });
 
-test('Editing notes from the detail page', async ({ context, page }) => {
-  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
-  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
-
-  await loginAs(context, userId!);
-  await page.goto(`/app/library/albums/${albumId}`);
-
-  await page.getByTestId('album-detail-notes').locator('button').click();
-
-  await expect(page.locator('dialog[open]')).toBeVisible();
-});
 
 test('Editing tags from the detail page', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();

@@ -2,34 +2,35 @@ package review
 
 import (
 	"context"
+	"database/sql"
 	"github.com/alecdray/wax/src/internal/core/db"
 	"github.com/alecdray/wax/src/internal/core/db/sqlc"
-	"github.com/alecdray/wax/src/internal/core/sqlx"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 type AlbumRatingDTO struct {
-	ID      string
-	UserID  string
-	AlbumID string
-	Rating  *float64
-	Review  *string
+	ID        string
+	UserID    string
+	AlbumID   string
+	Rating    *float64
+	Note      *string
+	CreatedAt time.Time
 }
 
-func NewAlbumRatingDTOFromModel(model sqlc.AlbumRating) *AlbumRatingDTO {
+func NewAlbumRatingDTOFromModel(model sqlc.AlbumRatingLog) *AlbumRatingDTO {
 	dto := &AlbumRatingDTO{
-		ID:      model.ID,
-		UserID:  model.UserID,
-		AlbumID: model.AlbumID,
+		ID:        model.ID,
+		UserID:    model.UserID,
+		AlbumID:   model.AlbumID,
+		CreatedAt: model.CreatedAt,
 	}
 
-	if model.Rating.Valid {
-		dto.Rating = &model.Rating.Float64
-	}
+	dto.Rating = &model.Rating
 
-	if model.Review.Valid {
-		dto.Review = &model.Review.String
+	if model.Note.Valid {
+		dto.Note = &model.Note.String
 	}
 
 	return dto
@@ -45,12 +46,17 @@ func NewService(db *db.DB) *Service {
 	}
 }
 
-func (s *Service) UpdateRating(ctx context.Context, userId, albumId string, rating float64) (*AlbumRatingDTO, error) {
-	model, err := s.db.Queries().UpsertAlbumRating(ctx, sqlc.UpsertAlbumRatingParams{
+func (s *Service) AddRating(ctx context.Context, userId, albumId string, rating float64, note string) (*AlbumRatingDTO, error) {
+	var noteParam sql.NullString
+	if note != "" {
+		noteParam = sql.NullString{String: note, Valid: true}
+	}
+	model, err := s.db.Queries().InsertAlbumRatingLogEntry(ctx, sqlc.InsertAlbumRatingLogEntryParams{
 		ID:      uuid.NewString(),
 		UserID:  userId,
 		AlbumID: albumId,
-		Rating:  sqlx.NewNullFloat64(rating),
+		Rating:  rating,
+		Note:    noteParam,
 	})
 	if err != nil {
 		return nil, err
@@ -59,23 +65,25 @@ func (s *Service) UpdateRating(ctx context.Context, userId, albumId string, rati
 	return NewAlbumRatingDTOFromModel(model), nil
 }
 
-func (s *Service) ClearRating(ctx context.Context, userId, albumId string) error {
-	return s.db.Queries().ClearAlbumRating(ctx, sqlc.ClearAlbumRatingParams{
-		UserID:  userId,
-		AlbumID: albumId,
+func (s *Service) DeleteRatingEntry(ctx context.Context, userId, entryId string) error {
+	return s.db.Queries().DeleteAlbumRatingLogEntry(ctx, sqlc.DeleteAlbumRatingLogEntryParams{
+		ID:     entryId,
+		UserID: userId,
 	})
 }
 
-func (s *Service) UpdateReview(ctx context.Context, userId, albumId string, review string) (*AlbumRatingDTO, error) {
-	model, err := s.db.Queries().UpsertAlbumReview(ctx, sqlc.UpsertAlbumReviewParams{
-		ID:      uuid.NewString(),
+func (s *Service) GetRatingLog(ctx context.Context, userId, albumId string) ([]*AlbumRatingDTO, error) {
+	rows, err := s.db.Queries().GetUserAlbumRatingLog(ctx, sqlc.GetUserAlbumRatingLogParams{
 		UserID:  userId,
 		AlbumID: albumId,
-		Review:  sqlx.NewNullString(review),
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return NewAlbumRatingDTOFromModel(model), nil
+	dtos := make([]*AlbumRatingDTO, len(rows))
+	for i, row := range rows {
+		dtos[i] = NewAlbumRatingDTOFromModel(row)
+	}
+	return dtos, nil
 }

@@ -30,10 +30,6 @@ Feature: Library Dashboard
     When they click the rating control on an album row
     Then the rating modal opens
 
-  Scenario: Opening the notes modal from an album row
-    Given a logged-in user on the dashboard with at least one album
-    When they click the notes button on an album row
-    Then the notes modal opens
 
   Scenario: Opening the tags modal from an album row
     Given a logged-in user on the dashboard with at least one album

@@ -81,15 +81,6 @@ CREATE TABLE IF NOT EXISTS "album_tracks" (
     track_id text not null references tracks(id) on delete cascade,
     unique(album_id, track_id)
 );
-CREATE TABLE album_ratings (
-    id text primary key,
-    user_id text not null references users(id) on delete cascade,
-    album_id text not null references albums(id) on delete cascade,
-    rating float,
-    created_at datetime not null default current_timestamp,
-    updated_at datetime, review text,
-    unique(user_id, album_id)
-);
 CREATE TABLE track_plays (
     id text primary key,
     user_id text not null references users(id) on delete cascade,
@@ -120,4 +111,12 @@ CREATE TABLE album_tags (
     tag_id     TEXT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, album_id, tag_id)
+);
+CREATE TABLE album_rating_log (
+    id         text primary key,
+    user_id    text not null references users(id) on delete cascade,
+    album_id   text not null references albums(id) on delete cascade,
+    rating     float not null,
+    note       text,
+    created_at datetime not null default current_timestamp
 );

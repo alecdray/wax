@@ -25,14 +25,13 @@ type AlbumArtist struct {
 	ArtistID string
 }
 
-type AlbumRating struct {
+type AlbumRatingLog struct {
 	ID        string
 	UserID    string
 	AlbumID   string
-	Rating    sql.NullFloat64
+	Rating    float64
+	Note      sql.NullString
 	CreatedAt time.Time
-	UpdatedAt sql.NullTime
-	Review    sql.NullString
 }
 
 type AlbumTag struct {

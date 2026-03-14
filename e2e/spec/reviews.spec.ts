@@ -6,6 +6,43 @@ import { loginAs } from '../helpers/auth';
 const userId = process.env.E2E_TEST_USER_ID;
 const albumId = process.env.E2E_TEST_ALBUM_ID;
 
+async function openRatingModal(page: any) {
+  await page.getByTestId('album-detail-rating').locator('[hx-get*="rating-recommender"]').click();
+  await expect(page.getByTestId('rating-confirm')).toBeVisible();
+}
+
+async function submitRating(page: any, score: string) {
+  await openRatingModal(page);
+  await page.getByTestId('rating-input').fill(score);
+  await page.getByTestId('rating-lock-in').click();
+  await expect(page.locator('dialog[open]')).not.toBeVisible();
+}
+
+async function openRatingHistory(page: any) {
+  const history = page.getByTestId('album-detail-rating-history');
+  const checkbox = history.locator('input[type="checkbox"]');
+  if (!await checkbox.isChecked()) {
+    await checkbox.click({ force: true });
+  }
+}
+
+async function deleteEntry(page: any) {
+  await openRatingHistory(page);
+  const responsePromise = page.waitForResponse(
+    (resp: any) => resp.url().includes('/rating-log/') && resp.status() === 200
+  );
+  await page.getByTestId('rating-history-delete').first().click();
+  await responsePromise;
+}
+
+async function clearAllEntries(page: any) {
+  await openRatingHistory(page);
+  const count = await page.getByTestId('rating-history-delete').count();
+  for (let i = 0; i < count; i++) {
+    await deleteEntry(page);
+  }
+}
+
 test('Rating modal opens to the confirmation form', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
   expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
@@ -13,9 +50,8 @@ test('Rating modal opens to the confirmation form', async ({ context, page }) =>
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  await page.getByTestId('album-detail-rating').locator('[hx-get*="rating-recommender"]').click();
+  await openRatingModal(page);
 
-  await expect(page.getByTestId('rating-confirm')).toBeVisible();
   await expect(page.getByTestId('rating-input')).toBeVisible();
   await expect(page.getByTestId('rating-lock-in')).toBeVisible();
 });
@@ -27,10 +63,7 @@ test('Navigating to the questionnaire from the confirmation form', async ({ cont
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  await page.getByTestId('album-detail-rating').locator('[hx-get*="rating-recommender"]').click();
-  await expect(page.getByTestId('rating-confirm')).toBeVisible();
-
-  // The ? button inside the confirm form navigates to the questionnaire
+  await openRatingModal(page);
   await page.getByTestId('rating-confirm').locator('[hx-get*="questions"]').click();
 
   await expect(page.getByTestId('rating-questionnaire')).toBeVisible();
@@ -44,11 +77,10 @@ test('Completing the questionnaire produces a score', async ({ context, page }) 
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  await page.getByTestId('album-detail-rating').locator('[hx-get*="rating-recommender"]').click();
+  await openRatingModal(page);
   await page.getByTestId('rating-confirm').locator('[hx-get*="questions"]').click();
   await expect(page.getByTestId('rating-questionnaire')).toBeVisible();
 
-  // Answer every question by picking the first radio option in each fieldset
   const fieldsets = page.locator('[data-testid="rating-questionnaire"] fieldset');
   const count = await fieldsets.count();
   for (let i = 0; i < count; i++) {
@@ -68,42 +100,76 @@ test('Saving a rating', async ({ context, page }) => {
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  await page.getByTestId('album-detail-rating').locator('[hx-get*="rating-recommender"]').click();
-  await expect(page.getByTestId('rating-confirm')).toBeVisible();
+  await submitRating(page, '7');
+});
 
-  await page.getByTestId('rating-input').fill('7');
+test('Saving a rating with a note', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto(`/app/library/albums/${albumId}`);
+
+  await openRatingModal(page);
+  await page.getByTestId('rating-input').fill('8');
+  await page.getByTestId('rating-note').fill('A great listen.');
   await page.getByTestId('rating-lock-in').click();
 
   await expect(page.locator('dialog[open]')).not.toBeVisible();
+  await expect(page.getByTestId('rating-history-note').first()).toContainText('A great listen.');
 });
 
-test('Deleting a rating', async ({ context, page }) => {
+test('No delete button in the rating modal', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
   expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  await page.getByTestId('album-detail-rating').locator('[hx-get*="rating-recommender"]').click();
-  await expect(page.getByTestId('rating-confirm')).toBeVisible();
+  await openRatingModal(page);
 
-  await page.getByTestId('rating-delete').click();
-
-  await expect(page.locator('dialog[open]')).not.toBeVisible();
+  await expect(page.getByTestId('rating-delete')).not.toBeVisible();
 });
 
-test('Saving review notes', async ({ context, page }) => {
+test('Rating history is shown on the album detail page', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto(`/app/library/albums/${albumId}`);
+  await clearAllEntries(page);
+
+  await submitRating(page, '6');
+  await submitRating(page, '7.5');
+
+  await expect(page.getByTestId('rating-history-entry')).toHaveCount(2);
+  await expect(page.getByTestId('album-detail-rating-history')).toBeVisible();
+});
+
+test('Deleting the only rating entry clears the album rating', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
   expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  await page.getByTestId('album-detail-notes').locator('button').click();
-  await expect(page.locator('dialog[open]')).toBeVisible();
+  await clearAllEntries(page);
 
-  await page.getByTestId('review-notes-textarea').fill('Great record.');
-  await page.getByTestId('review-notes-save').click();
+  await submitRating(page, '5');
+  await expect(page.getByTestId('rating-history-entry')).toHaveCount(1);
 
-  await expect(page.locator('dialog[open]')).not.toBeVisible();
+  await deleteEntry(page);
+
+  await expect(page.getByTestId('rating-history-entry')).toHaveCount(0);
+});
+
+test('No notes on dashboard', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/dashboard');
+
+  await expect(page.getByTestId('album-row-notes')).not.toBeVisible();
+  await expect(page.getByTestId('album-row-notes-button')).not.toBeVisible();
 });
