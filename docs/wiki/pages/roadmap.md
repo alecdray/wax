@@ -27,7 +27,11 @@ Planned features in rough priority order. See [features](./features.md) for what
 | **Wishlist** | Track albums you want but don't own yet |
 | **Sleeve Notes** | Attach free-form notes to any library entity |
 | **Linked Albums** | Connect albums to each other, building a personal music graph |
-| **My Library v1.1** | Rework the library table into a list view with faceted filtering and sorting; dashboard UX cleanup: remove Spotify links from album name and artist columns, make album image and artist name clicks open the album detail page; physical media support; multiple view modes |
+| **[My Library v1.1](./my-library-v1.1.md)** | Rework the library table into a list view with chip-based faceted filtering and sorting; dashboard UX cleanup: remove all Spotify outlinks from the dashboard, make album image and artist name clicks open the album detail page |
+| **Library Search** | Search/filter box on the dashboard to find albums in the library by title or artist |
+| **Physical Media** | Support for vinyl, CD, and cassette ownership; manual add flow with Discogs/MusicBrainz lookup; format facet in library filters |
+| **Hidden Albums** | Soft-remove albums from the main library view without deleting them (e.g., podcasts or junk synced from Spotify) |
+| **Album Detail — Non-Library Albums** | Support a read-only detail view for albums not in the user's library; fixes Recently Spun carousel items that currently 404 or fall back to Spotify outlinks |
 | **Auth Error Handling** | Graceful handling of JWT middleware failures and expired/invalid Spotify token failures |
 
 ## Ideas & Open Questions
@@ -45,4 +49,5 @@ Planned features in rough priority order. See [features](./features.md) for what
 - **Shared by / shared with** — optional field to track who introduced you to a record
 - **Social features** — Goodreads-style network, but secondary to personal library depth
 - **Last.fm integration** — extended listening history, working around Spotify's 50-track limit (see [integrations](./integrations.md))
+- **Multiple view modes** — grid/cover wall, compact text-only, and table alongside the default list view; mode switcher in the library header; persisted per user
 
