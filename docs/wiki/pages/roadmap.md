@@ -33,7 +33,6 @@ Planned features in rough priority order. See [features](./features.md) for what
 
 - **Stats & Insights visualizations** — listening heatmap (GitHub-style activity grid by day/month), genre evolution timeline showing how tastes shifted year over year, top artists by decade, "record DNA" radar chart showing where a library skews across tempo/energy/mood/era
 - **Progressive Web App (PWA)** — open question: whether to convert Wax to a PWA for offline support and installability; deferred until the mobile experience is more fully developed
-- **Rating history** — instead of a single current score, append each rating update as a timestamped entry so the full arc of how an opinion changed is preserved; each entry can carry a note explaining why the rating changed; if a guided rating questionnaire was used to arrive at a score, the individual question answers should be recorded alongside the rating so users can see how their responses shifted over time
 - **Comparative ranking** — derive a rating by pitting an album against others the user has already rated; a series of "is this better than that?" questions produces a score grounded in relative preference rather than an abstract 0–10 pick
 - **Dual-axis rating** — separate scores for objective quality vs. personal enjoyment ("it's a masterpiece but I never play it")
 - **Timestamped reviews** — reviews as journal entries to track how opinions evolve

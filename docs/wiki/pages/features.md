@@ -31,7 +31,7 @@ A stats bar at the top of the dashboard shows the user's total artist, album, an
 
 Each table row exposes per-row actions:
 - A rating control — shown as a score badge if the album is already rated, or a "Rate" button if not — opens the [rating modal](#rankings--reviews) directly
-- Notes and Tags are accessible via an ellipsis (⋯) dropdown menu on each row
+- Tags are accessible via an ellipsis (⋯) dropdown menu on each row
 
 A carousel above the library table offers two togglable views for surfacing albums worth acting on:
 
@@ -50,7 +50,7 @@ Each album in the library has a dedicated detail page showing all information Wa
 
 - Cover art, title, and artists (with Spotify links)
 - Release formats in the user's library with the date each was added
-- Rating, review notes, and tags — all editable from the page via the same modals used on the dashboard
+- Rating, rating history, and tags — all editable from the page via the same modals used on the dashboard
 - Last played date (when listening history is available)
 - Track list
 
@@ -74,8 +74,9 @@ Wax records what you've been playing by polling Spotify's recently played tracks
 Users can rate and review albums in their library.
 
 - 0–10 score per album, manually set or guided by a 3-question questionnaire (scoring approach inspired by [Pitchfork](https://pitchfork.com/news/how-to-rate-albums-using-pitchfork-scores/))
-- Free-text review notes attached to the rating
-- Rating and review are independently updatable
+- Ratings are stored as an append-only log — each new rating is a new entry; the most recent entry is shown as the current rating everywhere
+- An optional free-text note can be attached when submitting a new rating; notes are tied to the specific rating entry and are not separately editable after submission
+- The album detail page shows a collapsible **Rating History** section listing all past entries in reverse-chronological order, each with its score, label, date, and any attached note; each entry has a delete button to remove it individually
 
 ### Rating Modal
 
@@ -83,13 +84,11 @@ The rating modal is the primary entry point for scoring an album. It always open
 
 The confirm form contains:
 - A numeric score input (0–10, step 0.1) with a live label (e.g. "Heavy Rotation") that updates as the score changes
+- An optional note textarea (up to 2,000 characters) for attaching a note to this rating entry
 - A "Lock in" button to save the rating
 - A **?** button that navigates to the questionnaire within the modal
-- A trash button that deletes an existing rating and closes the modal
 
 After a successful save, the modal closes automatically.
-
-The **review notes** modal is separate — it contains a textarea (up to 2,000 characters) and a "Save Notes" button. It also closes automatically after a successful save.
 
 ### Rating Questionnaire
 

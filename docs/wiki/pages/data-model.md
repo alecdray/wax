@@ -43,7 +43,7 @@ User-generated content attached to library entities:
 
 | Entity | Description |
 |---|---|
-| **Album Rating** | A 0–10 score on an album, optionally with review text |
+| **Album Rating Log** | An append-only log of 0–10 rating entries for an album; each entry optionally includes a note and carries its own timestamp |
 | **Tag Group** | A named category for organizing tags (e.g. Sound, Mood) |
 | **Tag** | A user-defined label applied to albums, optionally grouped |
 | **Album Tag** | Join between an album and a tag |
@@ -66,7 +66,7 @@ User-generated content attached to library entities:
 ```
 User
  ├── User Releases → Release → Album
- ├── Album Ratings → Album
+ ├── Album Rating Log → Album
  ├── Tag Groups → Tags → Album Tags → Album
  └── Track Plays → Track → Album
 
