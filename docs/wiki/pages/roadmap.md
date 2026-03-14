@@ -28,6 +28,7 @@ Planned features in rough priority order. See [features](./features.md) for what
 | **Sleeve Notes** | Attach free-form notes to any library entity |
 | **Linked Albums** | Connect albums to each other, building a personal music graph |
 | **My Library v1.1** | Faceted search, physical media, multiple view modes |
+| **Auth Error Handling** | Graceful handling of JWT middleware failures and expired/invalid Spotify token failures |
 
 ## Ideas & Open Questions
 
