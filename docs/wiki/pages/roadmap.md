@@ -33,11 +33,14 @@ Planned features in rough priority order. See [features](./features.md) for what
 | **Hidden Albums** | Soft-remove albums from the main library view without deleting them (e.g., podcasts or junk synced from Spotify) |
 | **Album Detail — Non-Library Albums** | Support a read-only detail view for albums not in the user's library; fixes Recently Spun carousel items that currently 404 or fall back to Spotify outlinks |
 | **Auth Error Handling** | Graceful handling of JWT middleware failures and expired/invalid Spotify token failures |
+| **Rating Label Sync (Album List)** | When a rating is changed via the rating modal from the album list, the rating label badge on the row is not automatically updated — it requires a page reload to reflect the new label |
+| **Saved Tracks Sync** | Sync the user's saved tracks from Spotify so that loved tracks can be highlighted within album views; requires an efficient backfill strategy and incremental ongoing sync to avoid excessive Spotify API calls at scale |
 
-## Ideas & Open Questions
+## Ideas
+
+Directionally clear, not yet queued.
 
 - **Stats & Insights visualizations** — listening heatmap (GitHub-style activity grid by day/month), genre evolution timeline showing how tastes shifted year over year, top artists by decade, "record DNA" radar chart showing where a library skews across tempo/energy/mood/era
-- **Progressive Web App (PWA)** — open question: whether to convert Wax to a PWA for offline support and installability; deferred until the mobile experience is more fully developed
 - **Comparative ranking** — derive a rating by pitting an album against others the user has already rated; a series of "is this better than that?" questions produces a score grounded in relative preference rather than an abstract 0–10 pick
 - **Dual-axis rating** — separate scores for objective quality vs. personal enjoyment ("it's a masterpiece but I never play it")
 - **Timestamped reviews** — reviews as journal entries to track how opinions evolve
@@ -47,7 +50,13 @@ Planned features in rough priority order. See [features](./features.md) for what
 - **Album Detail — external sources** — links to Pitchfork, Wikipedia, NPR, and YouTube per album; eventual goal is a rich album detail page that aggregates critical context, video, and background alongside the user's own library data; users should also be able to manually attach their own resource links (live performances, Tiny Desk concerts, interviews, articles, reviews) to any album
 - **Influences** — surface what influenced an album and what it influenced
 - **Shared by / shared with** — optional field to track who introduced you to a record
-- **Social features** — Goodreads-style network, but secondary to personal library depth
 - **Last.fm integration** — extended listening history, working around Spotify's 50-track limit (see [integrations](./integrations.md))
 - **Multiple view modes** — grid/cover wall, compact text-only, and table alongside the default list view; mode switcher in the library header; persisted per user
+
+## Open Questions
+
+Genuinely undecided — direction or approach unresolved.
+
+- **Progressive Web App (PWA)** — whether to convert Wax to a PWA for offline support and installability; deferred until the mobile experience is more fully developed
+- **Social features** — Goodreads-style network is a natural long-term direction, but it's unclear whether this belongs in the core product or as a separate surface; secondary to personal library depth
 

@@ -32,6 +32,7 @@ The primary data source. Wax uses Spotify as a read-only backend for music data.
 **Constraints:**
 - Spotify's recently played API only returns the last 50 tracks — listening history is best-effort and requires frequent polling to avoid gaps
 - Library data (album metadata, artwork, track listings) comes from Spotify and is stored locally
+- Saved tracks sync is bounded by Spotify's paging API (max 50 per request); a full backfill for users with large collections requires batched pagination and care to avoid rate limiting; ongoing sync should be incremental to avoid re-fetching the full library on each run
 
 ## MusicBrainz
 
