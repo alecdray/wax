@@ -11,7 +11,7 @@ links:
   - features
 ---
 
-[wiki](../wiki.md)
+[Parent: wiki](../wiki.md)
 
 # Testing
 

@@ -12,7 +12,7 @@ links:
   - integrations
 ---
 
-[wiki](../wiki.md)
+[Parent: wiki](../wiki.md)
 
 # Features
 
@@ -22,18 +22,32 @@ Shipped features in production today.
 
 The core of the app. A user's library is their collection of music — albums, artists, tracks, and releases (format variants: digital, vinyl, CD, cassette).
 
-A stats bar at the top of the dashboard shows the user's total artist, album, and track counts at a glance.
+A stats bar at the top of the dashboard shows the user's total artist, album, and track counts at a glance. Digital media is automatically synced from Spotify on a recurring schedule.
 
-- Digital media is automatically synced from Spotify on a recurring schedule
-- Users can browse and sort their library by title, artist, rating, date added, and last played — clicking a column header reloads the table with the new sort applied
-- Album titles link to the album's detail page; Spotify remains accessible via an icon on both the table row and the detail page
-- Albums load in batches of 20 using infinite scroll — additional albums load automatically as the user scrolls to the bottom of the table
+Albums are displayed as a visual list. Each row has four areas from left to right:
+- **Format icon column** — all four format icons (Digital, Vinyl, CD, Cassette) stacked vertically; full opacity if the user owns that format, dimmed if not
+- **Album art** — links to the album detail page
+- **Title + artist block** — title and artist names (no external links) linking to the album detail page; the row footer shows the rating label as a badge alongside any tag badges
+- **Rating** — a large numeric value (one decimal place, e.g. "7.5") or `--` for unrated; the entire rating area is clickable and opens the [rating modal](#rankings--reviews)
 
-Each table row exposes per-row actions:
-- A rating control — shown as a score badge if the album is already rated, or a "Rate" button if not — opens the [rating modal](#rankings--reviews) directly
-- Tags are accessible via an ellipsis (⋯) dropdown menu on each row
+Albums load in batches of 20 using infinite scroll. Spotify is not accessible from the library list; it remains accessible from the album detail page.
 
-A carousel above the library table offers two togglable views for surfacing albums worth acting on:
+### Filtering and Sorting
+
+A chip bar above the list controls how the library is sorted and filtered. Each chip opens a dialog:
+
+- **Sort** chip — always present; controls sort field (title, artist, rating, date added, last played) and direction (ascending/descending); default is date added, newest first
+- **Rating** chip — filter by minimum and/or maximum rating, or show only rated / only unrated albums
+- **Format** chip — filter to a single format (digital, vinyl, CD, cassette)
+- **Artist** chip — filter to one or more artists (multi-select)
+
+Multiple filter chips can be active simultaneously. Active filters are reflected in URL params. Filters reset on page load — there is no session persistence. Infinite scroll preserves all active filters across pages.
+
+**Deferred facets** (not yet in the filter UI): genre/tag, date added, decade of release, recently spun.
+
+### Carousel
+
+Above the library list, a carousel offers two togglable views for surfacing albums worth acting on:
 
 | View | What it shows |
 |---|---|
@@ -41,6 +55,8 @@ A carousel above the library table offers two togglable views for surfacing albu
 | **Unrated** | Albums in the library with no [rating](#rankings--reviews) yet — a prompt to rate what you've been playing |
 
 Each carousel item shows album art, title, and artist, and links directly to the album in Spotify. Switching tabs swaps the carousel content without a full page reload; only the inactive tab is clickable at any time.
+
+Recently Spun may surface albums not in the user's library — these link to Spotify rather than the detail page. A dedicated roadmap item covers the full fix for this edge case.
 
 ---
 
@@ -133,7 +149,7 @@ Users can apply custom tags to albums for flexible organization and discovery.
 
 ### Tagging Modal
 
-The tags modal is accessible from the ellipsis dropdown on each library row and from the tags button on the album detail page.
+The tags modal is accessible from the tags button on the album detail page. Tags are shown as read-only badges on each library row but are not editable from the list view.
 
 - Tags are entered in a text input; pressing **Enter** or **comma** converts the current text into a chip shown above the input
 - **Backspace** on an empty input removes the last chip

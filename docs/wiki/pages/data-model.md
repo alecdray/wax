@@ -10,7 +10,7 @@ links:
   - integrations
 ---
 
-[wiki](../wiki.md)
+[Parent: wiki](../wiki.md)
 
 # Data Model
 

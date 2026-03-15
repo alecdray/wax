@@ -60,7 +60,7 @@ links:
 The first line after frontmatter is a link to the page's logical parent — the page a reader would naturally come from, or the one that provides the most context for this page. This is usually `wiki.md` for top-level nodes, but can be another page. For example, if a feature grows large enough to warrant its own dedicated page, its parent would be `features.md`.
 
 ```markdown
-[parent-page](../wiki.md)
+[Parent: parent-page](../wiki.md)
 ```
 
 ## When to Break Out a New Page

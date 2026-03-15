@@ -10,7 +10,7 @@ links:
   - roadmap
 ---
 
-[wiki](../wiki.md)
+[Parent: wiki](../wiki.md)
 
 # Integrations
 
