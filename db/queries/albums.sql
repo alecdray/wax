@@ -15,3 +15,6 @@ SELECT * FROM albums WHERE id IN (sqlc.slice('ids'));
 
 -- name: GetAlbumBySpotifyId :one
 SELECT * FROM albums WHERE spotify_id = ?;
+
+-- name: ListAlbums :many
+SELECT * FROM albums WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT ?;

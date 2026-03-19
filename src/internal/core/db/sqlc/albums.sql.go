@@ -144,3 +144,37 @@ func (q *Queries) GetOrCreateAlbum(ctx context.Context, arg GetOrCreateAlbumPara
 	)
 	return i, err
 }
+
+const listAlbums = `-- name: ListAlbums :many
+SELECT id, spotify_id, title, created_at, deleted_at, image_url FROM albums WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT ?
+`
+
+func (q *Queries) ListAlbums(ctx context.Context, limit int64) ([]Album, error) {
+	rows, err := q.db.QueryContext(ctx, listAlbums, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Album
+	for rows.Next() {
+		var i Album
+		if err := rows.Scan(
+			&i.ID,
+			&i.SpotifyID,
+			&i.Title,
+			&i.CreatedAt,
+			&i.DeletedAt,
+			&i.ImageUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
