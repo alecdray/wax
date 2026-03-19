@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -15,9 +16,15 @@ import (
 
 const origin = "https://api.discogs.com"
 
+const (
+	rateLimitWindow = 60 * time.Second
+	maxRetries      = 3
+)
+
 type rateLimit struct {
-	mu        sync.Mutex
-	remaining int
+	mu          sync.Mutex
+	remaining   int
+	exhaustedAt time.Time
 }
 
 func (r *rateLimit) update(resp *http.Response) {
@@ -27,6 +34,9 @@ func (r *rateLimit) update(resp *http.Response) {
 	}
 	r.mu.Lock()
 	r.remaining = remaining
+	if remaining > 0 {
+		r.exhaustedAt = time.Time{}
+	}
 	r.mu.Unlock()
 }
 
@@ -36,8 +46,20 @@ func (r *rateLimit) release() {
 	r.mu.Unlock()
 }
 
+func (r *rateLimit) throttle() {
+	r.mu.Lock()
+	r.remaining = 0
+	if r.exhaustedAt.IsZero() {
+		r.exhaustedAt = time.Now()
+	}
+	r.mu.Unlock()
+}
+
 // acquire claims one request slot. If none are available it waits one second
 // and retries, so concurrent callers queue up rather than all firing at once.
+// When the limit has been exhausted for a full 60-second window, one probe
+// request is allowed through so that update() can restore the counter from
+// the server's response.
 func (r *rateLimit) acquire(ctx contextx.ContextX) error {
 	for {
 		r.mu.Lock()
@@ -45,6 +67,15 @@ func (r *rateLimit) acquire(ctx contextx.ContextX) error {
 			r.remaining--
 			r.mu.Unlock()
 			return nil
+		}
+		// Rate limit window has reset on the server side; let one probe through.
+		if !r.exhaustedAt.IsZero() && time.Since(r.exhaustedAt) >= rateLimitWindow {
+			r.exhaustedAt = time.Time{}
+			r.mu.Unlock()
+			return nil
+		}
+		if r.exhaustedAt.IsZero() {
+			r.exhaustedAt = time.Now()
 		}
 		r.mu.Unlock()
 
@@ -82,34 +113,44 @@ func NewClient(consumerKey, consumerSecret, userAgent string) (*Client, error) {
 }
 
 func (c *Client) makeRequest(ctx contextx.ContextX, method, path string, query url.Values) (*http.Response, error) {
-	if err := c.rateLimit.acquire(ctx); err != nil {
-		return nil, err
-	}
-
 	reqURL, err := url.Parse(origin + path)
 	if err != nil {
 		return nil, err
 	}
 	reqURL.RawQuery = query.Encode()
 
-	req, err := http.NewRequestWithContext(ctx, method, reqURL.String(), nil)
-	if err != nil {
-		return nil, err
+	for attempt := range maxRetries {
+		if err := c.rateLimit.acquire(ctx); err != nil {
+			return nil, err
+		}
+
+		req, err := http.NewRequestWithContext(ctx, method, reqURL.String(), nil)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("Authorization", fmt.Sprintf("Discogs key=%s, secret=%s", c.consumerKey, c.consumerSecret))
+		req.Header.Set("User-Agent", c.userAgent)
+		req.Header.Set("Accept", "application/json")
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			c.rateLimit.release()
+			return nil, err
+		}
+
+		if resp.StatusCode == http.StatusTooManyRequests {
+			resp.Body.Close()
+			c.rateLimit.throttle()
+			slog.Debug("discogs rate limited, retrying", "attempt", attempt+1)
+			continue
+		}
+
+		c.rateLimit.update(resp)
+		return resp, nil
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Discogs key=%s, secret=%s", c.consumerKey, c.consumerSecret))
-	req.Header.Set("User-Agent", c.userAgent)
-	req.Header.Set("Accept", "application/json")
-
-	httpClient := &http.Client{}
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		c.rateLimit.release()
-		return nil, err
-	}
-
-	c.rateLimit.update(resp)
-	return resp, nil
+	return nil, fmt.Errorf("request failed after %d attempts: rate limited", maxRetries)
 }
 
 type SearchType string
