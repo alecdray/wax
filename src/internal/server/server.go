@@ -14,6 +14,7 @@ import (
 	"github.com/alecdray/wax/src/internal/core/httpx"
 	"github.com/alecdray/wax/src/internal/core/task"
 	"github.com/alecdray/wax/src/internal/core/templates"
+	"github.com/alecdray/wax/src/internal/discogs"
 	"github.com/alecdray/wax/src/internal/feed"
 	"github.com/alecdray/wax/src/internal/library"
 	libraryAdapters "github.com/alecdray/wax/src/internal/library/adapters"
@@ -33,6 +34,7 @@ type services struct {
 	taskManager      *task.TaskManager
 	user             *user.Service
 	musicbrainz      *musicbrainz.Service
+	discogs          *discogs.Service
 	spotifyAuth      *spotify.AuthService
 	spotify          *spotify.Service
 	library          *library.Service
@@ -60,6 +62,13 @@ func NewServices(app app.App, db *db.DB) *services {
 	s.user = user.NewService(db)
 
 	s.musicbrainz = musicbrainz.NewService(mbClient)
+
+	discogsClient, err := discogs.NewClient(app.Config().DiscogsKey, app.Config().DiscogsSecret, app.Config().AppName)
+	if err != nil {
+		slog.Error("Failed to create Discogs client", "error", err)
+		os.Exit(1)
+	}
+	s.discogs = discogs.NewService(discogsClient)
 
 	s.spotifyAuth = spotify.NewAuthService(
 		app.Config().SpotifyClientId,

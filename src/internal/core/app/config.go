@@ -47,6 +47,8 @@ type Config struct {
 	StateCode           string
 	SpotifyClientId     string
 	SpotifyClientSecret string
+	DiscogsKey          string
+	DiscogsSecret       string
 	AppName             string
 	AppVersion          string
 	ContactEmail        string
@@ -67,6 +69,8 @@ func LoadConfig() *Config {
 		StateCode:           GetEnvWithDefault("STATE_CODE", "state"),
 		SpotifyClientId:     GetEnvWithPanic("SPOTIFY_ID"),
 		SpotifyClientSecret: GetEnvWithPanic("SPOTIFY_SECRET"),
+		DiscogsKey:          GetEnvWithPanic("DISCOGS_ID"),
+		DiscogsSecret:       GetEnvWithPanic("DISCOGS_SECRET"),
 		AppName:             GetEnvWithDefault("APP_NAME", "wax"),
 		AppVersion:          GetEnvWithDefault("APP_VERSION", "0.0.0"),
 		ContactEmail:        GetEnvWithDefault("CONTACT_EMAIL", "support@wax.com"),
