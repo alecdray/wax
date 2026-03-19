@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-var invalidTagChars = regexp.MustCompile(`[^a-z0-9 \-&]+`)
+var invalidTagChars = regexp.MustCompile(`[^\p{L}\p{M}0-9 \-&]+`)
 
 func normalizeTag(name string) string {
 	name = strings.ToLower(strings.TrimSpace(name))
