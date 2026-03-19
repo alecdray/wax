@@ -112,26 +112,92 @@ func (c *Client) makeRequest(ctx contextx.ContextX, method, path string, query u
 	return resp, nil
 }
 
-type SearchProps struct {
-	Query   string
-	Type    string
+type SearchType string
+
+const (
+	SearchTypeRelease SearchType = "release"
+	SearchTypeMaster  SearchType = "master"
+	SearchTypeArtist  SearchType = "artist"
+	SearchTypeLabel   SearchType = "label"
+)
+
+type PageProps struct {
+	// Page is the page number to fetch (default 1).
+	Page int
+	// PerPage is the number of items per page, up to 100 (default 50).
 	PerPage int
-	Page    int
+}
+
+type SearchProps struct {
+	// Query is a general search query (e.g. "nirvana").
+	Query string
+	// Type filters results to a specific entity type.
+	Type SearchType
+	// Title searches by combined "Artist Name - Release Title" title field.
+	Title string
+	// ReleaseTitle searches release titles.
+	ReleaseTitle string
+	// Credit searches release credits.
+	Credit string
+	// Artist searches artist names.
+	Artist string
+	// Anv searches artist ANV (artist name variation).
+	Anv string
+	// Label searches label names.
+	Label string
+	// Genre searches genres.
+	Genre string
+	// Style searches styles.
+	Style string
+	// Country searches release country.
+	Country string
+	// Year searches release year.
+	Year string
+	// Format searches formats (e.g. "album").
+	Format string
+	// Catno searches catalog numbers.
+	Catno string
+	// Barcode searches barcodes.
+	Barcode string
+	// Track searches track titles.
+	Track string
+	// Submitter searches by submitter username.
+	Submitter string
+	// Contributor searches by contributor username.
+	Contributor string
+	Page        PageProps
 }
 
 func (c *Client) SearchDatabase(ctx contextx.ContextX, props SearchProps) (*SearchResult, error) {
 	query := url.Values{}
-	if props.Query != "" {
-		query.Set("q", props.Query)
+	setIfNonEmpty := func(key, val string) {
+		if val != "" {
+			query.Set(key, val)
+		}
 	}
-	if props.Type != "" {
-		query.Set("type", props.Type)
+	setIfNonEmpty("q", props.Query)
+	setIfNonEmpty("type", string(props.Type))
+	setIfNonEmpty("title", props.Title)
+	setIfNonEmpty("release_title", props.ReleaseTitle)
+	setIfNonEmpty("credit", props.Credit)
+	setIfNonEmpty("artist", props.Artist)
+	setIfNonEmpty("anv", props.Anv)
+	setIfNonEmpty("label", props.Label)
+	setIfNonEmpty("genre", props.Genre)
+	setIfNonEmpty("style", props.Style)
+	setIfNonEmpty("country", props.Country)
+	setIfNonEmpty("year", props.Year)
+	setIfNonEmpty("format", props.Format)
+	setIfNonEmpty("catno", props.Catno)
+	setIfNonEmpty("barcode", props.Barcode)
+	setIfNonEmpty("track", props.Track)
+	setIfNonEmpty("submitter", props.Submitter)
+	setIfNonEmpty("contributor", props.Contributor)
+	if props.Page.PerPage > 0 {
+		query.Set("per_page", strconv.Itoa(props.Page.PerPage))
 	}
-	if props.PerPage > 0 {
-		query.Set("per_page", strconv.Itoa(props.PerPage))
-	}
-	if props.Page > 0 {
-		query.Set("page", strconv.Itoa(props.Page))
+	if props.Page.Page > 0 {
+		query.Set("page", strconv.Itoa(props.Page.Page))
 	}
 
 	resp, err := c.makeRequest(ctx, http.MethodGet, "/database/search", query)

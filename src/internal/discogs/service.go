@@ -16,8 +16,16 @@ func (s *Service) Client() *Client {
 
 func (s *Service) SearchReleases(ctx contextx.ContextX, query string) (*SearchResult, error) {
 	return s.client.SearchDatabase(ctx, SearchProps{
-		Query:   query,
-		Type:    "release",
-		PerPage: 25,
+		Query: query,
+		Type:  SearchTypeRelease,
+		Page:  PageProps{PerPage: 25},
+	})
+}
+
+func (s *Service) SearchMasters(ctx contextx.ContextX, query string) (*SearchResult, error) {
+	return s.client.SearchDatabase(ctx, SearchProps{
+		Query: query,
+		Type:  SearchTypeMaster,
+		Page:  PageProps{PerPage: 25},
 	})
 }
