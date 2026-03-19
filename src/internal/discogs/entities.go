@@ -1,5 +1,25 @@
 package discogs
 
+type Genre string
+
+const (
+	GenreRock             Genre = "Rock"
+	GenreElectronic       Genre = "Electronic"
+	GenrePop              Genre = "Pop"
+	GenreFolkWorldCountry Genre = "Folk, World, & Country"
+	GenreJazz             Genre = "Jazz"
+	GenreFunkSoul         Genre = "Funk / Soul"
+	GenreClassical        Genre = "Classical"
+	GenreHipHop           Genre = "Hip Hop"
+	GenreLatin            Genre = "Latin"
+	GenreStageScreen      Genre = "Stage & Screen"
+	GenreReggae           Genre = "Reggae"
+	GenreBlues            Genre = "Blues"
+	GenreNonMusic         Genre = "Non-Music"
+	GenreChildrens        Genre = "Children's"
+	GenreBrassMilitary    Genre = "Brass & Military"
+)
+
 type Pagination struct {
 	Page    int `json:"page"`
 	Pages   int `json:"pages"`
@@ -8,8 +28,8 @@ type Pagination struct {
 }
 
 type SearchResult struct {
-	Pagination Pagination    `json:"pagination"`
-	Results    []SearchItem  `json:"results"`
+	Pagination Pagination   `json:"pagination"`
+	Results    []SearchItem `json:"results"`
 }
 
 type SearchItem struct {

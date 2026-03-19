@@ -5,12 +5,42 @@ import (
 	"database/sql"
 	"fmt"
 	"regexp"
+	"strings"
+
 	"github.com/alecdray/wax/src/internal/core/db"
 	"github.com/alecdray/wax/src/internal/core/db/sqlc"
-	"strings"
 
 	"github.com/google/uuid"
 )
+
+type Genre string
+
+const (
+	GenreClassical  Genre = "Classical"
+	GenreCountry    Genre = "Country"
+	GenreElectronic Genre = "Electronic"
+	GenreHipHop     Genre = "Hip-hop"
+	GenreJazz       Genre = "Jazz"
+	GenreLatin      Genre = "Latin"
+	GenrePop        Genre = "Pop"
+	GenrePunk       Genre = "Punk"
+	GenreReggae     Genre = "Reggae"
+	GenreRock       Genre = "Rock"
+	GenreMetal      Genre = "Metal"
+	GenreFunk       Genre = "Funk"
+	GenreSoul       Genre = "Soul"
+	GenreRnB        Genre = "R&B"
+	GenreBlues      Genre = "Blues"
+	GenreFolk       Genre = "Folk"
+	GenreWorld      Genre = "World"
+	GenreTheater    Genre = "Theater"
+	GenreOther      Genre = "Other"
+	GenreUnknown    Genre = "Unknown"
+)
+
+type Subgenre string
+
+const ()
 
 var invalidTagChars = regexp.MustCompile(`[^\p{L}\p{M}0-9 \-&]+`)
 
