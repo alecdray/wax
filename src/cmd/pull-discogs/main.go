@@ -5,16 +5,19 @@ import (
 	"encoding/json"
 	"log/slog"
 	"os"
+	"sort"
 
 	"github.com/alecdray/wax/src/internal/core/app"
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/db"
 	"github.com/alecdray/wax/src/internal/discogs"
+	"github.com/alecdray/wax/src/internal/tags"
 )
 
 const (
-	limit      = 50
-	outputFile = "tmp/discogs_records.json"
+	limit       = 50
+	outputFile  = "tmp/discogs_records.json"
+	stylesFile  = "tmp/discogs_styles.json"
 )
 
 type Record struct {
@@ -24,7 +27,7 @@ type Record struct {
 	DiscogsTitle string   `json:"discogs_title"`
 	Artists      []string `json:"artists"`
 	Year         int      `json:"year"`
-	Genres       []string `json:"genres"`
+	Genres       []tags.Genre `json:"genres"`
 	Styles       []string `json:"styles"`
 	ResourceURL  string   `json:"resource_url"`
 	MainRelease  int      `json:"main_release"`
@@ -64,6 +67,7 @@ func main() {
 	slog.Info("Fetched albums", "count", len(albums))
 
 	var records []Record
+	seenStyles := make(map[string]struct{})
 
 	for _, album := range albums {
 		artistRows, err := database.Queries().GetAlbumArtistByAlbumId(ctx, album.ID)
@@ -113,6 +117,10 @@ func main() {
 			artistNames = append(artistNames, a.Name)
 		}
 
+		for _, s := range master.Styles {
+			seenStyles[s] = struct{}{}
+		}
+
 		records = append(records, Record{
 			AlbumID:      album.ID,
 			AlbumTitle:   album.Title,
@@ -120,7 +128,7 @@ func main() {
 			DiscogsTitle: master.Title,
 			Artists:      artistNames,
 			Year:         master.Year,
-			Genres:       master.Genres,
+			Genres:       discogs.ToMasterGenres(master.Genres),
 			Styles:       master.Styles,
 			ResourceURL:  master.ResourceURL,
 			MainRelease:  master.MainRelease,
@@ -143,10 +151,32 @@ func main() {
 
 	enc := json.NewEncoder(f)
 	enc.SetIndent("", "  ")
+	enc.SetEscapeHTML(false)
 	if err := enc.Encode(records); err != nil {
 		slog.Error("Failed to write output", "error", err)
 		os.Exit(1)
 	}
 
-	slog.Info("Done", "records", len(records), "output", outputFile)
+	styles := make([]string, 0, len(seenStyles))
+	for s := range seenStyles {
+		styles = append(styles, s)
+	}
+	sort.Strings(styles)
+
+	sf, err := os.Create(stylesFile)
+	if err != nil {
+		slog.Error("Failed to create styles file", "error", err)
+		os.Exit(1)
+	}
+	defer sf.Close()
+
+	senc := json.NewEncoder(sf)
+	senc.SetIndent("", "  ")
+	senc.SetEscapeHTML(false)
+	if err := senc.Encode(styles); err != nil {
+		slog.Error("Failed to write styles", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("Done", "records", len(records), "styles", len(styles), "output", outputFile)
 }
