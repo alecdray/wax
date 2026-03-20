@@ -17,8 +17,9 @@ import (
 const origin = "https://api.discogs.com"
 
 const (
-	rateLimitWindow = 60 * time.Second
-	maxRetries      = 3
+	// Limiting tracks requests using a moving average over a 60 second window
+	rateLimitTimeout = 10 * time.Second
+	maxRetries       = 3
 )
 
 type rateLimit struct {
@@ -30,6 +31,7 @@ type rateLimit struct {
 func (r *rateLimit) update(resp *http.Response) {
 	remaining, err := strconv.Atoi(resp.Header.Get("X-Discogs-Ratelimit-Remaining"))
 	if err != nil {
+		slog.Warn("discogs missing or invalid rate limit header", "error", err)
 		return
 	}
 	r.mu.Lock()
@@ -69,7 +71,7 @@ func (r *rateLimit) acquire(ctx contextx.ContextX) error {
 			return nil
 		}
 		// Rate limit window has reset on the server side; let one probe through.
-		if !r.exhaustedAt.IsZero() && time.Since(r.exhaustedAt) >= rateLimitWindow {
+		if !r.exhaustedAt.IsZero() && time.Since(r.exhaustedAt) >= rateLimitTimeout {
 			r.exhaustedAt = time.Time{}
 			r.mu.Unlock()
 			return nil
@@ -115,18 +117,18 @@ func NewClient(consumerKey, consumerSecret, userAgent string) (*Client, error) {
 func (c *Client) makeRequest(ctx contextx.ContextX, method, path string, query url.Values) (*http.Response, error) {
 	reqURL, err := url.Parse(origin + path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parsing url: %w", err)
 	}
 	reqURL.RawQuery = query.Encode()
 
 	for attempt := range maxRetries {
 		if err := c.rateLimit.acquire(ctx); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("acquiring rate limit slot: %w", err)
 		}
 
 		req, err := http.NewRequestWithContext(ctx, method, reqURL.String(), nil)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("creating request: %w", err)
 		}
 
 		req.Header.Set("Authorization", fmt.Sprintf("Discogs key=%s, secret=%s", c.consumerKey, c.consumerSecret))
@@ -136,7 +138,7 @@ func (c *Client) makeRequest(ctx contextx.ContextX, method, path string, query u
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			c.rateLimit.release()
-			return nil, err
+			return nil, fmt.Errorf("executing request: %w", err)
 		}
 
 		if resp.StatusCode == http.StatusTooManyRequests {
@@ -248,7 +250,7 @@ func (c *Client) SearchDatabase(ctx contextx.ContextX, props SearchProps) (*Sear
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
 	var result SearchResult
@@ -266,7 +268,7 @@ func (c *Client) GetRelease(ctx contextx.ContextX, id int) (*Release, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
 	var result Release
@@ -284,7 +286,7 @@ func (c *Client) GetMaster(ctx contextx.ContextX, id int) (*Master, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status: %d", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
 	var result Master
