@@ -21,6 +21,13 @@ tasks:
   build/server:
     cmds:
       - go build -v -o ./bin/app ./src/cmd/app.go
+  build/pull-discogs:
+    cmds:
+      - go build -v -o ./bin/pull-discogs ./src/cmd/pull-discogs/
+  pull-discogs:
+    cmds:
+      - task build/pull-discogs
+      - ./bin/pull-discogs
   build:
     cmds:
       - task build/templ build/tailwind build/sqlc build/server
