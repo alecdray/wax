@@ -28,13 +28,16 @@ tasks:
     cmds:
       - task build/pull-discogs
       - ./bin/pull-discogs
-  build/pull-wikidata:
+  build/pull-genres:
     cmds:
-      - go build -v -o ./bin/pull-wikidata ./src/cmd/pull-wikidata/
-  pull-wikidata:
+      - go build -v -o ./bin/pull-genres ./src/cmd/pull-genres/
+  pull-genres:
     cmds:
-      - task build/pull-wikidata
-      - ./bin/pull-wikidata
+      - task build/pull-genres
+      - ./bin/pull-genres
+  genre-explorer:
+    cmds:
+      - go run ./src/cmd/genre-explorer/
   build:
     cmds:
       - task build/templ build/tailwind build/sqlc build/server
