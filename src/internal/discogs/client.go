@@ -12,14 +12,17 @@ import (
 	"time"
 
 	"github.com/alecdray/wax/src/internal/core/contextx"
+	"github.com/alecdray/wax/src/internal/core/utils"
 )
 
 const origin = "https://api.discogs.com"
 
 const (
 	// Limiting tracks requests using a moving average over a 60 second window
-	rateLimitTimeout = 60 * time.Second
-	maxRetries       = 3
+	rateLimitWindow      = 60 * time.Second
+	rateLimitTimeoutBase = 1 * time.Second
+	rateLimitMaxRequests = 60
+	maxRetries           = 10
 )
 
 type rateLimit struct {
@@ -62,7 +65,7 @@ func (r *rateLimit) throttle() {
 // When the limit has been exhausted for a full 60-second window, one probe
 // request is allowed through so that update() can restore the counter from
 // the server's response.
-func (r *rateLimit) acquire(ctx contextx.ContextX) error {
+func (r *rateLimit) acquire(ctx contextx.ContextX, attempt int) error {
 	for {
 		r.mu.Lock()
 		if r.remaining > 0 {
@@ -71,7 +74,8 @@ func (r *rateLimit) acquire(ctx contextx.ContextX) error {
 			return nil
 		}
 		// Rate limit window has reset on the server side; let one probe through.
-		if !r.exhaustedAt.IsZero() && time.Since(r.exhaustedAt) >= rateLimitTimeout {
+		adjustedRateLimitTimeout := utils.Clamp(time.Duration(attempt)*rateLimitTimeoutBase, rateLimitTimeoutBase, rateLimitWindow)
+		if !r.exhaustedAt.IsZero() && time.Since(r.exhaustedAt) >= adjustedRateLimitTimeout {
 			r.exhaustedAt = time.Time{}
 			r.mu.Unlock()
 			return nil
@@ -110,7 +114,7 @@ func NewClient(consumerKey, consumerSecret, userAgent string) (*Client, error) {
 		consumerKey:    consumerKey,
 		consumerSecret: consumerSecret,
 		userAgent:      userAgent,
-		rateLimit:      rateLimit{remaining: 60},
+		rateLimit:      rateLimit{remaining: rateLimitMaxRequests},
 	}, nil
 }
 
@@ -122,7 +126,7 @@ func (c *Client) makeRequest(ctx contextx.ContextX, method, path string, query u
 	reqURL.RawQuery = query.Encode()
 
 	for attempt := range maxRetries {
-		if err := c.rateLimit.acquire(ctx); err != nil {
+		if err := c.rateLimit.acquire(ctx, attempt); err != nil {
 			return nil, fmt.Errorf("acquiring rate limit slot: %w", err)
 		}
 
