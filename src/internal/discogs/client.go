@@ -18,7 +18,7 @@ const origin = "https://api.discogs.com"
 
 const (
 	// Limiting tracks requests using a moving average over a 60 second window
-	rateLimitTimeout = 10 * time.Second
+	rateLimitTimeout = 60 * time.Second
 	maxRetries       = 3
 )
 

@@ -15,22 +15,22 @@ import (
 )
 
 const (
-	limit       = 50
-	outputFile  = "tmp/discogs_records.json"
-	stylesFile  = "tmp/discogs_styles.json"
+	limit      = -1
+	outputFile = "tmp/discogs_records.json"
+	stylesFile = "tmp/discogs_styles.json"
 )
 
 type Record struct {
-	AlbumID      string   `json:"album_id"`
-	AlbumTitle   string   `json:"album_title"`
-	DiscogsID    int      `json:"discogs_id"`
-	DiscogsTitle string   `json:"discogs_title"`
-	Artists      []string `json:"artists"`
-	Year         int      `json:"year"`
+	AlbumID      string       `json:"album_id"`
+	AlbumTitle   string       `json:"album_title"`
+	DiscogsID    int          `json:"discogs_id"`
+	DiscogsTitle string       `json:"discogs_title"`
+	Artists      []string     `json:"artists"`
+	Year         int          `json:"year"`
 	Genres       []tags.Genre `json:"genres"`
-	Styles       []string `json:"styles"`
-	ResourceURL  string   `json:"resource_url"`
-	MainRelease  int      `json:"main_release"`
+	Styles       []string     `json:"styles"`
+	ResourceURL  string       `json:"resource_url"`
+	MainRelease  int          `json:"main_release"`
 }
 
 func main() {
@@ -80,11 +80,11 @@ func main() {
 
 		for _, artistRow := range artistRows {
 			artistName := artistRow.Artist.Name
-			slog.Debug("Searching Discogs", "album", album.Title, "artist", artistName)
+			slog.Debug("Searching Discogs masters", "album", album.Title, "artist", artistName)
 
 			item, err := discogsSvc.SearchMasterByAlbum(ctx, album.Title, artistName)
 			if err != nil {
-				slog.Warn("Discogs search failed", "album", album.Title, "artist", artistName, "error", err)
+				slog.Warn("Discogs master search failed", "album", album.Title, "artist", artistName, "error", err)
 				continue
 			}
 
@@ -93,7 +93,28 @@ func main() {
 				break
 			}
 
-			slog.Debug("No results, trying next artist", "album", album.Title, "artist", artistName)
+			slog.Debug("No master results, trying next artist", "album", album.Title, "artist", artistName)
+		}
+
+		if matchedItem == nil {
+			slog.Debug("No master found, falling back to release search", "album", album.Title)
+			for _, artistRow := range artistRows {
+				artistName := artistRow.Artist.Name
+				slog.Debug("Searching Discogs releases", "album", album.Title, "artist", artistName)
+
+				item, err := discogsSvc.SearchReleaseByAlbum(ctx, album.Title, artistName)
+				if err != nil {
+					slog.Warn("Discogs release search failed", "album", album.Title, "artist", artistName, "error", err)
+					continue
+				}
+
+				if item != nil {
+					matchedItem = item
+					break
+				}
+
+				slog.Debug("No release results, trying next artist", "album", album.Title, "artist", artistName)
+			}
 		}
 
 		if matchedItem == nil {
@@ -101,40 +122,68 @@ func main() {
 			continue
 		}
 
-		if matchedItem.MasterID == 0 {
-			slog.Warn("Search result has no master ID, skipping", "album", album.Title, "discogs_title", matchedItem.Title)
-			continue
+		var (
+			discogsID    int
+			discogsTitle string
+			artistNames  []string
+			year         int
+			genres       []tags.Genre
+			styles       []string
+			resourceURL  string
+			mainRelease  int
+		)
+
+		if matchedItem.MasterID != 0 {
+			master, err := discogsSvc.GetMaster(ctx, matchedItem.MasterID)
+			if err != nil {
+				slog.Warn("Failed to fetch master", "album", album.Title, "master_id", matchedItem.MasterID, "error", err)
+				continue
+			}
+			discogsID = master.ID
+			discogsTitle = master.Title
+			year = master.Year
+			genres = discogs.ToMasterGenres(master.Genres)
+			styles = master.Styles
+			resourceURL = master.ResourceURL
+			mainRelease = master.MainRelease
+			for _, a := range master.Artists {
+				artistNames = append(artistNames, a.Name)
+			}
+		} else {
+			release, err := discogsSvc.GetRelease(ctx, matchedItem.ID)
+			if err != nil {
+				slog.Warn("Failed to fetch release", "album", album.Title, "release_id", matchedItem.ID, "error", err)
+				continue
+			}
+			discogsID = release.ID
+			discogsTitle = release.Title
+			year = release.Year
+			genres = discogs.ToMasterGenres(release.Genres)
+			styles = release.Styles
+			resourceURL = release.ResourceURL
+			for _, a := range release.Artists {
+				artistNames = append(artistNames, a.Name)
+			}
 		}
 
-		master, err := discogsSvc.GetMaster(ctx, matchedItem.MasterID)
-		if err != nil {
-			slog.Warn("Failed to fetch master", "album", album.Title, "master_id", matchedItem.MasterID, "error", err)
-			continue
-		}
-
-		var artistNames []string
-		for _, a := range master.Artists {
-			artistNames = append(artistNames, a.Name)
-		}
-
-		for _, s := range master.Styles {
+		for _, s := range styles {
 			seenStyles[s] = struct{}{}
 		}
 
 		records = append(records, Record{
 			AlbumID:      album.ID,
 			AlbumTitle:   album.Title,
-			DiscogsID:    master.ID,
-			DiscogsTitle: master.Title,
+			DiscogsID:    discogsID,
+			DiscogsTitle: discogsTitle,
 			Artists:      artistNames,
-			Year:         master.Year,
-			Genres:       discogs.ToMasterGenres(master.Genres),
-			Styles:       master.Styles,
-			ResourceURL:  master.ResourceURL,
-			MainRelease:  master.MainRelease,
+			Year:         year,
+			Genres:       genres,
+			Styles:       styles,
+			ResourceURL:  resourceURL,
+			MainRelease:  mainRelease,
 		})
 
-		slog.Info("Matched", "album", album.Title, "discogs", master.Title, "year", master.Year)
+		slog.Info("Matched", "album", album.Title, "discogs", discogsTitle, "year", year)
 	}
 
 	if err := os.MkdirAll("tmp", 0755); err != nil {
