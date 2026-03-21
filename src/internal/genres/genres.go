@@ -4,6 +4,9 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"sort"
+
+	"github.com/lithammer/fuzzysearch/fuzzy"
 )
 
 //go:embed data.json
@@ -28,6 +31,7 @@ type Node struct {
 // DAG is a directed acyclic graph of music genres.
 type DAG struct {
 	nodes map[string]*Node
+	Root  *Node
 }
 
 // Load builds a DAG from the embedded data.json.
@@ -71,6 +75,13 @@ func Build(entries []Entry) *DAG {
 		}
 		if !hasNode(child.Parents, parent) {
 			child.Parents = append(child.Parents, parent)
+		}
+	}
+
+	for _, n := range d.nodes {
+		if len(n.Parents) == 0 {
+			d.Root = n
+			break
 		}
 	}
 
@@ -125,6 +136,23 @@ func (d *DAG) findCycles() []*Node {
 		}
 	}
 	return cyclic
+}
+
+// Search returns nodes whose labels fuzzy-match the query, ranked by closeness.
+func (d *DAG) Search(query string) []*Node {
+	labels := make([]string, 0, len(d.nodes))
+	byLabel := make(map[string]*Node, len(d.nodes))
+	for _, n := range d.nodes {
+		labels = append(labels, n.Label)
+		byLabel[n.Label] = n
+	}
+	matches := fuzzy.RankFindFold(query, labels)
+	sort.Sort(matches)
+	result := make([]*Node, 0, len(matches))
+	for _, m := range matches {
+		result = append(result, byLabel[m.Target])
+	}
+	return result
 }
 
 // Get returns the node for the given Wikidata ID, or nil if not found.
