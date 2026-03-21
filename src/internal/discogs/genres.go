@@ -5,62 +5,73 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/alecdray/wax/src/internal/tags"
+	"github.com/alecdray/wax/src/internal/genres"
 )
 
-var nonAlphanumeric = regexp.MustCompile(`[^a-z0-9 ]+`)
+var splitRe = regexp.MustCompile(`[/,]+`)
 
-func normalizeGenre(g string) string {
-	g = strings.ToLower(strings.TrimSpace(g))
-	return strings.TrimSpace(nonAlphanumeric.ReplaceAllString(g, ""))
+// splitTerm splits a Discogs compound term (e.g. "Funk / Soul", "Folk, World, & Country")
+// into individual sub-terms.
+func splitTerm(term string) []string {
+	parts := splitRe.Split(term, -1)
+	var out []string
+	for _, p := range parts {
+		p = strings.Trim(strings.TrimSpace(p), "&")
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
-// normalizedGenreMap is a normalized version of GenreMap for case-insensitive lookup.
-var normalizedGenreMap = func() map[string][]tags.Genre {
-	m := make(map[string][]tags.Genre, len(GenreMap))
-	for k, v := range GenreMap {
-		m[normalizeGenre(string(k))] = v
+// resolveOne tries to find the best DAG node for a single term.
+// Returns nil if no match.
+func resolveOne(dag *genres.DAG, term string) *genres.Node {
+	if m := dag.Search(term); len(m) > 0 {
+		return m[0]
 	}
-	return m
-}()
+	return nil
+}
 
-// ToMasterGenres converts a slice of Discogs genre strings to master genre tags.
-// Unrecognized genres map to tags.GenreUnknown.
-func ToMasterGenres(discogsGenres []string) []tags.Genre {
-	seen := make(map[tags.Genre]struct{})
-	var result []tags.Genre
-	for _, g := range discogsGenres {
-		key := normalizeGenre(g)
-		mapped, ok := normalizedGenreMap[key]
-		if !ok {
-			slog.Warn("unrecognized discogs genre", "genre", g)
-			mapped = []tags.Genre{tags.GenreUnknown}
+// Resolve fuzzy-matches a slice of Discogs genre/style strings against the
+// genre DAG and returns the best-matching node for each term.
+// Compound terms (e.g. "Funk / Soul") are split and each part resolved
+// independently. Terms with no match are logged and skipped.
+func Resolve(dag *genres.DAG, terms []string) []*genres.Node {
+	seen := make(map[string]bool)
+	var result []*genres.Node
+
+	add := func(n *genres.Node) {
+		if n != nil && !seen[n.ID] {
+			seen[n.ID] = true
+			result = append(result, n)
 		}
-		for _, mg := range mapped {
-			if _, exists := seen[mg]; !exists {
-				seen[mg] = struct{}{}
-				result = append(result, mg)
+	}
+
+	for _, term := range terms {
+		n := resolveOne(dag, term)
+		if n != nil {
+			add(n)
+			continue
+		}
+
+		// Try splitting into sub-terms for compound Discogs labels.
+		parts := splitTerm(term)
+		if len(parts) > 1 {
+			matched := false
+			for _, part := range parts {
+				if sn := resolveOne(dag, part); sn != nil {
+					add(sn)
+					matched = true
+				}
+			}
+			if matched {
+				continue
 			}
 		}
+
+		slog.Warn("no DAG match for discogs term", "term", term)
 	}
 	return result
-}
-
-// GenreMap maps a Discogs genre to one or more master genre tags.
-var GenreMap = map[Genre][]tags.Genre{
-	GenreRock:             {tags.GenreRock},
-	GenreElectronic:       {tags.GenreElectronic},
-	GenrePop:              {tags.GenrePop},
-	GenreFolkWorldCountry: {tags.GenreFolk, tags.GenreWorld, tags.GenreCountry},
-	GenreJazz:             {tags.GenreJazz},
-	GenreFunkSoul:         {tags.GenreFunk, tags.GenreSoul},
-	GenreClassical:        {tags.GenreClassical},
-	GenreHipHop:           {tags.GenreHipHop},
-	GenreLatin:            {tags.GenreLatin},
-	GenreStageScreen:      {tags.GenreTheater},
-	GenreReggae:           {tags.GenreReggae},
-	GenreBlues:            {tags.GenreBlues},
-	GenreNonMusic:         {tags.GenreOther},
-	GenreChildrens:        {tags.GenreOther},
-	GenreBrassMilitary:    {tags.GenreOther},
 }

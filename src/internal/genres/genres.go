@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/lithammer/fuzzysearch/fuzzy"
 )
@@ -138,19 +139,38 @@ func (d *DAG) findCycles() []*Node {
 	return cyclic
 }
 
+// normalizeLabel normalizes a label for fuzzy matching by replacing hyphens
+// with spaces, & with "and", and collapsing whitespace.
+func normalizeLabel(s string) string {
+	s = strings.ReplaceAll(s, "-", " ")
+	s = strings.ReplaceAll(s, "&", "and")
+	return strings.Join(strings.Fields(s), " ")
+}
+
 // Search returns nodes whose labels fuzzy-match the query, ranked by closeness.
+// Both the query and node labels are normalized before matching so that e.g.
+// "Hip Hop" matches "Hip-Hop" rather than the less-specific "GH Hip Hop".
 func (d *DAG) Search(query string) []*Node {
-	labels := make([]string, 0, len(d.nodes))
-	byLabel := make(map[string]*Node, len(d.nodes))
+	normQuery := normalizeLabel(query)
+	normLabels := make([]string, 0, len(d.nodes))
+	byNorm := make(map[string]*Node, len(d.nodes))
 	for _, n := range d.nodes {
-		labels = append(labels, n.Label)
-		byLabel[n.Label] = n
+		norm := normalizeLabel(n.Label)
+		normLabels = append(normLabels, norm)
+		if _, exists := byNorm[norm]; !exists {
+			byNorm[norm] = n
+		}
 	}
-	matches := fuzzy.RankFindFold(query, labels)
+	matches := fuzzy.RankFindFold(normQuery, normLabels)
 	sort.Sort(matches)
 	result := make([]*Node, 0, len(matches))
+	seen := make(map[string]bool)
 	for _, m := range matches {
-		result = append(result, byLabel[m.Target])
+		n := byNorm[m.Target]
+		if n != nil && !seen[n.ID] {
+			seen[n.ID] = true
+			result = append(result, n)
+		}
 	}
 	return result
 }

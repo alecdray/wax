@@ -11,30 +11,49 @@ import (
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/db"
 	"github.com/alecdray/wax/src/internal/discogs"
-	"github.com/alecdray/wax/src/internal/tags"
+	"github.com/alecdray/wax/src/internal/genres"
 )
 
 const (
-	limit      = -1
+	limit      = 50
 	outputFile = "tmp/discogs_records.json"
 	stylesFile = "tmp/discogs_styles.json"
 )
 
+type ResolvedGenre struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+}
+
 type Record struct {
-	AlbumID      string       `json:"album_id"`
-	AlbumTitle   string       `json:"album_title"`
-	DiscogsID    int          `json:"discogs_id"`
-	DiscogsTitle string       `json:"discogs_title"`
-	Artists      []string     `json:"artists"`
-	Year         int          `json:"year"`
-	Genres       []tags.Genre `json:"genres"`
-	Styles       []string     `json:"styles"`
-	ResourceURL  string       `json:"resource_url"`
-	MainRelease  int          `json:"main_release"`
+	AlbumID      string          `json:"album_id"`
+	AlbumTitle   string          `json:"album_title"`
+	DiscogsID    int             `json:"discogs_id"`
+	DiscogsTitle string          `json:"discogs_title"`
+	Artists      []string        `json:"artists"`
+	Year         int             `json:"year"`
+	Genres       []ResolvedGenre `json:"genres"`
+	Styles       []ResolvedGenre `json:"styles"`
+	ResourceURL  string          `json:"resource_url"`
+	MainRelease  int             `json:"main_release"`
+}
+
+func nodesToResolved(nodes []*genres.Node) []ResolvedGenre {
+	out := make([]ResolvedGenre, len(nodes))
+	for i, n := range nodes {
+		out[i] = ResolvedGenre{ID: n.ID, Label: n.Label}
+	}
+	return out
 }
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})))
+
+	dag, err := genres.Load()
+	if err != nil {
+		slog.Error("Failed to load genre DAG", "error", err)
+		os.Exit(1)
+	}
 
 	config := app.LoadConfig()
 
@@ -123,14 +142,14 @@ func main() {
 		}
 
 		var (
-			discogsID    int
-			discogsTitle string
-			artistNames  []string
-			year         int
-			genres       []tags.Genre
-			styles       []string
-			resourceURL  string
-			mainRelease  int
+			discogsID      int
+			discogsTitle   string
+			artistNames    []string
+			year           int
+			resolvedGenres []ResolvedGenre
+			resolvedStyles []ResolvedGenre
+			resourceURL    string
+			mainRelease    int
 		)
 
 		if matchedItem.MasterID != 0 {
@@ -142,8 +161,8 @@ func main() {
 			discogsID = master.ID
 			discogsTitle = master.Title
 			year = master.Year
-			genres = discogs.ToMasterGenres(master.Genres)
-			styles = master.Styles
+			resolvedGenres = nodesToResolved(discogs.Resolve(dag, master.Genres))
+			resolvedStyles = nodesToResolved(discogs.Resolve(dag, master.Styles))
 			resourceURL = master.ResourceURL
 			mainRelease = master.MainRelease
 			for _, a := range master.Artists {
@@ -158,16 +177,12 @@ func main() {
 			discogsID = release.ID
 			discogsTitle = release.Title
 			year = release.Year
-			genres = discogs.ToMasterGenres(release.Genres)
-			styles = release.Styles
+			resolvedGenres = nodesToResolved(discogs.Resolve(dag, release.Genres))
+			resolvedStyles = nodesToResolved(discogs.Resolve(dag, release.Styles))
 			resourceURL = release.ResourceURL
 			for _, a := range release.Artists {
 				artistNames = append(artistNames, a.Name)
 			}
-		}
-
-		for _, s := range styles {
-			seenStyles[s] = struct{}{}
 		}
 
 		records = append(records, Record{
@@ -177,8 +192,8 @@ func main() {
 			DiscogsTitle: discogsTitle,
 			Artists:      artistNames,
 			Year:         year,
-			Genres:       genres,
-			Styles:       styles,
+			Genres:       resolvedGenres,
+			Styles:       resolvedStyles,
 			ResourceURL:  resourceURL,
 			MainRelease:  mainRelease,
 		})

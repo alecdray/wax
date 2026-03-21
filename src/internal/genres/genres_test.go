@@ -4,6 +4,28 @@ import (
 	"testing"
 )
 
+func TestNormalizeLabel(t *testing.T) {
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{"Soul-Jazz", "Soul Jazz"},
+		{"Jazz-Rock", "Jazz Rock"},
+		{"Rhythm & Blues", "Rhythm and Blues"},
+		{"Jazzy Hip-Hop", "Jazzy Hip Hop"},
+		{"Rock", "Rock"},
+		{"Post Rock", "Post Rock"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.in, func(t *testing.T) {
+			got := normalizeLabel(tt.in)
+			if got != tt.want {
+				t.Errorf("normalizeLabel(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestRoot(t *testing.T) {
 	dag, err := Load()
 	if err != nil {
@@ -54,6 +76,26 @@ func TestSearch(t *testing.T) {
 		results := dag.Search("zzzzzzzzzzzzz")
 		if len(results) != 0 {
 			t.Errorf("expected no results for nonsense query, got %d", len(results))
+		}
+	})
+
+	t.Run("hyphenated label matches space-separated query ahead of longer labels", func(t *testing.T) {
+		results := dag.Search("Hip Hop")
+		if len(results) == 0 {
+			t.Skip("Hip-Hop not in dataset")
+		}
+		if results[0].Label != "hip-hop" {
+			t.Errorf("expected top result to be 'hip-hop', got %q", results[0].Label)
+		}
+	})
+
+	t.Run("ampersand in query matches 'and' label", func(t *testing.T) {
+		results := dag.Search("rock & roll")
+		if len(results) == 0 {
+			t.Skip("rock and roll not in dataset")
+		}
+		if results[0].Label != "rock and roll" {
+			t.Errorf("expected top result to be 'rock and roll', got %q", results[0].Label)
 		}
 	})
 
