@@ -40,6 +40,16 @@
 - Environment variables documented in `.env.template`
 - Run `task` without arguments to list available commands
 
+## Testing
+
+- **Always write tests for new logic.** Any non-trivial function should have a corresponding test.
+- For pure logic functions in `cmd` packages, extract them into a separate file (e.g. `pull.go`) so they can be unit tested without I/O — keep `main.go` as thin orchestration only
+- Group tests by the function under test using a top-level `Test<FuncName>` function
+- Use `t.Run` subtests to describe specific behaviours — makes output scannable and serves as documentation
+- Name subtests as plain descriptions of the expected behaviour (e.g. `"returns empty for nonsense query"`)
+- Test behaviour, not implementation — each subtest should assert one specific outcome
+- Use `t.Skip` when a test condition may legitimately not be met in all dataset states
+
 ## Documentation
 
 - After editing or adding significant logic to a module, review and update the module's README if needed
