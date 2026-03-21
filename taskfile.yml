@@ -28,6 +28,13 @@ tasks:
     cmds:
       - task build/pull-discogs
       - ./bin/pull-discogs
+  build/pull-wikidata:
+    cmds:
+      - go build -v -o ./bin/pull-wikidata ./src/cmd/pull-wikidata/
+  pull-wikidata:
+    cmds:
+      - task build/pull-wikidata
+      - ./bin/pull-wikidata
   build:
     cmds:
       - task build/templ build/tailwind build/sqlc build/server
