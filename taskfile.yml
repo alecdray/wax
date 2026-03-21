@@ -35,9 +35,13 @@ tasks:
     cmds:
       - task build/pull-genres
       - ./bin/pull-genres
+  build/genre-explorer:
+    cmds:
+      - go build -v -o ./bin/genre-explorer ./src/cmd/genre-explorer/
   genre-explorer:
     cmds:
-      - go run ./src/cmd/genre-explorer/
+      - task build/genre-explorer
+      - ./bin/genre-explorer
   build:
     cmds:
       - task build/templ build/tailwind build/sqlc build/server

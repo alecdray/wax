@@ -37,6 +37,7 @@
 
 - Use `task` command for all build/run operations (see `taskfile.yml`)
 - Always prefer `task <name>` over invoking tools directly (e.g. `task build/templ` not `templ generate`)
+- All `go build` commands must output to `./bin/` using `-o ./bin/<name>` — never build to the project root
 - Environment variables documented in `.env.template`
 - Run `task` without arguments to list available commands
 
