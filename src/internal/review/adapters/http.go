@@ -281,6 +281,15 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 		return
 	}
 
+	err = adapters.AlbumRating(*album, true).Render(ctx, w)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    err,
+		})
+		return
+	}
+
 	err = adapters.AlbumRatingHistory(*album, true).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
@@ -349,6 +358,15 @@ func (h *HttpHandler) DeleteRatingLogEntry(w http.ResponseWriter, r *http.Reques
 	}
 
 	err = adapters.AlbumListRating(*album, true).Render(ctx, w)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    err,
+		})
+		return
+	}
+
+	err = adapters.AlbumRating(*album, true).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
