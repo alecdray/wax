@@ -4,22 +4,22 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
+
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/db"
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/db/sqlc"
 	"github.com/alecdray/wax/src/internal/core/sqlx"
-	"github.com/alecdray/wax/src/internal/core/timex"
 	"github.com/alecdray/wax/src/internal/core/utils"
 	"github.com/alecdray/wax/src/internal/library"
 	"github.com/alecdray/wax/src/internal/spotify"
-	"time"
 
 	"github.com/google/uuid"
 )
 
 const (
-	MinStaleDuration = 1 * timex.Day
+	MinStaleDuration = 1 * time.Hour
 )
 
 type FeedDTO struct {
