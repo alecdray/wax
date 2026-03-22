@@ -86,7 +86,7 @@ func (s *Service) GetAlbumGenreSuggestions(ctx contextx.ContextX, title, artist 
 		return nil
 	}
 	if item == nil {
-		return nil
+		item, err = s.SearchReleaseByAlbum(ctx, title, artist)
 	}
 	return resolveItemGenres(s.dag, item)
 }

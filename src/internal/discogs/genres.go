@@ -37,6 +37,10 @@ func resolveOne(dag *genres.DAG, term string) *genres.Node {
 // resolveItemGenres combines the genre and style fields from a Discogs search item,
 // fuzzy-matches them against the DAG, and returns the resolved genre labels.
 func resolveItemGenres(dag *genres.DAG, item *SearchItem) []string {
+	if item == nil {
+		return nil
+	}
+
 	terms := append(item.Genre, item.Style...)
 	nodes := Resolve(dag, terms)
 	labels := make([]string, 0, len(nodes))
