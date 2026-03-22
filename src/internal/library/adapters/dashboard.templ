@@ -7,6 +7,7 @@ import (
 	"github.com/alecdray/wax/src/internal/feed"
 	"github.com/alecdray/wax/src/internal/library"
 	"github.com/alecdray/wax/src/internal/review"
+	"github.com/alecdray/wax/src/internal/tags"
 	"net/url"
 	"slices"
 	"strings"
@@ -21,6 +22,15 @@ func GetAlbumTagsID(albumId string) string {
 }
 
 const maxTagsInAlbumTagsCell = 2
+
+func hasSoundGroupTag(album library.AlbumDTO) bool {
+	for _, t := range album.Tags {
+		if t.Group != nil && t.Group.Name == tags.TagGroupSound {
+			return true
+		}
+	}
+	return false
+}
 
 templ AlbumTagsCell(album library.AlbumDTO, isOobSwap bool) {
 	<div
@@ -367,7 +377,7 @@ templ albumListRow(album library.AlbumDTO) {
 						}
 						for i, tag := range album.Tags {
 							if i < maxTagsInAlbumTagsCell {
-								<span class="badge badge-sm badge-ghost text-xs text-nowrap">{ tag.Name }</span>
+								<span class="badge badge-sm badge-ghost text-xs text-nowrap text-base-content/60">{ tag.Name }</span>
 							}
 						}
 						if len(album.Tags) > maxTagsInAlbumTagsCell {
@@ -375,6 +385,14 @@ templ albumListRow(album library.AlbumDTO) {
 						}
 					</div>
 				}
+				<button
+					class={ "btn btn-ghost btn-xs", templ.KV("text-secondary", !hasSoundGroupTag(album)), templ.KV("text-secondary-content/60", hasSoundGroupTag(album)) }
+					hx-get={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
+					hx-trigger="click"
+					hx-swap="none"
+				>
+					@templates.TagIcon(templates.IconProps{})
+				</button>
 			</div>
 		</div>
 		<div class="flex-shrink-0 self-stretch flex items-center">

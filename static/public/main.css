@@ -3723,6 +3723,21 @@
   .text-primary {
     color: var(--color-primary);
   }
+  .text-secondary {
+    color: var(--color-secondary);
+  }
+  .text-secondary-content\/50 {
+    color: var(--color-secondary-content);
+    @supports (color: color-mix(in lab, red, red)) {
+      color: color-mix(in oklab, var(--color-secondary-content) 50%, transparent);
+    }
+  }
+  .text-secondary-content\/60 {
+    color: var(--color-secondary-content);
+    @supports (color: color-mix(in lab, red, red)) {
+      color: color-mix(in oklab, var(--color-secondary-content) 60%, transparent);
+    }
+  }
   .text-success {
     color: var(--color-success);
   }
