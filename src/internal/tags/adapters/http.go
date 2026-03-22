@@ -176,5 +176,14 @@ func (h *HttpHandler) SubmitAlbumTags(w http.ResponseWriter, r *http.Request) {
 			Status: http.StatusInternalServerError,
 			Err:    err,
 		})
+		return
+	}
+
+	err = libraryAdapters.AlbumRowTagsSection(*album, true).Render(ctx, w)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    err,
+		})
 	}
 }
