@@ -16,6 +16,7 @@ import (
 	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/discogs"
 	"github.com/alecdray/wax/src/internal/feed"
+	"github.com/alecdray/wax/src/internal/genres"
 	"github.com/alecdray/wax/src/internal/library"
 	libraryAdapters "github.com/alecdray/wax/src/internal/library/adapters"
 	"github.com/alecdray/wax/src/internal/listeninghistory"
@@ -68,7 +69,11 @@ func NewServices(app app.App, db *db.DB) *services {
 		slog.Error("Failed to create Discogs client", "error", err)
 		os.Exit(1)
 	}
-	s.discogs = discogs.NewService(discogsClient)
+	genreDAG, err := genres.Load()
+	if err != nil {
+		slog.Warn("Failed to load genre DAG; tag suggestions will be unavailable", "error", err)
+	}
+	s.discogs = discogs.NewService(discogsClient, genreDAG)
 
 	s.spotifyAuth = spotify.NewAuthService(
 		app.Config().SpotifyClientId,
@@ -140,7 +145,7 @@ func Start(ctx context.Context, app app.App) {
 	appMux.Handle("GET /app/library/dashboard/carousel", httpx.HandlerFunc(libraryHandler.GetCarousel))
 	appMux.Handle("GET /app/library/albums/{albumId}", httpx.HandlerFunc(libraryHandler.GetAlbumDetailPage))
 
-	tagsHandler := tagsAdapters.NewHttpHandler(services.library, services.tags)
+	tagsHandler := tagsAdapters.NewHttpHandler(services.library, services.tags, services.discogs)
 	appMux.Handle("GET /app/tags/album", httpx.HandlerFunc(tagsHandler.GetTagsModal))
 	appMux.Handle("POST /app/tags/album", httpx.HandlerFunc(tagsHandler.SubmitAlbumTags))
 

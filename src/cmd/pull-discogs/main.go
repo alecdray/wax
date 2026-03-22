@@ -73,7 +73,7 @@ func main() {
 		slog.Error("Failed to create Discogs client", "error", err)
 		os.Exit(1)
 	}
-	discogsSvc := discogs.NewService(discogsClient)
+	discogsSvc := discogs.NewService(discogsClient, nil)
 
 	ctx := contextx.NewContextX(context.Background())
 

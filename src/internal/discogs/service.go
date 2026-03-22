@@ -1,13 +1,19 @@
 package discogs
 
-import "github.com/alecdray/wax/src/internal/core/contextx"
+import (
+	"log/slog"
+
+	"github.com/alecdray/wax/src/internal/core/contextx"
+	"github.com/alecdray/wax/src/internal/genres"
+)
 
 type Service struct {
 	client *Client
+	dag    *genres.DAG
 }
 
-func NewService(client *Client) *Service {
-	return &Service{client: client}
+func NewService(client *Client, dag *genres.DAG) *Service {
+	return &Service{client: client, dag: dag}
 }
 
 func (s *Service) Client() *Client {
@@ -68,4 +74,19 @@ func (s *Service) GetMaster(ctx contextx.ContextX, id int) (*Master, error) {
 
 func (s *Service) GetRelease(ctx contextx.ContextX, id int) (*Release, error) {
 	return s.client.GetRelease(ctx, id)
+}
+
+// GetAlbumGenreSuggestions searches Discogs for the album, resolves the genres and styles
+// against the genre DAG, and returns the normalized genre labels.
+// Errors are logged and suppressed so callers always get a (possibly empty) slice.
+func (s *Service) GetAlbumGenreSuggestions(ctx contextx.ContextX, title, artist string) []string {
+	item, err := s.SearchMasterByAlbum(ctx, title, artist)
+	if err != nil {
+		slog.Warn("discogs search failed for genre suggestions", "title", title, "err", err)
+		return nil
+	}
+	if item == nil {
+		return nil
+	}
+	return resolveItemGenres(s.dag, item)
 }

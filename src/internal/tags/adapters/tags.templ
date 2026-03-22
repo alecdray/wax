@@ -10,7 +10,7 @@ import (
 
 const TagsModalId = "tags-modal"
 
-func tagsAlpineData(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO) string {
+func tagsAlpineData(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO, suggestions []string) string {
   // Build initial chips from album's current tags
   type chip struct {
     ID      string `json:"id"`
@@ -55,11 +55,13 @@ func tagsAlpineData(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*
   chipsJSON, _ := json.Marshal(initialChips)
   tagsJSON, _ := json.Marshal(allTagOpts)
   groupsJSON, _ := json.Marshal(groupOpts)
+  suggestionsJSON, _ := json.Marshal(suggestions)
 
   return fmt.Sprintf(`{
     chips: %s,
     allTags: %s,
     groups: %s,
+    suggestions: %s,
     query: '',
     activeGroupId: '',
     get filteredTags() {
@@ -69,6 +71,14 @@ func tagsAlpineData(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*
         !used.has(t.name.toLowerCase()) &&
         (q === '' || t.name.toLowerCase().includes(q))
       ).slice(0, 8);
+    },
+    get availableSuggestions() {
+      const used = new Set(this.chips.map(c => c.name.toLowerCase()));
+      return this.suggestions.filter(s => !used.has(s.toLowerCase()));
+    },
+    get soundGroupId() {
+      const g = this.groups.find(g => g.name === 'Sound');
+      return g ? g.id : '';
     },
     addTag(name, id, groupId) {
       const n = name.trim();
@@ -91,11 +101,11 @@ func tagsAlpineData(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*
       const g = this.groups.find(g => g.id === groupId);
       return g ? g.name : '';
     }
-  }`, string(chipsJSON), string(tagsJSON), string(groupsJSON))
+  }`, string(chipsJSON), string(tagsJSON), string(groupsJSON), string(suggestionsJSON))
 }
 
-templ TagsForm(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO) {
-  <div x-data={ tagsAlpineData(album, allTags, tagGroups) }>
+templ TagsForm(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO, suggestions []string) {
+  <div x-data={ tagsAlpineData(album, allTags, tagGroups, suggestions) }>
     <!-- Group selector -->
     if len(tagGroups) > 0 {
       <div class="flex gap-2 mb-3 flex-wrap">
@@ -150,6 +160,19 @@ templ TagsForm(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.
         </template>
       </div>
     </div>
+    <!-- Discogs genre suggestions -->
+    <div x-show="availableSuggestions.length > 0" class="mb-4">
+      <div class="text-xs text-base-content/50 mb-1.5">Suggested (Sound)</div>
+      <div class="flex flex-wrap gap-1.5">
+        <template x-for="s in availableSuggestions" :key="s">
+          <button
+            type="button"
+            class="badge badge-outline badge-sm cursor-pointer hover:badge-primary text-sm py-3"
+            @click="addTag(s, '', soundGroupId)"
+          >+ <span x-text="s"></span></button>
+        </template>
+      </div>
+    </div>
     <!-- Hidden inputs for form submission -->
     <template x-for="chip in chips" :key="chip.name">
       <input type="hidden" name="tag[]" :value="chip.name + '|' + chip.groupId"/>
@@ -162,18 +185,18 @@ templ TagsForm(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.
   </div>
 }
 
-templ TagsFormWrapper(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO) {
+templ TagsFormWrapper(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO, suggestions []string) {
   <form
     class="flex flex-col gap-2"
     hx-post={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
   >
-    @TagsForm(album, allTags, tagGroups)
+    @TagsForm(album, allTags, tagGroups, suggestions)
   </form>
 }
 
-templ TagsModal(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO) {
+templ TagsModal(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO, suggestions []string) {
   @templates.Modal(TagsModalId, templates.ModalProps{
-    ModalContent: TagsFormWrapper(album, allTags, tagGroups),
+    ModalContent: TagsFormWrapper(album, allTags, tagGroups, suggestions),
   })
 }
 

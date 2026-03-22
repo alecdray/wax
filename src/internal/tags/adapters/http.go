@@ -4,24 +4,36 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
+
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/httpx"
+	"github.com/alecdray/wax/src/internal/discogs"
 	"github.com/alecdray/wax/src/internal/library"
 	libraryAdapters "github.com/alecdray/wax/src/internal/library/adapters"
 	"github.com/alecdray/wax/src/internal/tags"
-	"strings"
 )
 
 type HttpHandler struct {
 	libraryService *library.Service
 	tagsService    *tags.Service
+	discogsService *discogs.Service
 }
 
-func NewHttpHandler(libraryService *library.Service, tagsService *tags.Service) *HttpHandler {
+func NewHttpHandler(libraryService *library.Service, tagsService *tags.Service, discogsService *discogs.Service) *HttpHandler {
 	return &HttpHandler{
 		libraryService: libraryService,
 		tagsService:    tagsService,
+		discogsService: discogsService,
 	}
+}
+
+func (h *HttpHandler) fetchGenreSuggestions(ctx contextx.ContextX, album *library.AlbumDTO) []string {
+	artist := ""
+	if len(album.Artists) > 0 {
+		artist = album.Artists[0].Name
+	}
+	return h.discogsService.GetAlbumGenreSuggestions(ctx, album.Title, artist)
 }
 
 func (h *HttpHandler) GetTagsModal(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +85,9 @@ func (h *HttpHandler) GetTagsModal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = TagsModal(*album, allTags, tagGroups).Render(ctx, w)
+	suggestions := h.fetchGenreSuggestions(ctx, album)
+
+	err = TagsModal(*album, allTags, tagGroups, suggestions).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
