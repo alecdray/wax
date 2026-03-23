@@ -120,3 +120,11 @@ CREATE TABLE album_rating_log (
     note       text,
     created_at datetime not null default current_timestamp
 );
+CREATE TABLE album_notes (
+    id         TEXT NOT NULL PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    album_id   TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+    content    TEXT NOT NULL DEFAULT '',
+    updated_at DATETIME NOT NULL DEFAULT current_timestamp,
+    UNIQUE(user_id, album_id)
+);

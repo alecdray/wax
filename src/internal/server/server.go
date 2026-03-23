@@ -24,6 +24,8 @@ import (
 	"github.com/alecdray/wax/src/internal/review"
 	reviewAdapters "github.com/alecdray/wax/src/internal/review/adapters"
 	"github.com/alecdray/wax/src/internal/spotify"
+	"github.com/alecdray/wax/src/internal/notes"
+	notesAdapters "github.com/alecdray/wax/src/internal/notes/adapters"
 	"github.com/alecdray/wax/src/internal/tags"
 	tagsAdapters "github.com/alecdray/wax/src/internal/tags/adapters"
 	"github.com/alecdray/wax/src/internal/user"
@@ -43,6 +45,7 @@ type services struct {
 	review           *review.Service
 	listeningHistory *listeninghistory.Service
 	tags             *tags.Service
+	notes            *notes.Service
 }
 
 func NewServices(app app.App, db *db.DB) *services {
@@ -92,7 +95,9 @@ func NewServices(app app.App, db *db.DB) *services {
 
 	s.tags = tags.NewService(db)
 
-	s.library = library.NewService(db, s.listeningHistory, s.tags)
+	s.notes = notes.NewService(db)
+
+	s.library = library.NewService(db, s.listeningHistory, s.tags, s.notes)
 
 	s.feed = feed.NewService(db, s.spotify, s.library)
 	s.taskManager.RegisterCronTask(
@@ -148,6 +153,11 @@ func Start(ctx context.Context, app app.App) {
 	tagsHandler := tagsAdapters.NewHttpHandler(services.library, services.tags, services.discogs)
 	appMux.Handle("GET /app/tags/album", httpx.HandlerFunc(tagsHandler.GetTagsModal))
 	appMux.Handle("POST /app/tags/album", httpx.HandlerFunc(tagsHandler.SubmitAlbumTags))
+
+	notesHandler := notesAdapters.NewHttpHandler(services.library, services.notes)
+	appMux.Handle("GET /app/notes/album", httpx.HandlerFunc(notesHandler.GetSleeveNotesEditor))
+	appMux.Handle("GET /app/notes/album/view", httpx.HandlerFunc(notesHandler.GetSleeveNotesView))
+	appMux.Handle("PUT /app/notes/album", httpx.HandlerFunc(notesHandler.SaveSleeveNote))
 
 	reviewHandler := reviewAdapters.NewHttpHandler(services.library, services.review)
 	appMux.Handle("GET /app/review/rating-recommender", httpx.HandlerFunc(reviewHandler.GetRatingRecommender))

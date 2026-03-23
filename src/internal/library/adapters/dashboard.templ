@@ -337,23 +337,26 @@ templ AlbumRowTagsSection(album library.AlbumDTO, isOobSwap bool) {
 			hx-swap-oob="true"
 		}
 	>
-		if (album.Rating != nil && album.Rating.Rating != nil) || len(album.Tags) > 0 {
-			<div class="flex flex-wrap items-center gap-1">
-				if album.Rating != nil && album.Rating.Rating != nil {
-					<span class="badge badge-sm badge-soft badge-primary text-xs text-nowrap">{ review.GetRatingLabel(*album.Rating.Rating) }</span>
+		<div class="flex flex-wrap items-center gap-1">
+			if album.Rating != nil && album.Rating.Rating != nil {
+				<span class="badge badge-sm badge-soft badge-primary text-xs text-nowrap">{ review.GetRatingLabel(*album.Rating.Rating) }</span>
+			}
+			if album.SleeveNote != nil && album.SleeveNote.Content != "" {
+				<span class="badge badge-sm badge-ghost text-xs text-base-content/60" data-testid="album-row-notes-icon">
+					@templates.PenIcon(templates.IconProps{})
+				</span>
+			}
+			for i, tag := range album.Tags {
+				if i < maxTagsInAlbumTagsCell {
+					<span class="badge badge-sm badge-ghost text-xs text-nowrap text-base-content/60">{ tag.Name }</span>
 				}
-				for i, tag := range album.Tags {
-					if i < maxTagsInAlbumTagsCell {
-						<span class="badge badge-sm badge-ghost text-xs text-nowrap text-base-content/60">{ tag.Name }</span>
-					}
-				}
-				if len(album.Tags) > maxTagsInAlbumTagsCell {
-					<span class="badge badge-sm badge-ghost text-xs text-nowrap text-base-content/50">+{ fmt.Sprintf("%d", len(album.Tags)-maxTagsInAlbumTagsCell) }</span>
-				}
-			</div>
-		}
+			}
+			if len(album.Tags) > maxTagsInAlbumTagsCell {
+				<span class="badge badge-sm badge-ghost text-xs text-nowrap text-base-content/50">+{ fmt.Sprintf("%d", len(album.Tags)-maxTagsInAlbumTagsCell) }</span>
+			}
+		</div>
 		<button
-			class={ "btn btn-ghost btn-xs", templ.KV("text-secondary", !hasSoundGroupTag(album)), templ.KV("text-secondary-content/60", hasSoundGroupTag(album)) }
+			class={ "btn btn-ghost btn-xs text-secondary" }
 			hx-get={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"

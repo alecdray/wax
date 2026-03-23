@@ -25,6 +25,14 @@ type AlbumArtist struct {
 	ArtistID string
 }
 
+type AlbumNote struct {
+	ID        string
+	UserID    string
+	AlbumID   string
+	Content   string
+	UpdatedAt time.Time
+}
+
 type AlbumRatingLog struct {
 	ID        string
 	UserID    string

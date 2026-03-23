@@ -1,0 +1,63 @@
+package adapters
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/library"
+	"github.com/alecdray/wax/src/internal/notes"
+)
+
+func GetSleeveNotesSectionID(albumId string) string {
+	return fmt.Sprintf("sleeve-notes-%s", albumId)
+}
+
+templ SleeveNotesSection(album library.AlbumDTO, isOobSwap bool) {
+	<div
+		id={ GetSleeveNotesSectionID(album.ID) }
+		class="flex flex-col gap-2"
+		if isOobSwap {
+			hx-swap-oob="true"
+		}
+	>
+		if album.SleeveNote != nil && album.SleeveNote.Content != "" {
+			@sleeveNotesDisplay(album)
+		} else {
+			@sleeveNotesEmpty(album)
+		}
+	</div>
+}
+
+templ sleeveNotesDisplay(album library.AlbumDTO) {
+	<div class="flex items-center justify-start gap-2">
+		<span class="text-xs font-semibold uppercase tracking-wider text-base-content/40">Sleeve Notes</span>
+		<button
+			data-testid="sleeve-notes-edit"
+			class="btn btn-ghost btn-xs text-base-content/40"
+			hx-get={ fmt.Sprintf("/app/notes/album?albumId=%s", album.ID) }
+			hx-trigger="click"
+			hx-target={ "#" + GetSleeveNotesSectionID(album.ID) }
+			hx-swap="innerHTML"
+		>
+			Edit
+		</button>
+	</div>
+	<div class="text-sm text-base-content/80 [&_p]:mb-2 [&_a]:text-info [&_a]:underline [&_a:hover]:text-info/70 [&_ul]:!list-disc [&_ul]:pl-5 [&_ol]:!list-decimal [&_ol]:pl-5 [&_li]:my-0.5" data-testid="sleeve-notes-content">
+		@templ.Raw(string(notes.RenderMarkdown(album.SleeveNote.Content)))
+	</div>
+}
+
+templ sleeveNotesEmpty(album library.AlbumDTO) {
+	<div class="flex items-center justify-start gap-2">
+		<span class="text-xs font-semibold uppercase tracking-wider text-base-content/40">Sleeve Notes</span>
+		<button
+			data-testid="sleeve-notes-edit"
+			class="btn btn-ghost btn-xs text-base-content/40"
+			hx-get={ fmt.Sprintf("/app/notes/album?albumId=%s", album.ID) }
+			hx-trigger="click"
+			hx-target={ "#" + GetSleeveNotesSectionID(album.ID) }
+			hx-swap="innerHTML"
+		>
+			Add
+		</button>
+	</div>
+	<span class="text-xs text-base-content/30">No notes yet</span>
+}

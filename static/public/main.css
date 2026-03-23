@@ -2861,6 +2861,9 @@
   .mt-1 {
     margin-top: calc(var(--spacing) * 1);
   }
+  .mt-2 {
+    margin-top: calc(var(--spacing) * 2);
+  }
   .mt-4 {
     margin-top: calc(var(--spacing) * 4);
   }
@@ -3574,6 +3577,9 @@
   .text-right {
     text-align: right;
   }
+  .font-mono {
+    font-family: var(--font-mono);
+  }
   .text-2xl {
     font-size: var(--text-2xl);
     line-height: var(--tw-leading, var(--text-2xl--line-height));
@@ -3714,6 +3720,12 @@
       color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
     }
   }
+  .text-base-content\/80 {
+    color: var(--color-base-content);
+    @supports (color: color-mix(in lab, red, red)) {
+      color: color-mix(in oklab, var(--color-base-content) 80%, transparent);
+    }
+  }
   .text-error {
     color: var(--color-error);
   }
@@ -3725,18 +3737,6 @@
   }
   .text-secondary {
     color: var(--color-secondary);
-  }
-  .text-secondary-content\/50 {
-    color: var(--color-secondary-content);
-    @supports (color: color-mix(in lab, red, red)) {
-      color: color-mix(in oklab, var(--color-secondary-content) 50%, transparent);
-    }
-  }
-  .text-secondary-content\/60 {
-    color: var(--color-secondary-content);
-    @supports (color: color-mix(in lab, red, red)) {
-      color: color-mix(in oklab, var(--color-secondary-content) 60%, transparent);
-    }
   }
   .text-success {
     color: var(--color-success);
@@ -4016,6 +4016,54 @@
   .md\:overflow-y-auto {
     @media (width >= 48rem) {
       overflow-y: auto;
+    }
+  }
+  .\[\&_a\]\:text-info {
+    & a {
+      color: var(--color-info);
+    }
+  }
+  .\[\&_a\]\:underline {
+    & a {
+      text-decoration-line: underline;
+    }
+  }
+  .\[\&_a\:hover\]\:text-info\/70 {
+    & a:hover {
+      color: var(--color-info);
+      @supports (color: color-mix(in lab, red, red)) {
+        color: color-mix(in oklab, var(--color-info) 70%, transparent);
+      }
+    }
+  }
+  .\[\&_li\]\:my-0\.5 {
+    & li {
+      margin-block: calc(var(--spacing) * 0.5);
+    }
+  }
+  .\[\&_ol\]\:\!list-decimal {
+    & ol {
+      list-style-type: decimal !important;
+    }
+  }
+  .\[\&_ol\]\:pl-5 {
+    & ol {
+      padding-left: calc(var(--spacing) * 5);
+    }
+  }
+  .\[\&_p\]\:mb-2 {
+    & p {
+      margin-bottom: calc(var(--spacing) * 2);
+    }
+  }
+  .\[\&_ul\]\:\!list-disc {
+    & ul {
+      list-style-type: disc !important;
+    }
+  }
+  .\[\&_ul\]\:pl-5 {
+    & ul {
+      padding-left: calc(var(--spacing) * 5);
     }
   }
 }

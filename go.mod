@@ -19,6 +19,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
+	github.com/yuin/goldmark v1.7.17 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/net v0.42.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect

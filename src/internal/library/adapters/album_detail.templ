@@ -129,6 +129,8 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 					</div>
 					@AlbumTagsCell(album, false)
 				</div>
+				// Sleeve Notes
+				@SleeveNotesSection(album, false)
 				// Tracks
 				if len(album.Tracks) > 0 {
 					<div class="flex flex-col gap-2">

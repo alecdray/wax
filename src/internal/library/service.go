@@ -10,6 +10,7 @@ import (
 	"github.com/alecdray/wax/src/internal/core/db/sqlc"
 	"github.com/alecdray/wax/src/internal/core/utils"
 	"github.com/alecdray/wax/src/internal/listeninghistory"
+	"github.com/alecdray/wax/src/internal/notes"
 	"github.com/alecdray/wax/src/internal/review"
 	"github.com/alecdray/wax/src/internal/tags"
 	"sort"
@@ -114,6 +115,7 @@ type AlbumDTO struct {
 	Rating       *review.AlbumRatingDTO
 	RatingLog    []*review.AlbumRatingDTO
 	Tags         []tags.TagDTO
+	SleeveNote   *notes.AlbumNoteDTO
 	LastPlayedAt *time.Time
 }
 
@@ -356,13 +358,15 @@ type Service struct {
 	db                      *db.DB
 	listeningHistoryService *listeninghistory.Service
 	tagsService             *tags.Service
+	notesService            *notes.Service
 }
 
-func NewService(db *db.DB, listeningHistoryService *listeninghistory.Service, tagsService *tags.Service) *Service {
+func NewService(db *db.DB, listeningHistoryService *listeninghistory.Service, tagsService *tags.Service, notesService *notes.Service) *Service {
 	return &Service{
 		db:                      db,
 		listeningHistoryService: listeningHistoryService,
 		tagsService:             tagsService,
+		notesService:            notesService,
 	}
 }
 
@@ -449,6 +453,12 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 		return nil, err
 	}
 
+	notesByAlbumId, err := s.notesService.GetAlbumNotesByAlbumIds(ctx, userId, albumIds)
+	if err != nil {
+		err = fmt.Errorf("failed to get album notes: %w", err)
+		return nil, err
+	}
+
 	var albumDTOs []AlbumDTO
 	for _, album := range albums {
 		dto := NewAlbumDTOFromModel(
@@ -462,6 +472,7 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 			dto.LastPlayedAt = &t
 		}
 		dto.Tags = tagsByAlbumId[album.ID]
+		dto.SleeveNote = notesByAlbumId[album.ID]
 		albumDTOs = append(albumDTOs, dto)
 	}
 
@@ -667,6 +678,13 @@ func (s *Service) GetAlbumInLibrary(ctx context.Context, userId string, albumId 
 		return nil, err
 	}
 	albumDto.Tags = albumTags
+
+	sleeveNote, err := s.notesService.GetAlbumNote(ctx, userId, albumId)
+	if err != nil {
+		err = fmt.Errorf("failed to get album note: %w", err)
+		return nil, err
+	}
+	albumDto.SleeveNote = sleeveNote
 
 	lastPlayedAtByAlbumId, err := s.listeningHistoryService.GetLastPlayedAtByAlbumIds(ctx, userId, []string{albumId})
 	if err != nil {
