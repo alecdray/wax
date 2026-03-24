@@ -2,6 +2,7 @@ package review
 
 import (
 	"math"
+
 	"github.com/alecdray/wax/src/internal/core/utils"
 )
 
@@ -97,7 +98,7 @@ var RatingRecommenderQuestions RatingQuestions = RatingQuestions{
 			{1, "Bored or uncomfortable"},
 			{2, "Mostly indifferent"},
 			{3, "Engaged but nothing special"},
-			{4, "Moved — emotionally or physically"},
+			{4, "Moved or deeply engaged"},
 			{5, "Completely absorbed, transported somewhere else"},
 		},
 		Weight: RatingWeightImpact,
@@ -141,11 +142,11 @@ type RatingKeyEntry struct {
 }
 
 var RatingKey = []RatingKeyEntry{
-	{0, 2.9, RatingLabelDOA},
+	{0.0, 2.9, RatingLabelDOA},
 	{3.0, 3.9, RatingLabelNope},
-	{4.0, 5.9, RatingLabelNotForMe},
-	{6.0, 6.4, RatingLabelLukewarm},
-	{6.5, 6.9, RatingLabelSolid},
+	{4.0, 4.9, RatingLabelNotForMe},
+	{5.0, 5.9, RatingLabelLukewarm},
+	{6.0, 6.9, RatingLabelSolid},
 	{7.0, 7.9, RatingLabelRecommended},
 	{8.0, 8.9, RatingLabelEssential},
 	{9.0, 9.9, RatingLabelInstantClassic},
