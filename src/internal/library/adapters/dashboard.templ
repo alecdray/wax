@@ -354,15 +354,15 @@ templ AlbumRowTagsSection(album library.AlbumDTO, isOobSwap bool) {
 			if len(album.Tags) > maxTagsInAlbumTagsCell {
 				<span class="badge badge-sm badge-ghost text-xs text-nowrap text-base-content/50">+{ fmt.Sprintf("%d", len(album.Tags)-maxTagsInAlbumTagsCell) }</span>
 			}
+			<button
+				class={ "btn btn-ghost btn-xs text-secondary" }
+				hx-get={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
+				hx-trigger="click"
+				hx-swap="none"
+			>
+				@templates.TagIcon(templates.IconProps{})
+			</button>
 		</div>
-		<button
-			class={ "btn btn-ghost btn-xs text-secondary" }
-			hx-get={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
-			hx-trigger="click"
-			hx-swap="none"
-		>
-			@templates.TagIcon(templates.IconProps{})
-		</button>
 	</div>
 }
 
@@ -394,7 +394,7 @@ templ albumListRow(album library.AlbumDTO) {
 				</div>
 			}
 		</a>
-		<div class="list-col-grow flex flex-col justify-between min-w-0 h-full pt-2">
+		<div class="list-col-grow flex flex-col justify-between min-w-0 h-full pt-2 gap-2">
 			<a href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) } class="block min-w-0">
 				<div class="font-medium truncate" data-testid="album-row-title-link">{ album.Title }</div>
 				if len(album.Artists) > 0 {
