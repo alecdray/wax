@@ -109,6 +109,22 @@
     </section>
 
     <section>
+      <h2>Question weights <span style="color:#444;font-size:10px;text-transform:none;letter-spacing:0">(auto-normalized)</span></h2>
+      <div class="param">
+        <label>Consistency <span id="val-wc">0.30</span></label>
+        <input type="range" id="wc" min="0.05" max="1" step="0.05" value="0.3">
+      </div>
+      <div class="param">
+        <label>Impact <span id="val-wi">0.40</span></label>
+        <input type="range" id="wi" min="0.05" max="1" step="0.05" value="0.4">
+      </div>
+      <div class="param">
+        <label>Gut check <span id="val-wg">0.30</span></label>
+        <input type="range" id="wg" min="0.05" max="1" step="0.05" value="0.3">
+      </div>
+    </section>
+
+    <section>
       <h2>Curved values per answer</h2>
       <div class="cv-grid" id="cv-grid"></div>
     </section>
@@ -173,7 +189,13 @@
 </div>
 
 <script>
-const WEIGHTS = { c: 0.3, i: 0.4, g: 0.3 };
+function weights() {
+  const wc = parseFloat(document.getElementById('wc').value);
+  const wi = parseFloat(document.getElementById('wi').value);
+  const wg = parseFloat(document.getElementById('wg').value);
+  const total = wc + wi + wg;
+  return { c: wc / total, i: wi / total, g: wg / total };
+}
 
 const LABELS = [
   { label: "DOA",           min: 0.0,  max: 2.9  },
@@ -194,9 +216,10 @@ function curved(value, exponent) {
 }
 
 function computeRating(c, i, g, floor, ceiling, exponent) {
-  const raw = curved(c, exponent) * WEIGHTS.c
-            + curved(i, exponent) * WEIGHTS.i
-            + curved(g, exponent) * WEIGHTS.g;
+  const w = weights();
+  const raw = curved(c, exponent) * w.c
+            + curved(i, exponent) * w.i
+            + curved(g, exponent) * w.g;
   const rating = floor + ((raw - 1) / 4) * (ceiling - floor);
   return Math.round(rating * 10) / 10;
 }
@@ -220,6 +243,11 @@ function update() {
   document.getElementById('val-floor').textContent    = floor.toFixed(1);
   document.getElementById('val-ceiling').textContent  = ceiling.toFixed(1);
   document.getElementById('val-exponent').textContent = exponent.toFixed(2);
+
+  const w = weights();
+  document.getElementById('val-wc').textContent = w.c.toFixed(2);
+  document.getElementById('val-wi').textContent = w.i.toFixed(2);
+  document.getElementById('val-wg').textContent = w.g.toFixed(2);
 
   // Curved values
   const cvGrid = document.getElementById('cv-grid');
@@ -278,7 +306,7 @@ function update() {
   });
 }
 
-['floor', 'ceiling', 'exponent'].forEach(id => {
+['floor', 'ceiling', 'exponent', 'wc', 'wi', 'wg'].forEach(id => {
   document.getElementById(id).addEventListener('input', () => { update(); updateTester(); });
 });
 
