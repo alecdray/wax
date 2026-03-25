@@ -42,6 +42,13 @@ tasks:
     cmds:
       - task build/genre-explorer
       - ./bin/genre-explorer
+  build/rating-sim:
+    cmds:
+      - go build -v -o ./bin/rating-sim ./src/cmd/rating-sim/
+  rating-sim:
+    cmds:
+      - task build/rating-sim
+      - ./bin/rating-sim
   build:
     cmds:
       - task build/templ build/tailwind build/sqlc build/server

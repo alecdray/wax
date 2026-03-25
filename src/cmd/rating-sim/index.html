@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rating Score Simulator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: ui-monospace, monospace; font-size: 14px; background: #0f0f0f; color: #e0e0e0; padding: 32px; }
+  h1 { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 24px; letter-spacing: 0.05em; }
+
+  .layout { display: grid; grid-template-columns: 300px 1fr; gap: 32px; align-items: start; }
+
+  section { margin-bottom: 28px; }
+  h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #666; margin-bottom: 12px; }
+
+  /* Params */
+  .param { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
+  .param label { display: flex; justify-content: space-between; color: #aaa; }
+  .param label span { color: #fff; font-weight: 600; min-width: 36px; text-align: right; }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%; height: 4px;
+    background: #2a2a2a; border-radius: 2px; outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%; background: #7c6af7; cursor: pointer;
+  }
+
+  /* Curved values */
+  .cv-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .cv-cell {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px;
+    padding: 10px 8px; text-align: center;
+  }
+  .cv-cell .answer { font-size: 18px; font-weight: 700; color: #7c6af7; }
+  .cv-cell .arrow { font-size: 10px; color: #444; margin: 2px 0; }
+  .cv-cell .curved { font-size: 13px; color: #e0e0e0; }
+
+  /* Benchmarks */
+  .benchmark { display: flex; flex-direction: column; gap: 4px; }
+  .bench-row { display: flex; align-items: center; gap: 12px; padding: 6px 10px; background: #1a1a1a; border-radius: 5px; }
+  .bench-answers { color: #666; width: 52px; flex-shrink: 0; }
+  .bench-score { color: #fff; font-weight: 600; width: 40px; text-align: right; flex-shrink: 0; }
+  .bench-label { color: #aaa; flex: 1; }
+  .bench-bar-wrap { width: 80px; height: 4px; background: #2a2a2a; border-radius: 2px; flex-shrink: 0; }
+  .bench-bar { height: 100%; border-radius: 2px; background: #7c6af7; transition: width 0.15s; }
+
+  /* Distribution */
+  .dist-row { display: flex; align-items: center; gap: 10px; padding: 5px 10px; border-radius: 5px; }
+  .dist-row:hover { background: #1a1a1a; }
+  .dist-label { width: 110px; color: #aaa; flex-shrink: 0; }
+  .dist-range { width: 72px; color: #444; font-size: 12px; flex-shrink: 0; text-align: right; }
+  .dist-bar-wrap { flex: 1; height: 8px; background: #1e1e1e; border-radius: 3px; }
+  .dist-bar { height: 100%; border-radius: 3px; background: #7c6af7; transition: width 0.15s; min-width: 0; }
+  .dist-count { width: 28px; text-align: right; color: #666; font-size: 12px; flex-shrink: 0; }
+  .dist-pct { width: 36px; text-align: right; color: #444; font-size: 12px; flex-shrink: 0; }
+
+  .highlight .dist-label, .highlight .dist-count { color: #fff; }
+  .highlight .dist-bar { background: #a899ff; }
+
+  /* Question tester */
+  .question { margin-bottom: 16px; }
+  .question-text { color: #aaa; margin-bottom: 8px; line-height: 1.4; }
+  .options { display: flex; flex-direction: column; gap: 4px; }
+  .option {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 10px; border-radius: 5px; cursor: pointer;
+    border: 1px solid transparent; transition: background 0.1s;
+  }
+  .option:hover { background: #1e1e1e; }
+  .option.selected { background: #1e1a3a; border-color: #7c6af7; }
+  .option-num { color: #444; width: 14px; flex-shrink: 0; }
+  .option.selected .option-num { color: #7c6af7; }
+  .option-text { color: #aaa; }
+  .option.selected .option-text { color: #e0e0e0; }
+
+  .result-box {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 20px; background: #1a1a1a; border-radius: 8px;
+    border: 1px solid #2a2a2a; margin-top: 4px;
+  }
+  .result-score { font-size: 36px; font-weight: 700; color: #7c6af7; line-height: 1; }
+  .result-label { font-size: 18px; color: #fff; font-weight: 600; }
+  .result-range { font-size: 12px; color: #444; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<h1>Rating Score Simulator</h1>
+
+<div class="layout">
+  <div>
+    <section>
+      <h2>Parameters</h2>
+      <div class="param">
+        <label>Floor <span id="val-floor">2.0</span></label>
+        <input type="range" id="floor" min="0" max="5" step="0.5" value="2">
+      </div>
+      <div class="param">
+        <label>Ceiling <span id="val-ceiling">10.0</span></label>
+        <input type="range" id="ceiling" min="5" max="20" step="0.5" value="10">
+      </div>
+      <div class="param">
+        <label>Exponent <span id="val-exponent">0.80</span></label>
+        <input type="range" id="exponent" min="0.05" max="2" step="0.05" value="0.8">
+      </div>
+    </section>
+
+    <section>
+      <h2>Curved values per answer</h2>
+      <div class="cv-grid" id="cv-grid"></div>
+    </section>
+
+    <section>
+      <h2>Uniform answer scores</h2>
+      <div class="benchmark" id="benchmarks"></div>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>Question tester</h2>
+
+      <div class="question">
+        <div class="question-text">How would you describe the album track by track?</div>
+        <div class="options" data-q="c">
+          <div class="option selected" data-v="1"><span class="option-num">1</span><span class="option-text">Almost every track is a skip</span></div>
+          <div class="option" data-v="2"><span class="option-num">2</span><span class="option-text">More misses than hits</span></div>
+          <div class="option" data-v="3"><span class="option-num">3</span><span class="option-text">Mixed — some great, some weak</span></div>
+          <div class="option" data-v="4"><span class="option-num">4</span><span class="option-text">Mostly strong with a few weak spots</span></div>
+          <div class="option" data-v="5"><span class="option-num">5</span><span class="option-text">No skips, front to back</span></div>
+        </div>
+      </div>
+
+      <div class="question">
+        <div class="question-text">How did this album make you feel while listening?</div>
+        <div class="options" data-q="i">
+          <div class="option selected" data-v="1"><span class="option-num">1</span><span class="option-text">Bored or uncomfortable</span></div>
+          <div class="option" data-v="2"><span class="option-num">2</span><span class="option-text">Mostly indifferent</span></div>
+          <div class="option" data-v="3"><span class="option-num">3</span><span class="option-text">Engaged but nothing special</span></div>
+          <div class="option" data-v="4"><span class="option-num">4</span><span class="option-text">Moved or deeply engaged</span></div>
+          <div class="option" data-v="5"><span class="option-num">5</span><span class="option-text">Completely absorbed, transported somewhere else</span></div>
+        </div>
+      </div>
+
+      <div class="question">
+        <div class="question-text">When the album ended, what was your immediate reaction?</div>
+        <div class="options" data-q="g">
+          <div class="option selected" data-v="1"><span class="option-num">1</span><span class="option-text">Relief it was over</span></div>
+          <div class="option" data-v="2"><span class="option-num">2</span><span class="option-text">Indifferent</span></div>
+          <div class="option" data-v="3"><span class="option-num">3</span><span class="option-text">Satisfied</span></div>
+          <div class="option" data-v="4"><span class="option-num">4</span><span class="option-text">Impressed</span></div>
+          <div class="option" data-v="5"><span class="option-num">5</span><span class="option-text">I immediately restarted it</span></div>
+        </div>
+      </div>
+
+      <div class="result-box">
+        <div class="result-score" id="tester-score">—</div>
+        <div>
+          <div class="result-label" id="tester-label">—</div>
+          <div class="result-range" id="tester-range"></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Label distribution — all 125 combos</h2>
+      <div id="distribution"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+const WEIGHTS = { c: 0.3, i: 0.4, g: 0.3 };
+
+const LABELS = [
+  { label: "DOA",           min: 0.0,  max: 2.9  },
+  { label: "Nope",          min: 3.0,  max: 3.9  },
+  { label: "Not For Me",    min: 4.0,  max: 4.9  },
+  { label: "Lukewarm",      min: 5.0,  max: 5.9  },
+  { label: "Solid",         min: 6.0,  max: 6.9  },
+  { label: "Staff Pick",    min: 7.0,  max: 7.9  },
+  { label: "Essential",     min: 8.0,  max: 8.9  },
+  { label: "Inst. Classic", min: 9.0,  max: 9.9  },
+  { label: "Masterpiece",   min: 10.0, max: 10.0 },
+];
+
+function curved(value, exponent) {
+  const norm = (value - 3) / 2;
+  const c = Math.sign(norm) * Math.pow(Math.abs(norm), exponent);
+  return c * 2 + 3;
+}
+
+function computeRating(c, i, g, floor, ceiling, exponent) {
+  const raw = curved(c, exponent) * WEIGHTS.c
+            + curved(i, exponent) * WEIGHTS.i
+            + curved(g, exponent) * WEIGHTS.g;
+  const rating = floor + ((raw - 1) / 4) * (ceiling - floor);
+  return Math.round(rating * 10) / 10;
+}
+
+function getLabel(rating) {
+  const r = Math.max(0, Math.min(10, rating));
+  return LABELS.find(e => r >= e.min && r <= e.max) || LABELS[LABELS.length - 1];
+}
+
+function params() {
+  return {
+    floor:    parseFloat(document.getElementById('floor').value),
+    ceiling:  parseFloat(document.getElementById('ceiling').value),
+    exponent: parseFloat(document.getElementById('exponent').value),
+  };
+}
+
+function update() {
+  const { floor, ceiling, exponent } = params();
+
+  document.getElementById('val-floor').textContent    = floor.toFixed(1);
+  document.getElementById('val-ceiling').textContent  = ceiling.toFixed(1);
+  document.getElementById('val-exponent').textContent = exponent.toFixed(2);
+
+  // Curved values
+  const cvGrid = document.getElementById('cv-grid');
+  cvGrid.innerHTML = '';
+  for (let v = 1; v <= 5; v++) {
+    const cv = curved(v, exponent);
+    cvGrid.innerHTML += `
+      <div class="cv-cell">
+        <div class="answer">${v}</div>
+        <div class="arrow">↓</div>
+        <div class="curved">${cv.toFixed(2)}</div>
+      </div>`;
+  }
+
+  // Benchmarks
+  const benchEl = document.getElementById('benchmarks');
+  benchEl.innerHTML = '';
+  for (let v = 1; v <= 5; v++) {
+    const score = computeRating(v, v, v, floor, ceiling, exponent);
+    const entry = getLabel(score);
+    const pct = ((score / 10) * 100).toFixed(0);
+    benchEl.innerHTML += `
+      <div class="bench-row">
+        <span class="bench-answers">All ${v}s</span>
+        <span class="bench-score">${score.toFixed(1)}</span>
+        <span class="bench-label">${entry.label}</span>
+        <div class="bench-bar-wrap"><div class="bench-bar" style="width:${pct}%"></div></div>
+      </div>`;
+  }
+
+  // Distribution
+  const counts = new Array(LABELS.length).fill(0);
+  for (let c = 1; c <= 5; c++)
+    for (let i = 1; i <= 5; i++)
+      for (let g = 1; g <= 5; g++) {
+        const r = computeRating(c, i, g, floor, ceiling, exponent);
+        const idx = LABELS.findIndex(e => r >= e.min && r <= e.max);
+        if (idx >= 0) counts[idx]++;
+      }
+
+  const maxCount = Math.max(...counts);
+  const distEl = document.getElementById('distribution');
+  distEl.innerHTML = '';
+  LABELS.forEach((e, i) => {
+    const pct = maxCount > 0 ? (counts[i] / maxCount * 100).toFixed(1) : 0;
+    const totalPct = (counts[i] / 125 * 100).toFixed(0);
+    const highlight = counts[i] === maxCount && maxCount > 0 ? 'highlight' : '';
+    distEl.innerHTML += `
+      <div class="dist-row ${highlight}">
+        <span class="dist-label">${e.label}</span>
+        <span class="dist-range">${e.min.toFixed(1)}–${e.max.toFixed(1)}</span>
+        <div class="dist-bar-wrap"><div class="dist-bar" style="width:${pct}%"></div></div>
+        <span class="dist-count">${counts[i]}</span>
+        <span class="dist-pct">${totalPct}%</span>
+      </div>`;
+  });
+}
+
+['floor', 'ceiling', 'exponent'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => { update(); updateTester(); });
+});
+
+// Question tester state
+const testerValues = { c: 1, i: 1, g: 1 };
+
+function updateTester() {
+  const { floor, ceiling, exponent } = params();
+  const score = computeRating(testerValues.c, testerValues.i, testerValues.g, floor, ceiling, exponent);
+  const entry = getLabel(score);
+  document.getElementById('tester-score').textContent = score.toFixed(1);
+  document.getElementById('tester-label').textContent = entry.label;
+  document.getElementById('tester-range').textContent = `${entry.min.toFixed(1)} – ${entry.max.toFixed(1)}`;
+}
+
+document.querySelectorAll('.options').forEach(group => {
+  const q = group.dataset.q;
+  group.querySelectorAll('.option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      group.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      testerValues[q] = parseInt(opt.dataset.v);
+      updateTester();
+    });
+  });
+});
+
+update();
+updateTester();
+</script>
+</body>
+</html>
