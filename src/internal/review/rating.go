@@ -10,10 +10,10 @@ const (
 	// Controls how much extreme answers (1 or 5) are amplified.
 	// Lower values = more powerful extremes, higher values = closer to linear.
 	// Valid range 0.0–1.0, where 1.0 is fully linear.
-	ratingCurveExponent = 0.6
+	ratingCurveExponent = 1.55
 
 	// Minimum possible rating — awarded when all answers are 1.
-	ratingFloor = 1.0
+	ratingFloor = 1.5
 
 	// Maximum possible rating — awarded when all answers are 5.
 	ratingCeiling = 10.0
