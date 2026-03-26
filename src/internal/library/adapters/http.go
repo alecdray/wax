@@ -158,7 +158,7 @@ func (h *HttpHandler) GetAlbumsTable(w http.ResponseWriter, r *http.Request) {
 	sortBy := r.URL.Query().Get("sortBy")
 	dir := r.URL.Query().Get("dir")
 
-	ascending := dir != "desc"
+	ascending := dir == "asc"
 
 	switch sortBy {
 	case "album":
@@ -167,10 +167,10 @@ func (h *HttpHandler) GetAlbumsTable(w http.ResponseWriter, r *http.Request) {
 		albums.SortByArtist(ascending)
 	case "rating":
 		albums.SortByRating(ascending)
-	case "date":
-		albums.SortByDate(ascending)
 	case "lastPlayed":
 		albums.SortByLastPlayed(ascending)
+	default:
+		albums.SortByDate(ascending)
 	}
 
 	fp := parseFilterParams(r)
@@ -318,6 +318,15 @@ func (h *HttpHandler) DeleteAlbum(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func anyFeedSyncing(feeds []feed.FeedDTO) bool {
+	for _, f := range feeds {
+		if f.LastSyncStatus.IsSyncing() {
+			return true
+		}
+	}
+	return false
+}
+
 func (h *HttpHandler) GetFeedsDropdown(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())
 
@@ -333,6 +342,12 @@ func (h *HttpHandler) GetFeedsDropdown(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	wasSyncing := r.URL.Query().Get("wasSyncing") == "true"
+	nowSyncing := anyFeedSyncing(feeds)
+	if wasSyncing && !nowSyncing {
+		w.Header().Set("HX-Trigger", "libraryUpdated")
+	}
+
 	// Render content first
 	contentComponent := FeedsDropdownContent(feeds)
 	contentComponent.Render(r.Context(), w)
@@ -340,4 +355,23 @@ func (h *HttpHandler) GetFeedsDropdown(w http.ResponseWriter, r *http.Request) {
 	// Render button as OOB swap
 	buttonComponent := FeedsDropdownButton(feeds, true)
 	buttonComponent.Render(r.Context(), w)
+}
+
+func (h *HttpHandler) GetLibraryStats(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+
+	userId, err := ctx.UserId()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	lib, err := h.libraryService.GetLibrary(ctx, userId)
+	if err != nil {
+		err = fmt.Errorf("failed to get library: %w", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	LibraryStats(lib).Render(r.Context(), w)
 }

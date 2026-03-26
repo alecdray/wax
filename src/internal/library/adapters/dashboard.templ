@@ -74,6 +74,15 @@ type DashboardPageProps struct {
 	FilterParams    library.FilterParams
 }
 
+func anyFeedIsSyncing(feeds []feed.FeedDTO) bool {
+	for _, f := range feeds {
+		if f.LastSyncStatus.IsSyncing() {
+			return true
+		}
+	}
+	return false
+}
+
 func getFeedsDropdownButtonIndicatorColor(feeds []feed.FeedDTO) templates.NeonColor {
 	color := templates.NeonColorSuccess
 	for _, f := range feeds {
@@ -131,6 +140,7 @@ templ FeedsDropdownContent(feeds []feed.FeedDTO) {
 		} else {
 			hx-trigger="every 5s"
 		}
+		hx-vals={ fmt.Sprintf(`{"wasSyncing": "%v"}`, anyFeedIsSyncing(feeds)) }
 		hx-swap="morph"
 	>
 		<div class="menu-title px-2 py-1">
@@ -251,6 +261,32 @@ templ AlbumRating(album library.AlbumDTO, isOobSwap bool) {
 			Rate
 		</button>
 	}
+}
+
+func buildAlbumsTableURL(sortBy, dir string, fp library.FilterParams) string {
+	q := url.Values{}
+	if sortBy != "" {
+		q.Set("sortBy", sortBy)
+	}
+	if dir != "" {
+		q.Set("dir", dir)
+	}
+	if fp.MinRating != nil {
+		q.Set("minRating", fmt.Sprintf("%g", *fp.MinRating))
+	}
+	if fp.MaxRating != nil {
+		q.Set("maxRating", fmt.Sprintf("%g", *fp.MaxRating))
+	}
+	if fp.Rated != "" {
+		q.Set("rated", fp.Rated)
+	}
+	for _, format := range fp.Formats {
+		q.Add("format", string(format))
+	}
+	for _, artistID := range fp.ArtistIDs {
+		q.Add("artist", artistID)
+	}
+	return "/app/library/dashboard/albums-table?" + q.Encode()
 }
 
 // buildAlbumsPageURL constructs the URL for the infinite scroll sentinel.
@@ -765,7 +801,14 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 }
 
 templ AlbumsList(albums []library.AlbumDTO, sortBy string, sortDir string, fp library.FilterParams, artists []library.ArtistDTO) {
-	<div id="album-list" class="w-full max-w-3xl" data-testid="albums-list">
+	<div
+		id="album-list"
+		class="w-full max-w-3xl"
+		data-testid="albums-list"
+		hx-get={ buildAlbumsTableURL(sortBy, sortDir, fp) }
+		hx-trigger="libraryUpdated from:body"
+		hx-swap="outerHTML"
+	>
 		@filterChipBar(sortBy, sortDir, fp, artists)
 		<ul class="list px-4">
 			@albumsListBody(albums, 0, sortBy, sortDir, fp)
@@ -775,7 +818,14 @@ templ AlbumsList(albums []library.AlbumDTO, sortBy string, sortDir string, fp li
 
 templ LibraryStats(lib *library.Library) {
 	if lib != nil {
-		<div class="w-full flex-shrink-0 px-4" data-testid="library-stats">
+		<div
+			id="library-stats"
+			class="w-full flex-shrink-0 px-4"
+			data-testid="library-stats"
+			hx-get="/app/library/dashboard/stats"
+			hx-trigger="libraryUpdated from:body"
+			hx-swap="outerHTML"
+		>
 			<div class="bg-base-200 p-2 rounded-xl">
 				<div class="stats stats-horizontal shadow-sm w-full">
 					<div class="stat py-2">
@@ -872,7 +922,13 @@ templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 }
 
 templ CarouselSection(albums []library.AlbumSummaryDTO, active CarouselView) {
-	<div id="carousel-section" class="w-full flex-shrink-0">
+	<div
+		id="carousel-section"
+		class="w-full flex-shrink-0"
+		hx-get="/app/library/dashboard/carousel"
+		hx-trigger="libraryUpdated from:body"
+		hx-swap="outerHTML"
+	>
 		<div class="flex items-center gap-3 px-4 pb-1">
 			<button
 				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-base-content", active == CarouselViewRecentlyPlayed), templ.KV("text-base-content/40 hover:text-base-content/70 cursor-pointer", active != CarouselViewRecentlyPlayed) }
