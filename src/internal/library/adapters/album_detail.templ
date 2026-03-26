@@ -145,6 +145,17 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 						</div>
 					</div>
 				}
+			<div class="flex justify-center pt-4 pb-2">
+				<button
+					class="btn btn-ghost btn-sm text-error"
+					data-testid="album-detail-remove"
+					hx-delete={ fmt.Sprintf("/app/library/albums/%s", album.ID) }
+					hx-confirm="Remove this album from your library?"
+					hx-swap="none"
+				>
+					Remove from library
+				</button>
+			</div>
 			</div>
 		</div>
 	}

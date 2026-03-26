@@ -45,7 +45,7 @@ CREATE TABLE user_releases (
     user_id text not null references users(id) on delete cascade,
     release_id text not null references releases(id) on delete cascade,
     added_at datetime not null default current_timestamp,
-    deleted_at datetime,
+    deleted_at datetime, removed_at datetime,
     unique(user_id, release_id)
 );
 CREATE TABLE user_tracks (

@@ -146,6 +146,7 @@ type UserRelease struct {
 	ReleaseID string
 	AddedAt   time.Time
 	DeletedAt sql.NullTime
+	RemovedAt sql.NullTime
 }
 
 type UserTrack struct {

@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
+	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/db"
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/db/sqlc"
@@ -12,6 +14,7 @@ import (
 	"github.com/alecdray/wax/src/internal/listeninghistory"
 	"github.com/alecdray/wax/src/internal/notes"
 	"github.com/alecdray/wax/src/internal/review"
+	"github.com/alecdray/wax/src/internal/spotify"
 	"github.com/alecdray/wax/src/internal/tags"
 	"sort"
 	"time"
@@ -356,14 +359,16 @@ func (l *Library) tracks() []TrackDTO {
 
 type Service struct {
 	db                      *db.DB
+	spotifyService          *spotify.Service
 	listeningHistoryService *listeninghistory.Service
 	tagsService             *tags.Service
 	notesService            *notes.Service
 }
 
-func NewService(db *db.DB, listeningHistoryService *listeninghistory.Service, tagsService *tags.Service, notesService *notes.Service) *Service {
+func NewService(db *db.DB, spotifyService *spotify.Service, listeningHistoryService *listeninghistory.Service, tagsService *tags.Service, notesService *notes.Service) *Service {
 	return &Service{
 		db:                      db,
+		spotifyService:          spotifyService,
 		listeningHistoryService: listeningHistoryService,
 		tagsService:             tagsService,
 		notesService:            notesService,
@@ -716,6 +721,26 @@ func (s *Service) GetRecentlyPlayedAlbums(ctx context.Context, userID string) ([
 		})
 	}
 	return dtos, nil
+}
+
+func (s *Service) RemoveAlbumFromLibrary(ctx contextx.ContextX, userId, albumId string) error {
+	album, err := s.db.Queries().GetAlbum(ctx, albumId)
+	if err != nil {
+		return fmt.Errorf("failed to get album: %w", err)
+	}
+
+	if err := s.db.Queries().SoftDeleteUserReleasesByAlbumId(ctx, sqlc.SoftDeleteUserReleasesByAlbumIdParams{
+		UserID:  userId,
+		AlbumID: albumId,
+	}); err != nil {
+		return fmt.Errorf("failed to soft delete releases: %w", err)
+	}
+
+	if err := s.spotifyService.RemoveAlbumFromSavedLibrary(ctx, userId, album.SpotifyID); err != nil {
+		slog.WarnContext(ctx, "failed to remove album from spotify saved library", "error", err)
+	}
+
+	return nil
 }
 
 func (s *Service) GetUnratedAlbums(ctx context.Context, userID string) ([]AlbumSummaryDTO, error) {

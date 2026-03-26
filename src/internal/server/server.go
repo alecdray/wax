@@ -83,6 +83,7 @@ func NewServices(app app.App, db *db.DB) *services {
 		app.Config().SpotifyClientSecret,
 		fmt.Sprintf("%s/spotify/callback", app.Config().Host),
 		spotifyauth.ScopeUserLibraryRead,
+		spotifyauth.ScopeUserLibraryModify,
 		spotifyauth.ScopeUserReadRecentlyPlayed,
 	)
 
@@ -97,7 +98,7 @@ func NewServices(app app.App, db *db.DB) *services {
 
 	s.notes = notes.NewService(db)
 
-	s.library = library.NewService(db, s.listeningHistory, s.tags, s.notes)
+	s.library = library.NewService(db, s.spotify, s.listeningHistory, s.tags, s.notes)
 
 	s.feed = feed.NewService(db, s.spotify, s.library)
 	s.taskManager.RegisterCronTask(
@@ -149,6 +150,7 @@ func Start(ctx context.Context, app app.App) {
 	appMux.Handle("GET /app/library/dashboard/albums-page", httpx.HandlerFunc(libraryHandler.GetAlbumsPage))
 	appMux.Handle("GET /app/library/dashboard/carousel", httpx.HandlerFunc(libraryHandler.GetCarousel))
 	appMux.Handle("GET /app/library/albums/{albumId}", httpx.HandlerFunc(libraryHandler.GetAlbumDetailPage))
+	appMux.Handle("DELETE /app/library/albums/{albumId}", httpx.HandlerFunc(libraryHandler.DeleteAlbum))
 
 	tagsHandler := tagsAdapters.NewHttpHandler(services.library, services.tags, services.discogs)
 	appMux.Handle("GET /app/tags/album", httpx.HandlerFunc(tagsHandler.GetTagsModal))

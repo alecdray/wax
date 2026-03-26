@@ -11,9 +11,9 @@ import (
 )
 
 const getUserReleases = `-- name: GetUserReleases :many
-SELECT user_releases.id, user_releases.user_id, user_releases.release_id, user_releases.added_at, user_releases.deleted_at, releases.id, releases.album_id, releases.format, releases.created_at, releases.deleted_at FROM user_releases
+SELECT user_releases.id, user_releases.user_id, user_releases.release_id, user_releases.added_at, user_releases.deleted_at, user_releases.removed_at, releases.id, releases.album_id, releases.format, releases.created_at, releases.deleted_at FROM user_releases
 JOIN releases ON user_releases.release_id = releases.id
-WHERE user_id = ?
+WHERE user_id = ? AND removed_at IS NULL
 `
 
 type GetUserReleasesRow struct {
@@ -36,6 +36,7 @@ func (q *Queries) GetUserReleases(ctx context.Context, userID string) ([]GetUser
 			&i.UserRelease.ReleaseID,
 			&i.UserRelease.AddedAt,
 			&i.UserRelease.DeletedAt,
+			&i.UserRelease.RemovedAt,
 			&i.Release.ID,
 			&i.Release.AlbumID,
 			&i.Release.Format,
@@ -56,10 +57,11 @@ func (q *Queries) GetUserReleases(ctx context.Context, userID string) ([]GetUser
 }
 
 const getUserReleasesByAlbumId = `-- name: GetUserReleasesByAlbumId :many
-SELECT user_releases.id, user_releases.user_id, user_releases.release_id, user_releases.added_at, user_releases.deleted_at, releases.id, releases.album_id, releases.format, releases.created_at, releases.deleted_at FROM user_releases
+SELECT user_releases.id, user_releases.user_id, user_releases.release_id, user_releases.added_at, user_releases.deleted_at, user_releases.removed_at, releases.id, releases.album_id, releases.format, releases.created_at, releases.deleted_at FROM user_releases
 JOIN releases ON user_releases.release_id = releases.id
 WHERE user_id = ?
 AND album_id = ?
+AND removed_at IS NULL
 `
 
 type GetUserReleasesByAlbumIdParams struct {
@@ -87,6 +89,7 @@ func (q *Queries) GetUserReleasesByAlbumId(ctx context.Context, arg GetUserRelea
 			&i.UserRelease.ReleaseID,
 			&i.UserRelease.AddedAt,
 			&i.UserRelease.DeletedAt,
+			&i.UserRelease.RemovedAt,
 			&i.Release.ID,
 			&i.Release.AlbumID,
 			&i.Release.Format,
@@ -106,11 +109,34 @@ func (q *Queries) GetUserReleasesByAlbumId(ctx context.Context, arg GetUserRelea
 	return items, nil
 }
 
+const softDeleteUserReleasesByAlbumId = `-- name: SoftDeleteUserReleasesByAlbumId :exec
+UPDATE user_releases
+SET removed_at = current_timestamp
+WHERE user_id = ? AND release_id IN (
+    SELECT id FROM releases WHERE album_id = ?
+)
+`
+
+type SoftDeleteUserReleasesByAlbumIdParams struct {
+	UserID  string
+	AlbumID string
+}
+
+func (q *Queries) SoftDeleteUserReleasesByAlbumId(ctx context.Context, arg SoftDeleteUserReleasesByAlbumIdParams) error {
+	_, err := q.db.ExecContext(ctx, softDeleteUserReleasesByAlbumId, arg.UserID, arg.AlbumID)
+	return err
+}
+
 const upsertUserRelease = `-- name: UpsertUserRelease :one
 INSERT INTO user_releases (id, user_id, release_id, added_at) VALUES (?, ?, ?, ?)
 ON CONFLICT (user_id, release_id)
-DO UPDATE SET added_at = COALESCE(EXCLUDED.added_at, added_at)
-RETURNING id, user_id, release_id, added_at, deleted_at
+DO UPDATE SET
+    added_at = COALESCE(EXCLUDED.added_at, added_at),
+    removed_at = CASE
+        WHEN removed_at IS NOT NULL AND EXCLUDED.added_at > removed_at THEN NULL
+        ELSE removed_at
+    END
+RETURNING id, user_id, release_id, added_at, deleted_at, removed_at
 `
 
 type UpsertUserReleaseParams struct {
@@ -134,6 +160,7 @@ func (q *Queries) UpsertUserRelease(ctx context.Context, arg UpsertUserReleasePa
 		&i.ReleaseID,
 		&i.AddedAt,
 		&i.DeletedAt,
+		&i.RemovedAt,
 	)
 	return i, err
 }

@@ -18,7 +18,7 @@ SELECT albums.*, MAX(track_plays.played_at) as last_played_at,
     EXISTS (
         SELECT 1 FROM user_releases
         JOIN releases ON releases.id = user_releases.release_id
-        WHERE releases.album_id = albums.id AND user_releases.user_id = track_plays.user_id
+        WHERE releases.album_id = albums.id AND user_releases.user_id = track_plays.user_id AND user_releases.removed_at IS NULL
     ) as in_library
 FROM track_plays
 JOIN albums ON albums.id = track_plays.album_id

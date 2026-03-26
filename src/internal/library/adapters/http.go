@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/db/models"
+	"github.com/alecdray/wax/src/internal/core/httpx"
 	"github.com/alecdray/wax/src/internal/core/task"
 	"github.com/alecdray/wax/src/internal/feed"
 	"github.com/alecdray/wax/src/internal/library"
@@ -293,6 +294,28 @@ func (h *HttpHandler) GetAlbumDetailPage(w http.ResponseWriter, r *http.Request)
 	}
 
 	AlbumDetailPage(*album).Render(r.Context(), w)
+}
+
+func (h *HttpHandler) DeleteAlbum(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+	userId, err := ctx.UserId()
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get user ID: %w", err),
+		})
+		return
+	}
+	albumId := r.PathValue("albumId")
+	if err := h.libraryService.RemoveAlbumFromLibrary(ctx, userId, albumId); err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to remove album: %w", err),
+		})
+		return
+	}
+	w.Header().Set("HX-Redirect", "/app/library/dashboard")
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *HttpHandler) GetFeedsDropdown(w http.ResponseWriter, r *http.Request) {

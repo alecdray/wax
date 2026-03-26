@@ -2,9 +2,11 @@ package spotify
 
 import (
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/user"
-	"time"
 
 	spotify "github.com/zmb3/spotify/v2"
 )
@@ -133,6 +135,37 @@ func (s *Service) GetUsersSavedAlbums(ctx contextx.ContextX, userId string) ([]s
 		offset += len(albums.Albums)
 	}
 	return collectedAlbums, nil
+}
+
+func (s *Service) RemoveAlbumFromSavedLibrary(ctx contextx.ContextX, userId, spotifyId string) error {
+	client, err := s.Client(ctx, userId)
+	if err != nil {
+		return fmt.Errorf("failed to get spotify client: %w", err)
+	}
+
+	token, err := client.Token()
+	if err != nil {
+		return fmt.Errorf("failed to get token: %w", err)
+	}
+
+	uri := fmt.Sprintf("spotify:album:%s", spotifyId)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete,
+		"https://api.spotify.com/v1/me/library?uris="+uri, nil)
+	if err != nil {
+		return fmt.Errorf("failed to build request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status: %s", resp.Status)
+	}
+	return nil
 }
 
 func (s *Service) GetUsersSavedTracks(ctx contextx.ContextX, userId string) ([]spotify.SavedTrack, error) {
