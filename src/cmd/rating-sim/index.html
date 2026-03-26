@@ -95,32 +95,36 @@
     <section>
       <h2>Parameters</h2>
       <div class="param">
-        <label>Floor <span id="val-floor">2.0</span></label>
-        <input type="range" id="floor" min="0" max="5" step="0.5" value="2">
+        <label>Floor <span id="val-floor">1.5</span></label>
+        <input type="range" id="floor" min="0" max="5" step="0.5" value="1.5">
       </div>
       <div class="param">
         <label>Ceiling <span id="val-ceiling">10.0</span></label>
         <input type="range" id="ceiling" min="5" max="20" step="0.5" value="10">
       </div>
       <div class="param">
-        <label>Exponent <span id="val-exponent">0.80</span></label>
-        <input type="range" id="exponent" min="0.05" max="2" step="0.05" value="0.8">
+        <label>Exponent <span id="val-exponent">1.55</span></label>
+        <input type="range" id="exponent" min="0.05" max="2" step="0.05" value="1.55">
       </div>
     </section>
 
     <section>
       <h2>Question weights <span style="color:#444;font-size:10px;text-transform:none;letter-spacing:0">(auto-normalized)</span></h2>
       <div class="param">
-        <label>Consistency <span id="val-wc">0.30</span></label>
-        <input type="range" id="wc" min="0.05" max="1" step="0.05" value="0.3">
+        <label>Consistency <span id="val-wc">0.25</span></label>
+        <input type="range" id="wc" min="0.05" max="1" step="0.05" value="0.25">
       </div>
       <div class="param">
-        <label>Impact <span id="val-wi">0.40</span></label>
-        <input type="range" id="wi" min="0.05" max="1" step="0.05" value="0.4">
+        <label>Impact <span id="val-wi">0.35</span></label>
+        <input type="range" id="wi" min="0.05" max="1" step="0.05" value="0.35">
       </div>
       <div class="param">
-        <label>Gut check <span id="val-wg">0.30</span></label>
-        <input type="range" id="wg" min="0.05" max="1" step="0.05" value="0.3">
+        <label>Gut check <span id="val-wg">0.25</span></label>
+        <input type="range" id="wg" min="0.05" max="1" step="0.05" value="0.25">
+      </div>
+      <div class="param">
+        <label>X Factor <span id="val-wx">0.15</span></label>
+        <input type="range" id="wx" min="0.05" max="1" step="0.05" value="0.15">
       </div>
     </section>
 
@@ -172,6 +176,17 @@
         </div>
       </div>
 
+      <div class="question">
+        <div class="question-text">How do you feel about this album?</div>
+        <div class="options" data-q="x">
+          <div class="option selected" data-v="1"><span class="option-num">1</span><span class="option-text">Not good</span></div>
+          <div class="option" data-v="2"><span class="option-num">2</span><span class="option-text">Meh</span></div>
+          <div class="option" data-v="3"><span class="option-num">3</span><span class="option-text">I dig it</span></div>
+          <div class="option" data-v="4"><span class="option-num">4</span><span class="option-text">It speaks to me</span></div>
+          <div class="option" data-v="5"><span class="option-num">5</span><span class="option-text">This album is a part of who I am</span></div>
+        </div>
+      </div>
+
       <div class="result-box">
         <div class="result-score" id="tester-score">—</div>
         <div>
@@ -182,7 +197,7 @@
     </section>
 
     <section>
-      <h2>Label distribution — all 125 combos</h2>
+      <h2>Label distribution — all 625 combos</h2>
       <div id="distribution"></div>
     </section>
   </div>
@@ -193,8 +208,9 @@ function weights() {
   const wc = parseFloat(document.getElementById('wc').value);
   const wi = parseFloat(document.getElementById('wi').value);
   const wg = parseFloat(document.getElementById('wg').value);
-  const total = wc + wi + wg;
-  return { c: wc / total, i: wi / total, g: wg / total };
+  const wx = parseFloat(document.getElementById('wx').value);
+  const total = wc + wi + wg + wx;
+  return { c: wc / total, i: wi / total, g: wg / total, x: wx / total };
 }
 
 const LABELS = [
@@ -215,11 +231,12 @@ function curved(value, exponent) {
   return c * 2 + 3;
 }
 
-function computeRating(c, i, g, floor, ceiling, exponent) {
+function computeRating(c, i, g, x, floor, ceiling, exponent) {
   const w = weights();
   const raw = curved(c, exponent) * w.c
             + curved(i, exponent) * w.i
-            + curved(g, exponent) * w.g;
+            + curved(g, exponent) * w.g
+            + curved(x, exponent) * w.x;
   const rating = floor + ((raw - 1) / 4) * (ceiling - floor);
   return Math.round(rating * 10) / 10;
 }
@@ -248,6 +265,7 @@ function update() {
   document.getElementById('val-wc').textContent = w.c.toFixed(2);
   document.getElementById('val-wi').textContent = w.i.toFixed(2);
   document.getElementById('val-wg').textContent = w.g.toFixed(2);
+  document.getElementById('val-wx').textContent = w.x.toFixed(2);
 
   // Curved values
   const cvGrid = document.getElementById('cv-grid');
@@ -266,7 +284,7 @@ function update() {
   const benchEl = document.getElementById('benchmarks');
   benchEl.innerHTML = '';
   for (let v = 1; v <= 5; v++) {
-    const score = computeRating(v, v, v, floor, ceiling, exponent);
+    const score = computeRating(v, v, v, v, floor, ceiling, exponent);
     const entry = getLabel(score);
     const pct = ((score / 10) * 100).toFixed(0);
     benchEl.innerHTML += `
@@ -282,18 +300,19 @@ function update() {
   const counts = new Array(LABELS.length).fill(0);
   for (let c = 1; c <= 5; c++)
     for (let i = 1; i <= 5; i++)
-      for (let g = 1; g <= 5; g++) {
-        const r = computeRating(c, i, g, floor, ceiling, exponent);
-        const idx = LABELS.findIndex(e => r >= e.min && r <= e.max);
-        if (idx >= 0) counts[idx]++;
-      }
+      for (let g = 1; g <= 5; g++)
+        for (let x = 1; x <= 5; x++) {
+          const r = computeRating(c, i, g, x, floor, ceiling, exponent);
+          const idx = LABELS.findIndex(e => r >= e.min && r <= e.max);
+          if (idx >= 0) counts[idx]++;
+        }
 
   const maxCount = Math.max(...counts);
   const distEl = document.getElementById('distribution');
   distEl.innerHTML = '';
   LABELS.forEach((e, i) => {
     const pct = maxCount > 0 ? (counts[i] / maxCount * 100).toFixed(1) : 0;
-    const totalPct = (counts[i] / 125 * 100).toFixed(0);
+    const totalPct = (counts[i] / 625 * 100).toFixed(0);
     const highlight = counts[i] === maxCount && maxCount > 0 ? 'highlight' : '';
     distEl.innerHTML += `
       <div class="dist-row ${highlight}">
@@ -306,16 +325,16 @@ function update() {
   });
 }
 
-['floor', 'ceiling', 'exponent', 'wc', 'wi', 'wg'].forEach(id => {
+['floor', 'ceiling', 'exponent', 'wc', 'wi', 'wg', 'wx'].forEach(id => {
   document.getElementById(id).addEventListener('input', () => { update(); updateTester(); });
 });
 
 // Question tester state
-const testerValues = { c: 1, i: 1, g: 1 };
+const testerValues = { c: 1, i: 1, g: 1, x: 1 };
 
 function updateTester() {
   const { floor, ceiling, exponent } = params();
-  const score = computeRating(testerValues.c, testerValues.i, testerValues.g, floor, ceiling, exponent);
+  const score = computeRating(testerValues.c, testerValues.i, testerValues.g, testerValues.x, floor, ceiling, exponent);
   const entry = getLabel(score);
   document.getElementById('tester-score').textContent = score.toFixed(1);
   document.getElementById('tester-label').textContent = entry.label;
