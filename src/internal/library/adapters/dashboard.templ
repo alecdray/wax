@@ -907,7 +907,7 @@ templ DashboardPage(props DashboardPageProps) {
 	@templates.RootComponent(templates.RootProps{
 		Title: templates.CreatePageTitle("Dashboard"),
 	}) {
-		<div class="w-full flex flex-col">
+		<div class="w-full flex flex-col" hx-history="false">
 			@DashboardHeaderBar(props.Feeds)
 			<div class="flex flex-col py-4 gap-4 items-center">
 				@LibraryStats(props.Library)
