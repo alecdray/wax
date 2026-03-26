@@ -30,9 +30,8 @@ const (
 	// Captures the overall impression beyond individual tracks.
 	RatingWeightGutCheck = 0.25
 
-	// Weighting for Q4: personal conviction / x factor.
-	// Intentionally lighter — a modifier on top of the listening experience.
-	RatingWeightXFactor = 0.15
+	// Weighting for Q4: personal resonance — how the album sits with you in retrospect.
+	RatingWeightRetrospect = 0.15
 )
 
 type RatingQuestionKey string
@@ -41,7 +40,7 @@ const (
 	RatingQuestionConsistency RatingQuestionKey = "consistency"
 	RatingQuestionImpact      RatingQuestionKey = "impact"
 	RatingQuestionGutCheck    RatingQuestionKey = "gut_check"
-	RatingQuestionXFactor     RatingQuestionKey = "x_factor"
+	RatingQuestionRetrospect  RatingQuestionKey = "retrospect"
 )
 
 func (k RatingQuestionKey) String() string {
@@ -121,8 +120,8 @@ var RatingRecommenderQuestions RatingQuestions = RatingQuestions{
 		Weight: RatingWeightGutCheck,
 	},
 	{
-		Key:      RatingQuestionXFactor,
-		Question: "How do you feel about this album?",
+		Key:      RatingQuestionRetrospect,
+		Question: "How do you feel about the album in retrospect?",
 		Options: []RatingQuestionOption{
 			{1, "Not good"},
 			{2, "Meh"},
@@ -130,7 +129,7 @@ var RatingRecommenderQuestions RatingQuestions = RatingQuestions{
 			{4, "It speaks to me"},
 			{5, "This album is a part of who I am"},
 		},
-		Weight: RatingWeightXFactor,
+		Weight: RatingWeightRetrospect,
 	},
 }
 

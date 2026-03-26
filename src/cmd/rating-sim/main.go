@@ -21,10 +21,11 @@ func curvedValue(value int, exponent float64) float64 {
 	return curved*2.0 + 3.0
 }
 
-func computeRating(consistency, impact, gutCheck int, p params) float64 {
-	raw := curvedValue(consistency, p.exponent)*0.3 +
-		curvedValue(impact, p.exponent)*0.4 +
-		curvedValue(gutCheck, p.exponent)*0.3
+func computeRating(consistency, impact, gutCheck, retrospect int, p params) float64 {
+	raw := curvedValue(consistency, p.exponent)*0.25 +
+		curvedValue(impact, p.exponent)*0.35 +
+		curvedValue(gutCheck, p.exponent)*0.25 +
+		curvedValue(retrospect, p.exponent)*0.15
 	rating := p.floor + ((raw-1.0)/4.0)*(p.ceiling-p.floor)
 	return math.Round(rating*10) / 10
 }
@@ -62,11 +63,13 @@ func distribution(p params) [9]int {
 	for c := 1; c <= 5; c++ {
 		for i := 1; i <= 5; i++ {
 			for g := 1; g <= 5; g++ {
-				r := computeRating(c, i, g, p)
-				for idx, e := range ratingKey {
-					if r >= e.min && r <= e.max {
-						counts[idx]++
-						break
+				for r := 1; r <= 5; r++ {
+					rating := computeRating(c, i, g, r, p)
+					for idx, e := range ratingKey {
+						if rating >= e.min && rating <= e.max {
+							counts[idx]++
+							break
+						}
 					}
 				}
 			}
@@ -114,7 +117,7 @@ func render(p params) string {
 	// uniform benchmarks
 	b.WriteString("  Uniform answer scores\n")
 	for v := 1; v <= 5; v++ {
-		score := computeRating(v, v, v, p)
+		score := computeRating(v, v, v, v, p)
 		label := getLabel(score)
 		b.WriteString(fmt.Sprintf("    All %ds  → %5.1f  %s\n", v, score, label))
 	}
@@ -129,7 +132,7 @@ func render(p params) string {
 		}
 	}
 
-	b.WriteString("  Label distribution (125 combos)\n")
+	b.WriteString("  Label distribution (625 combos)\n")
 	for i, e := range ratingKey {
 		barchart := bar(counts[i], maxCount, 20)
 		b.WriteString(fmt.Sprintf("    %-14s  %s  %3d\n", e.label, barchart, counts[i]))
