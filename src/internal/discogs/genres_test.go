@@ -43,17 +43,24 @@ func minimalDAG() *genres.DAG {
 	})
 }
 
+func resolveItem(dag *genres.DAG, item *SearchItem) []*genres.Node {
+	if item == nil {
+		return nil
+	}
+	return Resolve(dag, append(item.Genre, item.Style...))
+}
+
 func TestResolveItemGenres(t *testing.T) {
 	dag := minimalDAG()
 
-	t.Run("returns labels for matched genres and styles", func(t *testing.T) {
+	t.Run("returns nodes for matched genres and styles", func(t *testing.T) {
 		item := &SearchItem{
 			Genre: []string{"Rock"},
 			Style: []string{"Jazz"},
 		}
-		got := resolveItemGenres(dag, item)
+		got := resolveItem(dag, item)
 		if len(got) != 2 {
-			t.Fatalf("expected 2 labels, got %v", got)
+			t.Fatalf("expected 2 nodes, got %v", got)
 		}
 	})
 
@@ -62,9 +69,9 @@ func TestResolveItemGenres(t *testing.T) {
 			Genre: []string{"Rock"},
 			Style: []string{"Soul music"},
 		}
-		got := resolveItemGenres(dag, item)
+		got := resolveItem(dag, item)
 		if len(got) != 2 {
-			t.Fatalf("expected 2 labels, got %v", got)
+			t.Fatalf("expected 2 nodes, got %v", got)
 		}
 	})
 
@@ -73,12 +80,12 @@ func TestResolveItemGenres(t *testing.T) {
 			Genre: []string{"Rock"},
 			Style: []string{"Rock"},
 		}
-		got := resolveItemGenres(dag, item)
+		got := resolveItem(dag, item)
 		if len(got) != 1 {
-			t.Fatalf("expected 1 label after dedup, got %v", got)
+			t.Fatalf("expected 1 node after dedup, got %v", got)
 		}
-		if got[0] != "Rock" {
-			t.Errorf("expected Rock, got %q", got[0])
+		if got[0].Label != "Rock" {
+			t.Errorf("expected Rock, got %q", got[0].Label)
 		}
 	})
 
@@ -87,12 +94,12 @@ func TestResolveItemGenres(t *testing.T) {
 			Genre: []string{"xyzzy nonsense genre"},
 			Style: []string{"Rock"},
 		}
-		got := resolveItemGenres(dag, item)
+		got := resolveItem(dag, item)
 		if len(got) != 1 {
-			t.Fatalf("expected 1 label, got %v", got)
+			t.Fatalf("expected 1 node, got %v", got)
 		}
-		if got[0] != "Rock" {
-			t.Errorf("expected Rock, got %q", got[0])
+		if got[0].Label != "Rock" {
+			t.Errorf("expected Rock, got %q", got[0].Label)
 		}
 	})
 
@@ -101,7 +108,7 @@ func TestResolveItemGenres(t *testing.T) {
 			Genre: []string{"xyzzy1"},
 			Style: []string{"xyzzy2"},
 		}
-		got := resolveItemGenres(dag, item)
+		got := resolveItem(dag, item)
 		if len(got) != 0 {
 			t.Fatalf("expected empty, got %v", got)
 		}
@@ -109,7 +116,7 @@ func TestResolveItemGenres(t *testing.T) {
 
 	t.Run("returns empty slice for empty item", func(t *testing.T) {
 		item := &SearchItem{}
-		got := resolveItemGenres(dag, item)
+		got := resolveItem(dag, item)
 		if len(got) != 0 {
 			t.Fatalf("expected empty, got %v", got)
 		}

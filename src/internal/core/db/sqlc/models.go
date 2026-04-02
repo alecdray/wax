@@ -25,6 +25,23 @@ type AlbumArtist struct {
 	ArtistID string
 }
 
+type AlbumGenre struct {
+	ID         string
+	UserID     string
+	AlbumID    string
+	GenreID    string
+	GenreLabel string
+	CreatedAt  time.Time
+}
+
+type AlbumMood struct {
+	ID        string
+	UserID    string
+	AlbumID   string
+	Mood      string
+	CreatedAt time.Time
+}
+
 type AlbumNote struct {
 	ID        string
 	UserID    string
@@ -42,17 +59,17 @@ type AlbumRatingLog struct {
 	CreatedAt time.Time
 }
 
-type AlbumTag struct {
-	ID        string
-	UserID    string
-	AlbumID   string
-	TagID     string
-	CreatedAt time.Time
-}
-
 type AlbumTrack struct {
 	AlbumID string
 	TrackID string
+}
+
+type AlbumUserTag struct {
+	ID        string
+	UserID    string
+	AlbumID   string
+	Tag       string
+	CreatedAt time.Time
 }
 
 type Artist struct {
@@ -91,21 +108,6 @@ type Release struct {
 type SqliteSequence struct {
 	Name interface{}
 	Seq  interface{}
-}
-
-type Tag struct {
-	ID        string
-	UserID    string
-	Name      string
-	GroupID   sql.NullString
-	CreatedAt time.Time
-}
-
-type TagGroup struct {
-	ID        string
-	UserID    string
-	Name      string
-	CreatedAt time.Time
 }
 
 type Track struct {

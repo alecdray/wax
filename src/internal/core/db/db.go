@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/alecdray/wax/src/internal/core/db/sqlc"
+	_ "github.com/alecdray/wax/src/internal/migrations"
 	"time"
 
 	"github.com/pressly/goose/v3"
@@ -87,13 +88,31 @@ func (db *DB) runMigrations() error {
 	if err := goose.SetDialect("sqlite3"); err != nil {
 		return err
 	}
-	err := goose.Up(db.sql, migrationsDir)
 
-	if errors.Is(err, goose.ErrNoMigrationFiles) {
-		// Do nothing, no migrations found
-	} else if err != nil {
+	pending, err := goose.CollectMigrations(migrationsDir, 0, goose.MaxVersion)
+	if err != nil && !errors.Is(err, goose.ErrNoMigrationFiles) {
 		return err
 	}
 
+	current, err := goose.GetDBVersion(db.sql)
+	if err != nil {
+		return err
+	}
+
+	for _, m := range pending {
+		if m.Version > current {
+			return fmt.Errorf("database is not up to date (at %d, %d migration(s) pending) — run: task db/up", current, len(pending)-indexOf(pending, current))
+		}
+	}
+
 	return nil
+}
+
+func indexOf(migrations goose.Migrations, version int64) int {
+	for i, m := range migrations {
+		if m.Version > version {
+			return i
+		}
+	}
+	return len(migrations)
 }

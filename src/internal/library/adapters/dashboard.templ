@@ -1,13 +1,14 @@
 package adapters
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/feed"
+	"github.com/alecdray/wax/src/internal/labels"
 	"github.com/alecdray/wax/src/internal/library"
 	"github.com/alecdray/wax/src/internal/review"
-	"github.com/alecdray/wax/src/internal/tags"
 	"net/url"
 	"slices"
 	"strings"
@@ -29,15 +30,16 @@ func GetAlbumRowTagsSectionID(albumId string) string {
 	return fmt.Sprintf("album-row-tags-section-%s", albumId)
 }
 
-const maxTagsInAlbumTagsCell = 2
+const maxLabelsInAlbumTagsCell = 3
 
-func hasSoundGroupTag(album library.AlbumDTO) bool {
-	for _, t := range album.Tags {
-		if t.Group != nil && t.Group.Name == tags.TagGroupSound {
-			return true
-		}
+func albumAllLabels(album library.AlbumDTO) []string {
+	var all []string
+	for _, g := range album.Genres {
+		all = append(all, g.Label)
 	}
-	return false
+	all = append(all, album.Moods...)
+	all = append(all, album.UserTags...)
+	return all
 }
 
 templ AlbumTagsCell(album library.AlbumDTO, isOobSwap bool) {
@@ -48,11 +50,17 @@ templ AlbumTagsCell(album library.AlbumDTO, isOobSwap bool) {
 			hx-swap-oob="true"
 		}
 	>
-		if len(album.Tags) == 0 {
+		if len(album.Genres) == 0 && len(album.Moods) == 0 && len(album.UserTags) == 0 {
 			<span class="text-xs text-base-content/30">—</span>
 		} else {
-			for _, tag := range album.Tags {
-				<span class="badge badge-sm badge-ghost text-xs">{ tag.Name }</span>
+			for _, g := range album.Genres {
+				<span class="badge badge-sm badge-primary text-xs">{ g.Label }</span>
+			}
+			for _, m := range album.Moods {
+				<span class="badge badge-sm badge-ghost text-xs">{ m }</span>
+			}
+			for _, t := range album.UserTags {
+				<span class="badge badge-sm badge-ghost text-xs">{ t }</span>
 			}
 		}
 	</div>
@@ -72,6 +80,8 @@ type DashboardPageProps struct {
 	FirstPageAlbums []library.AlbumDTO
 	Artists         []library.ArtistDTO
 	FilterParams    library.FilterParams
+	AllMoods        []string
+	AllUserTags     []string
 }
 
 func anyFeedIsSyncing(feeds []feed.FeedDTO) bool {
@@ -263,14 +273,7 @@ templ AlbumRating(album library.AlbumDTO, isOobSwap bool) {
 	}
 }
 
-func buildAlbumsTableURL(sortBy, dir string, fp library.FilterParams) string {
-	q := url.Values{}
-	if sortBy != "" {
-		q.Set("sortBy", sortBy)
-	}
-	if dir != "" {
-		q.Set("dir", dir)
-	}
+func buildFilterQuery(q url.Values, fp library.FilterParams) {
 	if fp.MinRating != nil {
 		q.Set("minRating", fmt.Sprintf("%g", *fp.MinRating))
 	}
@@ -286,6 +289,26 @@ func buildAlbumsTableURL(sortBy, dir string, fp library.FilterParams) string {
 	for _, artistID := range fp.ArtistIDs {
 		q.Add("artist", artistID)
 	}
+	for _, id := range fp.GenreIDs {
+		q.Add("genre", id)
+	}
+	for _, m := range fp.Moods {
+		q.Add("mood", m)
+	}
+	for _, t := range fp.UserTags {
+		q.Add("tag", t)
+	}
+}
+
+func buildAlbumsTableURL(sortBy, dir string, fp library.FilterParams) string {
+	q := url.Values{}
+	if sortBy != "" {
+		q.Set("sortBy", sortBy)
+	}
+	if dir != "" {
+		q.Set("dir", dir)
+	}
+	buildFilterQuery(q, fp)
 	return "/app/library/dashboard/albums-table?" + q.Encode()
 }
 
@@ -299,21 +322,7 @@ func buildAlbumsPageURL(offset int, sortBy, dir string, fp library.FilterParams)
 	if dir != "" {
 		q.Set("dir", dir)
 	}
-	if fp.MinRating != nil {
-		q.Set("minRating", fmt.Sprintf("%g", *fp.MinRating))
-	}
-	if fp.MaxRating != nil {
-		q.Set("maxRating", fmt.Sprintf("%g", *fp.MaxRating))
-	}
-	if fp.Rated != "" {
-		q.Set("rated", fp.Rated)
-	}
-	for _, format := range fp.Formats {
-		q.Add("format", string(format))
-	}
-	for _, artistID := range fp.ArtistIDs {
-		q.Add("artist", artistID)
-	}
+	buildFilterQuery(q, fp)
 	return "/app/library/dashboard/albums-page?" + q.Encode()
 }
 
@@ -382,17 +391,17 @@ templ AlbumRowTagsSection(album library.AlbumDTO, isOobSwap bool) {
 					@templates.PenIcon(templates.IconProps{})
 				</span>
 			}
-			for i, tag := range album.Tags {
-				if i < maxTagsInAlbumTagsCell {
-					<span class="badge badge-sm badge-ghost text-xs text-nowrap text-base-content/60">{ tag.Name }</span>
+			for i, lbl := range albumAllLabels(album) {
+				if i < maxLabelsInAlbumTagsCell {
+					<span class="badge badge-sm badge-ghost text-xs text-nowrap text-base-content/60">{ lbl }</span>
 				}
 			}
-			if len(album.Tags) > maxTagsInAlbumTagsCell {
-				<span class="badge badge-sm badge-ghost text-xs text-nowrap text-base-content/50">+{ fmt.Sprintf("%d", len(album.Tags)-maxTagsInAlbumTagsCell) }</span>
+			if len(albumAllLabels(album)) > maxLabelsInAlbumTagsCell {
+				<span class="badge badge-sm badge-ghost text-xs text-nowrap text-base-content/50">+{ fmt.Sprintf("%d", len(albumAllLabels(album))-maxLabelsInAlbumTagsCell) }</span>
 			}
 			<button
 				class={ "btn btn-ghost btn-xs text-secondary" }
-				hx-get={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
+				hx-get={ fmt.Sprintf("/app/labels/album?albumId=%s", album.ID) }
 				hx-trigger="click"
 				hx-swap="none"
 			>
@@ -471,7 +480,38 @@ templ albumsListBody(albums []library.AlbumDTO, offset int, sortBy string, sortD
 	}
 }
 
-templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []library.ArtistDTO) {
+func genreFilterAlpineData(selectedGenres []labels.GenreDTO) string {
+	type chip struct {
+		ID    string `json:"id"`
+		Label string `json:"label"`
+	}
+	chips := make([]chip, 0, len(selectedGenres))
+	for _, g := range selectedGenres {
+		chips = append(chips, chip{ID: g.ID, Label: g.Label})
+	}
+	b, _ := json.Marshal(chips)
+	return fmt.Sprintf(`{
+		chips: %s,
+		query: '',
+		results: [],
+		timer: null,
+		search() {
+			clearTimeout(this.timer);
+			const q = this.query.trim();
+			if (!q) { this.results = []; return; }
+			this.timer = setTimeout(async () => {
+				const res = await fetch('/app/labels/genre-search?q=' + encodeURIComponent(q));
+				this.results = await res.json();
+			}, 300);
+		},
+		add(id, label) {
+			if (!this.chips.some(c => c.id === id)) this.chips.push({id, label});
+			this.query = ''; this.results = [];
+		}
+	}`, string(b))
+}
+
+templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []library.ArtistDTO, selectedGenres []labels.GenreDTO, allMoods []string, allUserTags []string) {
 	<div class="flex gap-2 px-4 py-2 overflow-x-auto flex-shrink-0">
 		// Sort chip
 		<div x-data>
@@ -513,6 +553,15 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 						}
 						for _, artistID := range fp.ArtistIDs {
 							<input type="hidden" name="artist" value={ artistID }/>
+						}
+						for _, id := range fp.GenreIDs {
+							<input type="hidden" name="genre" value={ id }/>
+						}
+						for _, m := range fp.Moods {
+							<input type="hidden" name="mood" value={ m }/>
+						}
+						for _, t := range fp.UserTags {
+							<input type="hidden" name="tag" value={ t }/>
 						}
 						<div class="flex flex-col gap-2 mb-4">
 							for _, opt := range []struct{ value, label string }{
@@ -596,6 +645,15 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 						}
 						for _, artistID := range fp.ArtistIDs {
 							<input type="hidden" name="artist" value={ artistID }/>
+						}
+						for _, id := range fp.GenreIDs {
+							<input type="hidden" name="genre" value={ id }/>
+						}
+						for _, m := range fp.Moods {
+							<input type="hidden" name="mood" value={ m }/>
+						}
+						for _, t := range fp.UserTags {
+							<input type="hidden" name="tag" value={ t }/>
 						}
 						<div class="flex gap-3 mb-4">
 							<label class="flex flex-col gap-1 flex-1">
@@ -692,6 +750,15 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 						for _, artistID := range fp.ArtistIDs {
 							<input type="hidden" name="artist" value={ artistID }/>
 						}
+						for _, id := range fp.GenreIDs {
+							<input type="hidden" name="genre" value={ id }/>
+						}
+						for _, m := range fp.Moods {
+							<input type="hidden" name="mood" value={ m }/>
+						}
+						for _, t := range fp.UserTags {
+							<input type="hidden" name="tag" value={ t }/>
+						}
 						<div class="flex flex-col gap-2 mb-4">
 							for _, opt := range []struct{ value, label string }{
 								{"", "All formats"},
@@ -764,6 +831,15 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 							for _, format := range fp.Formats {
 								<input type="hidden" name="format" value={ string(format) }/>
 							}
+							for _, id := range fp.GenreIDs {
+								<input type="hidden" name="genre" value={ id }/>
+							}
+							for _, m := range fp.Moods {
+								<input type="hidden" name="mood" value={ m }/>
+							}
+							for _, t := range fp.UserTags {
+								<input type="hidden" name="tag" value={ t }/>
+							}
 							<div x-data="{ search: '' }">
 								<input
 									x-model="search"
@@ -797,10 +873,253 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 				</dialog>
 			</div>
 		}
+		// Genre chip
+		<div x-data={ genreFilterAlpineData(selectedGenres) }>
+			<button
+				class={ templ.KV("btn btn-sm btn-primary", len(fp.GenreIDs) > 0), templ.KV("btn btn-sm btn-ghost btn-outline", len(fp.GenreIDs) == 0) }
+				@click="$refs.genreDialog.showModal()"
+				data-testid="genre-chip"
+			>
+				if len(fp.GenreIDs) == 1 {
+					1 Genre
+				} else if len(fp.GenreIDs) > 1 {
+					{ fmt.Sprintf("%d Genres", len(fp.GenreIDs)) }
+				} else {
+					Genre
+				}
+			</button>
+			<dialog x-ref="genreDialog" class="modal">
+				<div class="modal-box max-w-sm">
+					<form method="dialog">
+						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
+					</form>
+					<h3 class="font-bold text-base mb-4">Filter by Genre</h3>
+					<form
+						hx-get="/app/library/dashboard/albums-table"
+						hx-target="#album-list"
+						hx-swap="outerHTML"
+						@submit="$refs.genreDialog.close()"
+					>
+						if sortBy != "" {
+							<input type="hidden" name="sortBy" value={ sortBy }/>
+						}
+						if sortDir != "" {
+							<input type="hidden" name="dir" value={ sortDir }/>
+						}
+						if fp.MinRating != nil {
+							<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
+						}
+						if fp.MaxRating != nil {
+							<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
+						}
+						if fp.Rated != "" {
+							<input type="hidden" name="rated" value={ fp.Rated }/>
+						}
+						for _, format := range fp.Formats {
+							<input type="hidden" name="format" value={ string(format) }/>
+						}
+						for _, artistID := range fp.ArtistIDs {
+							<input type="hidden" name="artist" value={ artistID }/>
+						}
+						for _, m := range fp.Moods {
+							<input type="hidden" name="mood" value={ m }/>
+						}
+						for _, t := range fp.UserTags {
+							<input type="hidden" name="tag" value={ t }/>
+						}
+						<div class="flex flex-wrap gap-1.5 mb-2 min-h-6">
+							<template x-for="(chip, i) in chips" :key="chip.id">
+								<span class="badge badge-soft badge-primary gap-1 text-sm">
+									<span x-text="chip.label"></span>
+									<button type="button" class="ml-1 opacity-60 hover:opacity-100" @click="chips.splice(i,1)">✕</button>
+								</span>
+							</template>
+						</div>
+						<input
+							type="text"
+							class="input input-sm w-full"
+							placeholder="Search genres..."
+							x-model="query"
+							@input="search()"
+							@keydown.enter.prevent=""
+						/>
+						<div x-show="results.length > 0 && query.length > 0" class="mt-1 bg-base-100 border border-base-300 rounded-box shadow-lg max-h-40 overflow-y-auto">
+							<template x-for="r in results" :key="r.id">
+								<button
+									type="button"
+									class="w-full text-left px-3 py-1.5 text-sm hover:bg-base-200 flex items-center gap-2"
+									@click="add(r.id, r.label)"
+								>
+									<span x-text="r.label"></span>
+									<span x-show="r.parentLabel" class="text-xs opacity-50" x-text="'(' + r.parentLabel + ')'"></span>
+								</button>
+							</template>
+						</div>
+						<template x-for="chip in chips" :key="chip.id">
+							<input type="hidden" name="genre" :value="chip.id"/>
+						</template>
+						<button type="submit" class="btn btn-primary btn-sm w-full mt-4">Apply</button>
+					</form>
+				</div>
+				<form method="dialog" class="modal-backdrop"><button>close</button></form>
+			</dialog>
+		</div>
+		// Mood chip
+		if len(allMoods) > 0 || len(fp.Moods) > 0 {
+			<div x-data>
+				<button
+					class={ templ.KV("btn btn-sm btn-primary", len(fp.Moods) > 0), templ.KV("btn btn-sm btn-ghost btn-outline", len(fp.Moods) == 0) }
+					@click="$refs.moodDialog.showModal()"
+					data-testid="mood-chip"
+				>
+					if len(fp.Moods) == 1 {
+						{ fp.Moods[0] }
+					} else if len(fp.Moods) > 1 {
+						{ fmt.Sprintf("%d Moods", len(fp.Moods)) }
+					} else {
+						Mood
+					}
+				</button>
+				<dialog x-ref="moodDialog" class="modal">
+					<div class="modal-box max-w-sm">
+						<form method="dialog">
+							<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
+						</form>
+						<h3 class="font-bold text-base mb-4">Filter by Mood</h3>
+						<form
+							hx-get="/app/library/dashboard/albums-table"
+							hx-target="#album-list"
+							hx-swap="outerHTML"
+							@submit="$refs.moodDialog.close()"
+						>
+							if sortBy != "" {
+								<input type="hidden" name="sortBy" value={ sortBy }/>
+							}
+							if sortDir != "" {
+								<input type="hidden" name="dir" value={ sortDir }/>
+							}
+							if fp.MinRating != nil {
+								<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
+							}
+							if fp.MaxRating != nil {
+								<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
+							}
+							if fp.Rated != "" {
+								<input type="hidden" name="rated" value={ fp.Rated }/>
+							}
+							for _, format := range fp.Formats {
+								<input type="hidden" name="format" value={ string(format) }/>
+							}
+							for _, artistID := range fp.ArtistIDs {
+								<input type="hidden" name="artist" value={ artistID }/>
+							}
+							for _, id := range fp.GenreIDs {
+								<input type="hidden" name="genre" value={ id }/>
+							}
+							for _, t := range fp.UserTags {
+								<input type="hidden" name="tag" value={ t }/>
+							}
+							<div class="max-h-56 overflow-y-auto flex flex-col gap-1 mb-4">
+								for _, mood := range allMoods {
+									<label class="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-base-200 rounded">
+										<input
+											type="checkbox"
+											name="mood"
+											value={ mood }
+											class="checkbox checkbox-sm"
+											checked?={ slices.Contains(fp.Moods, mood) }
+										/>
+										<span class="text-sm">{ mood }</span>
+									</label>
+								}
+							</div>
+							<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
+						</form>
+					</div>
+					<form method="dialog" class="modal-backdrop"><button>close</button></form>
+				</dialog>
+			</div>
+		}
+		// Tag chip
+		if len(allUserTags) > 0 || len(fp.UserTags) > 0 {
+			<div x-data>
+				<button
+					class={ templ.KV("btn btn-sm btn-primary", len(fp.UserTags) > 0), templ.KV("btn btn-sm btn-ghost btn-outline", len(fp.UserTags) == 0) }
+					@click="$refs.tagDialog.showModal()"
+					data-testid="tag-chip"
+				>
+					if len(fp.UserTags) == 1 {
+						{ fp.UserTags[0] }
+					} else if len(fp.UserTags) > 1 {
+						{ fmt.Sprintf("%d Tags", len(fp.UserTags)) }
+					} else {
+						Tag
+					}
+				</button>
+				<dialog x-ref="tagDialog" class="modal">
+					<div class="modal-box max-w-sm">
+						<form method="dialog">
+							<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
+						</form>
+						<h3 class="font-bold text-base mb-4">Filter by Tag</h3>
+						<form
+							hx-get="/app/library/dashboard/albums-table"
+							hx-target="#album-list"
+							hx-swap="outerHTML"
+							@submit="$refs.tagDialog.close()"
+						>
+							if sortBy != "" {
+								<input type="hidden" name="sortBy" value={ sortBy }/>
+							}
+							if sortDir != "" {
+								<input type="hidden" name="dir" value={ sortDir }/>
+							}
+							if fp.MinRating != nil {
+								<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
+							}
+							if fp.MaxRating != nil {
+								<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
+							}
+							if fp.Rated != "" {
+								<input type="hidden" name="rated" value={ fp.Rated }/>
+							}
+							for _, format := range fp.Formats {
+								<input type="hidden" name="format" value={ string(format) }/>
+							}
+							for _, artistID := range fp.ArtistIDs {
+								<input type="hidden" name="artist" value={ artistID }/>
+							}
+							for _, id := range fp.GenreIDs {
+								<input type="hidden" name="genre" value={ id }/>
+							}
+							for _, m := range fp.Moods {
+								<input type="hidden" name="mood" value={ m }/>
+							}
+							<div class="max-h-56 overflow-y-auto flex flex-col gap-1 mb-4">
+								for _, tag := range allUserTags {
+									<label class="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-base-200 rounded">
+										<input
+											type="checkbox"
+											name="tag"
+											value={ tag }
+											class="checkbox checkbox-sm"
+											checked?={ slices.Contains(fp.UserTags, tag) }
+										/>
+										<span class="text-sm">{ tag }</span>
+									</label>
+								}
+							</div>
+							<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
+						</form>
+					</div>
+					<form method="dialog" class="modal-backdrop"><button>close</button></form>
+				</dialog>
+			</div>
+		}
 	</div>
 }
 
-templ AlbumsList(albums []library.AlbumDTO, sortBy string, sortDir string, fp library.FilterParams, artists []library.ArtistDTO) {
+templ AlbumsList(albums []library.AlbumDTO, sortBy string, sortDir string, fp library.FilterParams, artists []library.ArtistDTO, selectedGenres []labels.GenreDTO, allMoods []string, allUserTags []string) {
 	<div
 		id="album-list"
 		class="w-full max-w-3xl"
@@ -809,7 +1128,7 @@ templ AlbumsList(albums []library.AlbumDTO, sortBy string, sortDir string, fp li
 		hx-trigger="libraryUpdated from:body"
 		hx-swap="outerHTML"
 	>
-		@filterChipBar(sortBy, sortDir, fp, artists)
+		@filterChipBar(sortBy, sortDir, fp, artists, selectedGenres, allMoods, allUserTags)
 		<ul class="list px-4">
 			@albumsListBody(albums, 0, sortBy, sortDir, fp)
 		</ul>
@@ -969,7 +1288,7 @@ templ DashboardPage(props DashboardPageProps) {
 				@LibraryStats(props.Library)
 				@CarouselSection(props.RecentAlbums, CarouselViewRecentlyPlayed)
 				if props.Library != nil {
-					@AlbumsList(props.FirstPageAlbums, "date", "desc", props.FilterParams, props.Artists)
+					@AlbumsList(props.FirstPageAlbums, "date", "desc", props.FilterParams, props.Artists, nil, props.AllMoods, props.AllUserTags)
 				}
 			</div>
 		</div>

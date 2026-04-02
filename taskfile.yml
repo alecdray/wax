@@ -103,14 +103,22 @@ tasks:
         -e SPOTIFY_TOKEN_SECRET=$SPOTIFY_TOKEN_SECRET
         -e CONTACT_EMAIL=$CONTACT_EMAIL
         wax
+  build/migrate:
+    cmds:
+      - go build -v -o ./bin/migrate ./src/cmd/migrate/
   db/create:
     cmds:
       - goose -dir db/migrations create {{.CLI_ARGS}} sql
   db/up:
     cmds:
-      - goose up
+      - task build/migrate
+      - ./bin/migrate up
       - sqlite3 $GOOSE_DBSTRING .schema > ./db/schema.sql
       - sqlc generate
+  db/down:
+    cmds:
+      - task build/migrate
+      - ./bin/migrate down
   test/unit:
     desc: Run Go unit tests
     cmds:

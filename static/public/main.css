@@ -2882,8 +2882,8 @@
       font-weight: 600;
     }
   }
-  .mb-1\.5 {
-    margin-bottom: calc(var(--spacing) * 1.5);
+  .mb-1 {
+    margin-bottom: calc(var(--spacing) * 1);
   }
   .mb-2 {
     margin-bottom: calc(var(--spacing) * 2);
@@ -3164,11 +3164,17 @@
   .max-h-40 {
     max-height: calc(var(--spacing) * 40);
   }
+  .max-h-48 {
+    max-height: calc(var(--spacing) * 48);
+  }
   .max-h-56 {
     max-height: calc(var(--spacing) * 56);
   }
   .min-h-0 {
     min-height: calc(var(--spacing) * 0);
+  }
+  .min-h-6 {
+    min-height: calc(var(--spacing) * 6);
   }
   .min-h-20 {
     min-height: calc(var(--spacing) * 20);
@@ -3449,14 +3455,6 @@
       background-image: none;
     }
   }
-  .badge-outline {
-    @layer daisyui.l1.l2 {
-      color: var(--badge-color);
-      --badge-bg: #0000;
-      background-image: none;
-      border-color: currentColor;
-    }
-  }
   .border-base-300 {
     border-color: var(--color-base-300);
   }
@@ -3468,15 +3466,6 @@
   }
   .bg-base-300 {
     background-color: var(--color-base-300);
-  }
-  .bg-error {
-    background-color: var(--color-error);
-  }
-  .bg-success {
-    background-color: var(--color-success);
-  }
-  .bg-warning {
-    background-color: var(--color-warning);
   }
   .mask-squircle {
     @layer daisyui.l1.l2 {

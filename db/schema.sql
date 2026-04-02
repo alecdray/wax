@@ -89,29 +89,6 @@ CREATE TABLE track_plays (
     played_at datetime not null,
     unique(user_id, track_id, played_at)
 );
-CREATE TABLE tag_groups (
-    id         TEXT PRIMARY KEY,
-    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    name       TEXT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, name)
-);
-CREATE TABLE tags (
-    id         TEXT PRIMARY KEY,
-    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    name       TEXT NOT NULL,
-    group_id   TEXT REFERENCES tag_groups(id) ON DELETE SET NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, name)
-);
-CREATE TABLE album_tags (
-    id         TEXT PRIMARY KEY,
-    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    album_id   TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
-    tag_id     TEXT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, album_id, tag_id)
-);
 CREATE TABLE album_rating_log (
     id         text primary key,
     user_id    text not null references users(id) on delete cascade,
@@ -127,4 +104,29 @@ CREATE TABLE album_notes (
     content    TEXT NOT NULL DEFAULT '',
     updated_at DATETIME NOT NULL DEFAULT current_timestamp,
     UNIQUE(user_id, album_id)
+);
+CREATE TABLE album_genres (
+    id           TEXT PRIMARY KEY,
+    user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    album_id     TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+    genre_id     TEXT NOT NULL,
+    genre_label  TEXT NOT NULL,
+    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, album_id, genre_id)
+);
+CREATE TABLE album_moods (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    album_id   TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+    mood       TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, album_id, mood)
+);
+CREATE TABLE album_user_tags (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    album_id   TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+    tag        TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, album_id, tag)
 );

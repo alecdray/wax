@@ -17,17 +17,17 @@ import (
 	"github.com/alecdray/wax/src/internal/discogs"
 	"github.com/alecdray/wax/src/internal/feed"
 	"github.com/alecdray/wax/src/internal/genres"
+	"github.com/alecdray/wax/src/internal/labels"
+	labelsAdapters "github.com/alecdray/wax/src/internal/labels/adapters"
 	"github.com/alecdray/wax/src/internal/library"
 	libraryAdapters "github.com/alecdray/wax/src/internal/library/adapters"
 	"github.com/alecdray/wax/src/internal/listeninghistory"
 	"github.com/alecdray/wax/src/internal/musicbrainz"
+	"github.com/alecdray/wax/src/internal/notes"
+	notesAdapters "github.com/alecdray/wax/src/internal/notes/adapters"
 	"github.com/alecdray/wax/src/internal/review"
 	reviewAdapters "github.com/alecdray/wax/src/internal/review/adapters"
 	"github.com/alecdray/wax/src/internal/spotify"
-	"github.com/alecdray/wax/src/internal/notes"
-	notesAdapters "github.com/alecdray/wax/src/internal/notes/adapters"
-	"github.com/alecdray/wax/src/internal/tags"
-	tagsAdapters "github.com/alecdray/wax/src/internal/tags/adapters"
 	"github.com/alecdray/wax/src/internal/user"
 
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
@@ -44,8 +44,9 @@ type services struct {
 	feed             *feed.Service
 	review           *review.Service
 	listeningHistory *listeninghistory.Service
-	tags             *tags.Service
+	labels           *labels.Service
 	notes            *notes.Service
+	genreDAG         *genres.DAG
 }
 
 func NewServices(app app.App, db *db.DB) *services {
@@ -72,10 +73,12 @@ func NewServices(app app.App, db *db.DB) *services {
 		slog.Error("Failed to create Discogs client", "error", err)
 		os.Exit(1)
 	}
-	genreDAG, err := genres.Load()
+	var genreDAG *genres.DAG
+	genreDAG, err = genres.Load()
 	if err != nil {
-		slog.Warn("Failed to load genre DAG; tag suggestions will be unavailable", "error", err)
+		slog.Warn("Failed to load genre DAG; genre search will be unavailable", "error", err)
 	}
+	s.genreDAG = genreDAG
 	s.discogs = discogs.NewService(discogsClient, genreDAG)
 
 	s.spotifyAuth = spotify.NewAuthService(
@@ -94,11 +97,11 @@ func NewServices(app app.App, db *db.DB) *services {
 		listeninghistory.NewSyncListeningHistoryTask(s.listeningHistory),
 	)
 
-	s.tags = tags.NewService(db)
+	s.labels = labels.NewService(db, genreDAG)
 
 	s.notes = notes.NewService(db)
 
-	s.library = library.NewService(db, s.spotify, s.listeningHistory, s.tags, s.notes)
+	s.library = library.NewService(db, s.spotify, s.listeningHistory, s.labels, s.notes)
 
 	s.feed = feed.NewService(db, s.spotify, s.library)
 	s.taskManager.RegisterCronTask(
@@ -141,6 +144,8 @@ func Start(ctx context.Context, app app.App) {
 		services.musicbrainz,
 		services.feed,
 		services.library,
+		services.labels,
+		services.genreDAG,
 		services.taskManager,
 	)
 	appMux.Handle("/app/library/dashboard", httpx.HandlerFunc(libraryHandler.GetDashboardPage))
@@ -153,9 +158,10 @@ func Start(ctx context.Context, app app.App) {
 	appMux.Handle("GET /app/library/albums/{albumId}", httpx.HandlerFunc(libraryHandler.GetAlbumDetailPage))
 	appMux.Handle("DELETE /app/library/albums/{albumId}", httpx.HandlerFunc(libraryHandler.DeleteAlbum))
 
-	tagsHandler := tagsAdapters.NewHttpHandler(services.library, services.tags, services.discogs)
-	appMux.Handle("GET /app/tags/album", httpx.HandlerFunc(tagsHandler.GetTagsModal))
-	appMux.Handle("POST /app/tags/album", httpx.HandlerFunc(tagsHandler.SubmitAlbumTags))
+	labelsHandler := labelsAdapters.NewHttpHandler(services.library, services.labels, services.discogs)
+	appMux.Handle("GET /app/labels/album", httpx.HandlerFunc(labelsHandler.GetLabelsModal))
+	appMux.Handle("POST /app/labels/album", httpx.HandlerFunc(labelsHandler.SubmitAlbumLabels))
+	appMux.Handle("GET /app/labels/genre-search", httpx.HandlerFunc(labelsHandler.SearchGenres))
 
 	notesHandler := notesAdapters.NewHttpHandler(services.library, services.notes)
 	appMux.Handle("GET /app/notes/album", httpx.HandlerFunc(notesHandler.GetSleeveNotesEditor))

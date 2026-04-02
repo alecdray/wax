@@ -1,0 +1,258 @@
+package adapters
+
+import (
+  "encoding/json"
+  "fmt"
+  "github.com/alecdray/wax/src/internal/core/templates"
+  "github.com/alecdray/wax/src/internal/labels"
+  "github.com/alecdray/wax/src/internal/library"
+)
+
+const LabelsModalId = "labels-modal"
+
+func labelsAlpineData(album library.AlbumDTO, suggestions []labels.GenreDTO, allMoods []string, allUserTags []string) string {
+  type genreChip struct {
+    ID    string `json:"id"`
+    Label string `json:"label"`
+  }
+
+  initialGenres := make([]genreChip, 0, len(album.Genres))
+  for _, g := range album.Genres {
+    initialGenres = append(initialGenres, genreChip{ID: g.ID, Label: g.Label})
+  }
+
+  moodsJSON, _ := json.Marshal(album.Moods)
+  allMoodsJSON, _ := json.Marshal(allMoods)
+  tagsJSON, _ := json.Marshal(album.UserTags)
+  allTagsJSON, _ := json.Marshal(allUserTags)
+  genresJSON, _ := json.Marshal(initialGenres)
+
+  suggestionChips := make([]genreChip, 0, len(suggestions))
+  for _, s := range suggestions {
+    suggestionChips = append(suggestionChips, genreChip{ID: s.ID, Label: s.Label})
+  }
+  suggestionsJSON, _ := json.Marshal(suggestionChips)
+
+  return fmt.Sprintf(`{
+    genreChips: %s,
+    genreSuggestions: %s,
+    genreQuery: '',
+    genreResults: [],
+    genreTimer: null,
+    searchGenres() {
+      clearTimeout(this.genreTimer);
+      const q = this.genreQuery.trim();
+      if (!q) { this.genreResults = []; return; }
+      this.genreTimer = setTimeout(async () => {
+        const res = await fetch('/app/labels/genre-search?q=' + encodeURIComponent(q));
+        this.genreResults = await res.json();
+      }, 300);
+    },
+    addGenre(id, label) {
+      if (!this.genreChips.some(c => c.id === id)) {
+        this.genreChips.push({id, label});
+      }
+      this.genreQuery = '';
+      this.genreResults = [];
+    },
+    removeGenre(i) { this.genreChips.splice(i, 1); },
+    get unusedSuggestions() {
+      const used = new Set(this.genreChips.map(c => c.id));
+      return this.genreSuggestions.filter(s => !used.has(s.id));
+    },
+
+    moodChips: %s,
+    allMoods: %s,
+    moodQuery: '',
+    get filteredMoods() {
+      const q = this.moodQuery.toLowerCase().trim();
+      const used = new Set(this.moodChips.map(m => m.toLowerCase()));
+      return this.allMoods.filter(m =>
+        !used.has(m.toLowerCase()) &&
+        (q === '' || m.toLowerCase().includes(q))
+      ).slice(0, 8);
+    },
+    addMood(name) {
+      const n = name.trim().toLowerCase();
+      if (!n || this.moodChips.some(m => m.toLowerCase() === n)) return;
+      this.moodChips.push(n);
+      this.moodQuery = '';
+    },
+    removeMood(i) { this.moodChips.splice(i, 1); },
+    onMoodKeydown(e) {
+      if ((e.key === 'Enter' || e.key === ',') && this.moodQuery.trim()) {
+        e.preventDefault();
+        this.addMood(this.moodQuery.trim());
+      } else if (e.key === 'Backspace' && this.moodQuery === '' && this.moodChips.length > 0) {
+        this.moodChips.pop();
+      }
+    },
+
+    tagChips: %s,
+    allUserTags: %s,
+    tagQuery: '',
+    get filteredTags() {
+      const q = this.tagQuery.toLowerCase().trim();
+      const used = new Set(this.tagChips.map(t => t.toLowerCase()));
+      return this.allUserTags.filter(t =>
+        !used.has(t.toLowerCase()) &&
+        (q === '' || t.toLowerCase().includes(q))
+      ).slice(0, 8);
+    },
+    addTag(name) {
+      const n = name.trim().toLowerCase();
+      if (!n || this.tagChips.some(t => t.toLowerCase() === n)) return;
+      this.tagChips.push(n);
+      this.tagQuery = '';
+    },
+    removeTag(i) { this.tagChips.splice(i, 1); },
+    onTagKeydown(e) {
+      if ((e.key === 'Enter' || e.key === ',') && this.tagQuery.trim()) {
+        e.preventDefault();
+        this.addTag(this.tagQuery.trim());
+      } else if (e.key === 'Backspace' && this.tagQuery === '' && this.tagChips.length > 0) {
+        this.tagChips.pop();
+      }
+    }
+  }`, string(genresJSON), string(suggestionsJSON), string(moodsJSON), string(allMoodsJSON), string(tagsJSON), string(allTagsJSON))
+}
+
+templ LabelsForm(album library.AlbumDTO, suggestions []labels.GenreDTO, allMoods []string, allUserTags []string) {
+  <div x-data={ labelsAlpineData(album, suggestions, allMoods, allUserTags) }>
+    <!-- Genres section -->
+    <div class="fieldset bg-base-200 border-base-300 rounded-box border p-3 mb-4">
+      <legend class="fieldset-legend">Genres</legend>
+      <div class="flex flex-wrap gap-1.5 mb-2">
+        <template x-for="(chip, i) in genreChips" :key="chip.id">
+          <span class="badge badge-soft badge-primary gap-1 text-sm">
+            <span x-text="chip.label"></span>
+            <button type="button" class="ml-1 opacity-60 hover:opacity-100" @click="removeGenre(i)">✕</button>
+          </span>
+        </template>
+      </div>
+      <input
+        type="text"
+        class="input input-sm w-full"
+        placeholder="Search genres..."
+        x-model="genreQuery"
+        @input="searchGenres()"
+        @keydown.enter.prevent=""
+      />
+      <div x-show="genreResults.length > 0" class="mt-1 bg-base-100 border border-base-300 rounded-box shadow-lg max-h-48 overflow-y-auto">
+        <template x-for="r in genreResults" :key="r.id">
+          <button
+            type="button"
+            class="w-full text-left px-3 py-1.5 text-sm hover:bg-base-200 flex items-center gap-2"
+            @click="addGenre(r.id, r.label)"
+          >
+            <span x-text="r.label"></span>
+            <span x-show="r.parentLabel" class="text-xs opacity-50" x-text="'(' + r.parentLabel + ')'"></span>
+          </button>
+        </template>
+      </div>
+      <div x-show="unusedSuggestions.length > 0" class="mt-2">
+        <p class="text-xs opacity-50 mb-1">Suggested</p>
+        <div class="flex flex-wrap gap-1.5">
+          <template x-for="s in unusedSuggestions" :key="s.id">
+            <button
+              type="button"
+              class="badge badge-soft badge-ghost gap-1 text-sm hover:badge-primary cursor-pointer"
+              @click="addGenre(s.id, s.label)"
+            >
+              <span>+</span>
+              <span x-text="s.label"></span>
+            </button>
+          </template>
+        </div>
+      </div>
+      <template x-for="chip in genreChips" :key="chip.id">
+        <input type="hidden" name="genre[]" :value="chip.id"/>
+      </template>
+    </div>
+    <!-- Moods section -->
+    <div class="fieldset bg-base-200 border-base-300 rounded-box border p-3 mb-4">
+      <legend class="fieldset-legend">Moods</legend>
+      <div class="flex flex-wrap gap-1.5 mb-2">
+        <template x-for="(chip, i) in moodChips" :key="chip">
+          <span class="badge badge-soft badge-primary gap-1 text-sm">
+            <span x-text="chip"></span>
+            <button type="button" class="ml-1 opacity-60 hover:opacity-100" @click="removeMood(i)">✕</button>
+          </span>
+        </template>
+      </div>
+      <input
+        type="text"
+        class="input input-sm w-full"
+        placeholder="Type a mood and press Enter..."
+        x-model="moodQuery"
+        @keydown="onMoodKeydown($event)"
+      />
+      <div x-show="filteredMoods.length > 0 && moodQuery.length > 0" class="mt-1 bg-base-100 border border-base-300 rounded-box shadow-lg max-h-40 overflow-y-auto">
+        <template x-for="m in filteredMoods" :key="m">
+          <button
+            type="button"
+            class="w-full text-left px-3 py-1.5 text-sm hover:bg-base-200"
+            @click="addMood(m)"
+            x-text="m"
+          ></button>
+        </template>
+      </div>
+      <template x-for="chip in moodChips" :key="chip">
+        <input type="hidden" name="mood[]" :value="chip"/>
+      </template>
+    </div>
+    <!-- User Tags section -->
+    <div class="fieldset bg-base-200 border-base-300 rounded-box border p-3 mb-4">
+      <legend class="fieldset-legend">Tags</legend>
+      <div class="flex flex-wrap gap-1.5 mb-2">
+        <template x-for="(chip, i) in tagChips" :key="chip">
+          <span class="badge badge-soft badge-primary gap-1 text-sm">
+            <span x-text="chip"></span>
+            <button type="button" class="ml-1 opacity-60 hover:opacity-100" @click="removeTag(i)">✕</button>
+          </span>
+        </template>
+      </div>
+      <input
+        type="text"
+        class="input input-sm w-full"
+        placeholder="Type a tag and press Enter..."
+        x-model="tagQuery"
+        @keydown="onTagKeydown($event)"
+      />
+      <div x-show="filteredTags.length > 0 && tagQuery.length > 0" class="mt-1 bg-base-100 border border-base-300 rounded-box shadow-lg max-h-40 overflow-y-auto">
+        <template x-for="t in filteredTags" :key="t">
+          <button
+            type="button"
+            class="w-full text-left px-3 py-1.5 text-sm hover:bg-base-200"
+            @click="addTag(t)"
+            x-text="t"
+          ></button>
+        </template>
+      </div>
+      <template x-for="chip in tagChips" :key="chip">
+        <input type="hidden" name="tag[]" :value="chip"/>
+      </template>
+    </div>
+    <button type="submit" class="btn btn-primary w-full">Save Labels</button>
+  </div>
+}
+
+templ LabelsFormWrapper(album library.AlbumDTO, suggestions []labels.GenreDTO, allMoods []string, allUserTags []string) {
+  <form
+    class="flex flex-col gap-2"
+    hx-post={ fmt.Sprintf("/app/labels/album?albumId=%s", album.ID) }
+  >
+    @LabelsForm(album, suggestions, allMoods, allUserTags)
+  </form>
+}
+
+templ LabelsModal(album library.AlbumDTO, suggestions []labels.GenreDTO, allMoods []string, allUserTags []string) {
+  @templates.Modal(LabelsModalId, templates.ModalProps{
+    ModalContent: LabelsFormWrapper(album, suggestions, allMoods, allUserTags),
+  })
+}
+
+templ CloseLabelsModal() {
+  @templates.ForceCloseModal(LabelsModalId)
+}
+

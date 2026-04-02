@@ -11,11 +11,12 @@ import (
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/db/sqlc"
 	"github.com/alecdray/wax/src/internal/core/utils"
+	"github.com/alecdray/wax/src/internal/genres"
+	"github.com/alecdray/wax/src/internal/labels"
 	"github.com/alecdray/wax/src/internal/listeninghistory"
 	"github.com/alecdray/wax/src/internal/notes"
 	"github.com/alecdray/wax/src/internal/review"
 	"github.com/alecdray/wax/src/internal/spotify"
-	"github.com/alecdray/wax/src/internal/tags"
 	"sort"
 	"time"
 
@@ -117,7 +118,9 @@ type AlbumDTO struct {
 	Releases     ReleaseDTOs
 	Rating       *review.AlbumRatingDTO
 	RatingLog    []*review.AlbumRatingDTO
-	Tags         []tags.TagDTO
+	Genres       []labels.GenreDTO
+	Moods        []string
+	UserTags     []string
 	SleeveNote   *notes.AlbumNoteDTO
 	LastPlayedAt *time.Time
 }
@@ -246,10 +249,37 @@ type FilterParams struct {
 	Rated     string // "only" | "unrated" | ""
 	Formats   []models.ReleaseFormat
 	ArtistIDs []string
+	GenreIDs  []string
+	Moods     []string
+	UserTags  []string
+}
+
+// ExpandGenreDescendants returns a copy of FilterParams with GenreIDs expanded
+// to include all descendants of each requested genre in the DAG.
+func (p FilterParams) ExpandGenreDescendants(dag *genres.DAG) FilterParams {
+	if dag == nil || len(p.GenreIDs) == 0 {
+		return p
+	}
+	expanded := make(map[string]bool, len(p.GenreIDs))
+	for _, id := range p.GenreIDs {
+		expanded[id] = true
+		for _, desc := range dag.Descendants(id) {
+			expanded[desc.ID] = true
+		}
+	}
+	ids := make([]string, 0, len(expanded))
+	for id := range expanded {
+		ids = append(ids, id)
+	}
+	p.GenreIDs = ids
+	return p
 }
 
 func (albums AlbumDTOs) Filter(p FilterParams) AlbumDTOs {
-	if p.MinRating == nil && p.MaxRating == nil && p.Rated == "" && len(p.Formats) == 0 && len(p.ArtistIDs) == 0 {
+	isEmpty := p.MinRating == nil && p.MaxRating == nil && p.Rated == "" &&
+		len(p.Formats) == 0 && len(p.ArtistIDs) == 0 &&
+		len(p.GenreIDs) == 0 && len(p.Moods) == 0 && len(p.UserTags) == 0
+	if isEmpty {
 		return albums
 	}
 	result := make(AlbumDTOs, 0, len(albums))
@@ -298,6 +328,57 @@ func (albums AlbumDTOs) Filter(p FilterParams) AlbumDTOs {
 				}
 			}
 			if !hasArtist {
+				continue
+			}
+		}
+		if len(p.GenreIDs) > 0 {
+			hasGenre := false
+			for _, gid := range p.GenreIDs {
+				for _, g := range album.Genres {
+					if g.ID == gid {
+						hasGenre = true
+						break
+					}
+				}
+				if hasGenre {
+					break
+				}
+			}
+			if !hasGenre {
+				continue
+			}
+		}
+		if len(p.Moods) > 0 {
+			hasMood := false
+			for _, mood := range p.Moods {
+				for _, m := range album.Moods {
+					if m == mood {
+						hasMood = true
+						break
+					}
+				}
+				if hasMood {
+					break
+				}
+			}
+			if !hasMood {
+				continue
+			}
+		}
+		if len(p.UserTags) > 0 {
+			hasTag := false
+			for _, tag := range p.UserTags {
+				for _, t := range album.UserTags {
+					if t == tag {
+						hasTag = true
+						break
+					}
+				}
+				if hasTag {
+					break
+				}
+			}
+			if !hasTag {
 				continue
 			}
 		}
@@ -361,16 +442,16 @@ type Service struct {
 	db                      *db.DB
 	spotifyService          *spotify.Service
 	listeningHistoryService *listeninghistory.Service
-	tagsService             *tags.Service
+	labelsService           *labels.Service
 	notesService            *notes.Service
 }
 
-func NewService(db *db.DB, spotifyService *spotify.Service, listeningHistoryService *listeninghistory.Service, tagsService *tags.Service, notesService *notes.Service) *Service {
+func NewService(db *db.DB, spotifyService *spotify.Service, listeningHistoryService *listeninghistory.Service, labelsService *labels.Service, notesService *notes.Service) *Service {
 	return &Service{
 		db:                      db,
 		spotifyService:          spotifyService,
 		listeningHistoryService: listeningHistoryService,
-		tagsService:             tagsService,
+		labelsService:           labelsService,
 		notesService:            notesService,
 	}
 }
@@ -452,9 +533,9 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 		return nil, err
 	}
 
-	tagsByAlbumId, err := s.tagsService.GetAlbumTagsByAlbumIds(ctx, userId, albumIds)
+	labelsByAlbumId, err := s.labelsService.GetAlbumLabelsByAlbumIds(ctx, userId, albumIds)
 	if err != nil {
-		err = fmt.Errorf("failed to get album tags: %w", err)
+		err = fmt.Errorf("failed to get album labels: %w", err)
 		return nil, err
 	}
 
@@ -476,7 +557,10 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 		if t, ok := lastPlayedAtByAlbumId[album.ID]; ok {
 			dto.LastPlayedAt = &t
 		}
-		dto.Tags = tagsByAlbumId[album.ID]
+		al := labelsByAlbumId[album.ID]
+		dto.Genres = al.Genres
+		dto.Moods = al.Moods
+		dto.UserTags = al.UserTags
 		dto.SleeveNote = notesByAlbumId[album.ID]
 		albumDTOs = append(albumDTOs, dto)
 	}
@@ -677,12 +761,14 @@ func (s *Service) GetAlbumInLibrary(ctx context.Context, userId string, albumId 
 	)
 	albumDto.RatingLog = ratingLog
 
-	albumTags, err := s.tagsService.GetAlbumTags(ctx, userId, albumId)
+	albumLabels, err := s.labelsService.GetAlbumLabels(ctx, userId, albumId)
 	if err != nil {
-		err = fmt.Errorf("failed to get album tags: %w", err)
+		err = fmt.Errorf("failed to get album labels: %w", err)
 		return nil, err
 	}
-	albumDto.Tags = albumTags
+	albumDto.Genres = albumLabels.Genres
+	albumDto.Moods = albumLabels.Moods
+	albumDto.UserTags = albumLabels.UserTags
 
 	sleeveNote, err := s.notesService.GetAlbumNote(ctx, userId, albumId)
 	if err != nil {

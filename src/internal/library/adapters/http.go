@@ -11,25 +11,31 @@ import (
 	"github.com/alecdray/wax/src/internal/core/httpx"
 	"github.com/alecdray/wax/src/internal/core/task"
 	"github.com/alecdray/wax/src/internal/feed"
+	"github.com/alecdray/wax/src/internal/genres"
+	"github.com/alecdray/wax/src/internal/labels"
 	"github.com/alecdray/wax/src/internal/library"
 	"github.com/alecdray/wax/src/internal/musicbrainz"
 	"github.com/alecdray/wax/src/internal/spotify"
 )
 
 type HttpHandler struct {
-	spotifyAuth *spotify.AuthService
-	mb          *musicbrainz.Service
-	feedService *feed.Service
+	spotifyAuth    *spotify.AuthService
+	mb             *musicbrainz.Service
+	feedService    *feed.Service
 	libraryService *library.Service
-	taskManager *task.TaskManager
+	labelsService  *labels.Service
+	genreDAG       *genres.DAG
+	taskManager    *task.TaskManager
 }
 
-func NewHttpHandler(spotifyAuth *spotify.AuthService, mb *musicbrainz.Service, feedService *feed.Service, libraryService *library.Service, taskManager *task.TaskManager) *HttpHandler {
+func NewHttpHandler(spotifyAuth *spotify.AuthService, mb *musicbrainz.Service, feedService *feed.Service, libraryService *library.Service, labelsService *labels.Service, genreDAG *genres.DAG, taskManager *task.TaskManager) *HttpHandler {
 	return &HttpHandler{
 		spotifyAuth:    spotifyAuth,
 		mb:             mb,
 		feedService:    feedService,
 		libraryService: libraryService,
+		labelsService:  labelsService,
+		genreDAG:       genreDAG,
 		taskManager:    taskManager,
 	}
 }
@@ -52,7 +58,26 @@ func parseFilterParams(r *http.Request) library.FilterParams {
 		fp.Formats = []models.ReleaseFormat{models.ReleaseFormat(format)}
 	}
 	fp.ArtistIDs = q["artist"]
+	fp.GenreIDs = q["genre"]
+	fp.Moods = q["mood"]
+	fp.UserTags = q["tag"]
 	return fp
+}
+
+// resolveGenreLabels looks up labels for the given genre IDs from the DAG.
+func resolveGenreLabels(dag *genres.DAG, ids []string) []labels.GenreDTO {
+	if dag == nil || len(ids) == 0 {
+		return nil
+	}
+	result := make([]labels.GenreDTO, 0, len(ids))
+	for _, id := range ids {
+		label := id
+		if n := dag.Get(id); n != nil {
+			label = n.Label
+		}
+		result = append(result, labels.GenreDTO{ID: id, Label: label})
+	}
+	return result
 }
 
 func (h *HttpHandler) GetDashboardPage(w http.ResponseWriter, r *http.Request) {
@@ -92,6 +117,9 @@ func (h *HttpHandler) GetDashboardPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	allMoods, _ := h.labelsService.GetDistinctUserMoods(ctx, userId)
+	allUserTags, _ := h.labelsService.GetDistinctUserTags(ctx, userId)
+
 	dashboardPage := DashboardPage(DashboardPageProps{
 		Library:         lib,
 		Feeds:           feeds,
@@ -99,6 +127,8 @@ func (h *HttpHandler) GetDashboardPage(w http.ResponseWriter, r *http.Request) {
 		FirstPageAlbums: lib.Albums.Page(0),
 		Artists:         lib.Artists,
 		FilterParams:    library.FilterParams{},
+		AllMoods:        allMoods,
+		AllUserTags:     allUserTags,
 	})
 	dashboardPage.Render(r.Context(), w)
 }
@@ -174,9 +204,16 @@ func (h *HttpHandler) GetAlbumsTable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fp := parseFilterParams(r)
+	selectedGenres := resolveGenreLabels(h.genreDAG, fp.GenreIDs)
+	fp = fp.ExpandGenreDescendants(h.genreDAG)
 	albums = albums.Filter(fp)
+	// Restore original (unexpanded) genre IDs so the filter chip bar shows correct state.
+	fp.GenreIDs = r.URL.Query()["genre"]
 
-	component := AlbumsList(albums.Page(0), sortBy, dir, fp, lib.Artists)
+	allMoods, _ := h.labelsService.GetDistinctUserMoods(ctx, userId)
+	allUserTags, _ := h.labelsService.GetDistinctUserTags(ctx, userId)
+
+	component := AlbumsList(albums.Page(0), sortBy, dir, fp, lib.Artists, selectedGenres, allMoods, allUserTags)
 	component.Render(r.Context(), w)
 }
 
@@ -263,7 +300,10 @@ func (h *HttpHandler) GetAlbumsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fp := parseFilterParams(r)
+	originalGenreIDs := fp.GenreIDs
+	fp = fp.ExpandGenreDescendants(h.genreDAG)
 	albums = albums.Filter(fp)
+	fp.GenreIDs = originalGenreIDs
 
 	page := albums.Page(offset)
 	if len(page) == 0 {

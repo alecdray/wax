@@ -113,14 +113,14 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 				</div>
 				// Rating History
 				@AlbumRatingHistory(album, false)
-				// Tags
+				// Labels
 				<div class="flex flex-col gap-2" data-testid="album-detail-tags">
 					<div class="flex items-center justify-start gap-2">
-						<span class="text-xs font-semibold uppercase tracking-wider text-base-content/40">Tags</span>
+						<span class="text-xs font-semibold uppercase tracking-wider text-base-content/40">Labels</span>
 						<button
 							data-testid="album-detail-tags-edit"
 							class="btn btn-ghost btn-xs text-base-content/40"
-							hx-get={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
+							hx-get={ fmt.Sprintf("/app/labels/album?albumId=%s", album.ID) }
 							hx-trigger="click"
 							hx-swap="none"
 						>

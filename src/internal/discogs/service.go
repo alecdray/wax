@@ -77,9 +77,9 @@ func (s *Service) GetRelease(ctx contextx.ContextX, id int) (*Release, error) {
 }
 
 // GetAlbumGenreSuggestions searches Discogs for the album, resolves the genres and styles
-// against the genre DAG, and returns the normalized genre labels.
+// against the genre DAG, and returns the matched DAG nodes.
 // Errors are logged and suppressed so callers always get a (possibly empty) slice.
-func (s *Service) GetAlbumGenreSuggestions(ctx contextx.ContextX, title, artist string) []string {
+func (s *Service) GetAlbumGenreSuggestions(ctx contextx.ContextX, title, artist string) []*genres.Node {
 	item, err := s.SearchMasterByAlbum(ctx, title, artist)
 	if err != nil {
 		slog.Warn("discogs search failed for genre suggestions", "title", title, "err", err)
@@ -87,6 +87,10 @@ func (s *Service) GetAlbumGenreSuggestions(ctx contextx.ContextX, title, artist 
 	}
 	if item == nil {
 		item, err = s.SearchReleaseByAlbum(ctx, title, artist)
+		if err != nil {
+			slog.Warn("discogs release search failed for genre suggestions", "title", title, "err", err)
+			return nil
+		}
 	}
-	return resolveItemGenres(s.dag, item)
+	return Resolve(s.dag, append(item.Genre, item.Style...))
 }
