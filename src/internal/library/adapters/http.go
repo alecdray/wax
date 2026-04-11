@@ -117,20 +117,34 @@ func (h *HttpHandler) GetCarousel(w http.ResponseWriter, r *http.Request) {
 		view = CarouselViewRecentlyPlayed
 	}
 
-	var albums []library.AlbumSummaryDTO
+	props := CarouselSectionProps{Active: view}
+
 	switch view {
 	case CarouselViewUnrated:
-		albums, err = h.libraryService.GetUnratedAlbums(ctx, userId)
+		albums, err := h.libraryService.GetUnratedAlbums(ctx, userId)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		props.RegularAlbums = albums
+	case CarouselViewReratedue:
+		albums, err := h.libraryService.GetRerateQueue(ctx, userId)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		props.RerateAlbums = albums
 	default:
-		view = CarouselViewRecentlyPlayed
-		albums, err = h.libraryService.GetRecentlyPlayedAlbums(ctx, userId)
-	}
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		props.Active = CarouselViewRecentlyPlayed
+		albums, err := h.libraryService.GetRecentlyPlayedAlbums(ctx, userId)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		props.RegularAlbums = albums
 	}
 
-	CarouselSection(albums, view).Render(r.Context(), w)
+	CarouselSection(props).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetAlbumsTable(w http.ResponseWriter, r *http.Request) {
