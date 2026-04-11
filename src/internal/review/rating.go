@@ -73,6 +73,9 @@ func (qs BaseQuestions) Score(mode RatingMode) float64 {
 		if mode == RatingModeProvisional && q.Key == QuestionReturnRate {
 			continue
 		}
+		if q.Value == 0 {
+			continue
+		}
 		weightedSum += float64(q.Value) * q.Weight
 		totalWeight += q.Weight
 	}
@@ -266,7 +269,7 @@ func DetectContradictions(qs BaseQuestions, mods Modifiers, baseScore float64, m
 	}
 
 	// Contradiction 3
-	if baseScore >= 7.0 {
+	if baseScore >= 7.0 && len(mods) > 0 {
 		allNeg := true
 		for _, m := range mods {
 			if m.Value != -1 {
@@ -281,8 +284,6 @@ func DetectContradictions(qs BaseQuestions, mods Modifiers, baseScore float64, m
 
 	return false
 }
-
-// --- Rating labels (unchanged) ---
 
 type RatingLabel string
 
@@ -318,10 +319,10 @@ var RatingKey = []RatingKeyEntry{
 
 func GetRatingLabel(rating float64) RatingLabel {
 	clamped := utils.Clamp(rating, 0, 10)
-	for _, entry := range RatingKey {
-		if clamped >= entry.MinValue && clamped <= entry.MaxValue {
-			return entry.Label
+	for i := len(RatingKey) - 1; i >= 0; i-- {
+		if clamped >= RatingKey[i].MinValue {
+			return RatingKey[i].Label
 		}
 	}
-	return RatingKey[len(RatingKey)-1].Label
+	return RatingKey[0].Label
 }

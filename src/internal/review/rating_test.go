@@ -57,7 +57,7 @@ func TestBaseScore_Provisional_ExcludesReturnRate(t *testing.T) {
 	}
 }
 
-func TestBaseScore_Provisional_CappedAt8(t *testing.T) {
+func TestFinalScore_Provisional_CappedAt8(t *testing.T) {
 	qs := finalizedQuestions()
 	for i := range qs {
 		qs[i].Value = 5
@@ -295,6 +295,45 @@ func TestGetRatingLabel_Ranges(t *testing.T) {
 		if got != tc.want {
 			t.Errorf("GetRatingLabel(%v) = %q, want %q", tc.rating, got, tc.want)
 		}
+	}
+}
+
+func TestBaseScore_AllUnanswered_ReturnsZero(t *testing.T) {
+	qs := finalizedQuestions()
+	// all Value fields stay 0 (unanswered)
+	got := qs.Score(RatingModeFinalized)
+	if got != 0 {
+		t.Fatalf("expected 0 for unanswered questions, got %f", got)
+	}
+}
+
+func TestGetRatingLabel_MidRangeFloat_NoGap(t *testing.T) {
+	// 2.95 is between boundary entries — should not return Masterpiece
+	got := GetRatingLabel(2.95)
+	if got == RatingLabelMasterpiece {
+		t.Fatal("GetRatingLabel(2.95) should not return Masterpiece")
+	}
+	if got != RatingLabelDOA {
+		t.Fatalf("expected DOA for 2.95, got %q", got)
+	}
+}
+
+func TestDetectContradictions_EmptyMods_NoFlag(t *testing.T) {
+	qs := finalizedQuestions()
+	for i := range qs {
+		qs[i].Value = 5
+	}
+	var emptyMods Modifiers
+	if DetectContradictions(qs, emptyMods, 9.0, RatingModeFinalized) {
+		t.Fatal("expected no contradiction with empty mods slice")
+	}
+}
+
+func TestModifierAdjustment_EmptySlice_ReturnsZero(t *testing.T) {
+	var mods Modifiers
+	got := mods.Adjustment()
+	if got != 0 {
+		t.Fatalf("expected 0 for empty modifiers, got %f", got)
 	}
 }
 
