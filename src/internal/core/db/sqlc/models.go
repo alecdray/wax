@@ -25,6 +25,23 @@ type AlbumArtist struct {
 	ArtistID string
 }
 
+type AlbumGenre struct {
+	ID         string
+	UserID     string
+	AlbumID    string
+	GenreID    string
+	GenreLabel string
+	CreatedAt  time.Time
+}
+
+type AlbumMood struct {
+	ID        string
+	UserID    string
+	AlbumID   string
+	Mood      string
+	CreatedAt time.Time
+}
+
 type AlbumNote struct {
 	ID        string
 	UserID    string
@@ -40,6 +57,18 @@ type AlbumRatingLog struct {
 	Rating    float64
 	Note      sql.NullString
 	CreatedAt time.Time
+	State     sql.NullString
+}
+
+type AlbumRatingState struct {
+	ID           string
+	UserID       string
+	AlbumID      string
+	State        string
+	SnoozeCount  int64
+	NextRerateAt sql.NullTime
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 type AlbumTag struct {
@@ -53,6 +82,14 @@ type AlbumTag struct {
 type AlbumTrack struct {
 	AlbumID string
 	TrackID string
+}
+
+type AlbumUserTag struct {
+	ID        string
+	UserID    string
+	AlbumID   string
+	Tag       string
+	CreatedAt time.Time
 }
 
 type Artist struct {
