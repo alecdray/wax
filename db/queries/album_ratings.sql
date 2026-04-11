@@ -1,6 +1,6 @@
 -- name: InsertAlbumRatingLogEntry :one
-INSERT INTO album_rating_log (id, user_id, album_id, rating, note, created_at)
-VALUES (?, ?, ?, ?, ?, current_timestamp)
+INSERT INTO album_rating_log (id, user_id, album_id, rating, note, state, created_at)
+VALUES (?, ?, ?, ?, ?, ?, current_timestamp)
 RETURNING *;
 
 -- name: DeleteAlbumRatingLogEntry :exec

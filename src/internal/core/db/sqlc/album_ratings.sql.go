@@ -219,8 +219,8 @@ func (q *Queries) GetUserAlbumRatingLog(ctx context.Context, arg GetUserAlbumRat
 }
 
 const insertAlbumRatingLogEntry = `-- name: InsertAlbumRatingLogEntry :one
-INSERT INTO album_rating_log (id, user_id, album_id, rating, note, created_at)
-VALUES (?, ?, ?, ?, ?, current_timestamp)
+INSERT INTO album_rating_log (id, user_id, album_id, rating, note, state, created_at)
+VALUES (?, ?, ?, ?, ?, ?, current_timestamp)
 RETURNING id, user_id, album_id, rating, note, created_at, state
 `
 
@@ -230,6 +230,7 @@ type InsertAlbumRatingLogEntryParams struct {
 	AlbumID string
 	Rating  float64
 	Note    sql.NullString
+	State   sql.NullString
 }
 
 func (q *Queries) InsertAlbumRatingLogEntry(ctx context.Context, arg InsertAlbumRatingLogEntryParams) (AlbumRatingLog, error) {
@@ -239,6 +240,7 @@ func (q *Queries) InsertAlbumRatingLogEntry(ctx context.Context, arg InsertAlbum
 		arg.AlbumID,
 		arg.Rating,
 		arg.Note,
+		arg.State,
 	)
 	var i AlbumRatingLog
 	err := row.Scan(
