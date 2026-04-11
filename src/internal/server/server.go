@@ -98,14 +98,14 @@ func NewServices(app app.App, db *db.DB) *services {
 
 	s.notes = notes.NewService(db)
 
-	s.library = library.NewService(db, s.spotify, s.listeningHistory, s.tags, s.notes)
+	s.review = review.NewService(db)
+
+	s.library = library.NewService(db, s.spotify, s.listeningHistory, s.tags, s.notes, s.review)
 
 	s.feed = feed.NewService(db, s.spotify, s.library)
 	s.taskManager.RegisterCronTask(
 		feed.NewSyncStaleSpotifyFeedsTask(s.feed),
 	)
-
-	s.review = review.NewService(db)
 
 	return s
 }
