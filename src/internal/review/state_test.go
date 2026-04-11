@@ -87,17 +87,6 @@ func TestStateAfterSnooze(t *testing.T) {
 		}
 	})
 
-	t.Run("returns Stalled when already at max", func(t *testing.T) {
-		state := RatingStateDTO{
-			State:       RatingStateFinalized,
-			SnoozeCount: MaxSnoozeCount,
-		}
-		result := StateAfterSnooze(state)
-		if result != RatingStateStalled {
-			t.Errorf("expected %q, got %q", RatingStateStalled, result)
-		}
-	})
-
 	t.Run("returns same state when below snooze threshold", func(t *testing.T) {
 		tests := []struct {
 			name       string

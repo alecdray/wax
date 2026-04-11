@@ -26,13 +26,16 @@ const (
 	RerateCycleDuration = 30 * 24 * time.Hour
 )
 
-func (s *RatingStateDTO) IsRerateDue() bool {
+func (s RatingStateDTO) IsRerateDue() bool {
 	if s.NextRerateAt == nil {
 		return false
 	}
 	return s.NextRerateAt.Before(time.Now())
 }
 
+// NextRerateTime returns the time at which a rerate should next be prompted.
+// snoozeCount is the number of snoozes already applied (before this call).
+// Returns nil when the album is stalled (snoozeCount >= MaxSnoozeCount).
 func NextRerateTime(snoozeCount int) *time.Time {
 	if snoozeCount >= MaxSnoozeCount {
 		return nil
@@ -41,6 +44,8 @@ func NextRerateTime(snoozeCount int) *time.Time {
 	return &t
 }
 
+// StateAfterSnooze returns the RatingState that results from applying one snooze.
+// current.SnoozeCount is expected to be less than MaxSnoozeCount (i.e. snoozing is still allowed).
 func StateAfterSnooze(current RatingStateDTO) RatingState {
 	if current.SnoozeCount+1 >= MaxSnoozeCount {
 		return RatingStateStalled
