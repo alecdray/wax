@@ -50,9 +50,10 @@ func TestBaseScore_Provisional_ExcludesReturnRate(t *testing.T) {
 		}
 	}
 	got := qs.Score(RatingModeProvisional)
-	// All others at 5 would give 10, but provisional caps at 8.0
-	if math.Abs(got-ProvisionalScoreCap) > 0.01 {
-		t.Fatalf("expected %f (capped at ProvisionalScoreCap), got %f", ProvisionalScoreCap, got)
+	// All others at 5 would give 10, but return rate is excluded in provisional mode
+	// so the score should be 10 since all included questions are at max
+	if math.Abs(got-10.0) > 0.01 {
+		t.Fatalf("expected %f with all other answers at 5 (return rate excluded), got %f", 10.0, got)
 	}
 }
 
@@ -61,9 +62,11 @@ func TestBaseScore_Provisional_CappedAt8(t *testing.T) {
 	for i := range qs {
 		qs[i].Value = 5
 	}
-	score := qs.Score(RatingModeProvisional)
-	if score > ProvisionalScoreCap {
-		t.Fatalf("provisional base score %f exceeds cap %f", score, ProvisionalScoreCap)
+	// Base score alone is uncapped now; cap applied in FinalScore
+	base := qs.Score(RatingModeProvisional)
+	got := FinalScore(base, 0, RatingModeProvisional)
+	if got > ProvisionalScoreCap {
+		t.Fatalf("provisional final score %f exceeds cap %f", got, ProvisionalScoreCap)
 	}
 }
 
@@ -117,16 +120,35 @@ func TestModifierAdjustment_Mixed_Dampens(t *testing.T) {
 // --- FinalScore ---
 
 func TestFinalScore_ClampedAbove10(t *testing.T) {
-	got := FinalScore(10.0, ModifierMaxSwing)
+	got := FinalScore(10.0, ModifierMaxSwing, RatingModeFinalized)
 	if got > 10.0 {
 		t.Fatalf("expected clamped to 10.0, got %f", got)
 	}
 }
 
 func TestFinalScore_ClampedBelow0(t *testing.T) {
-	got := FinalScore(0.0, -ModifierMaxSwing)
+	got := FinalScore(0.0, -ModifierMaxSwing, RatingModeFinalized)
 	if got < 0.0 {
 		t.Fatalf("expected clamped to 0.0, got %f", got)
+	}
+}
+
+func TestBaseScore_Provisional_CappedAt8_AfterModifiers(t *testing.T) {
+	// All max answers in provisional mode gives base of 10.0 before cap
+	// but with positive modifiers, FinalScore should still be capped at 8.0
+	qs := finalizedQuestions()
+	for i := range qs {
+		qs[i].Value = 5
+	}
+	mods := defaultModifiers()
+	for i := range mods {
+		mods[i].Value = 1 // all positive
+	}
+	base := qs.Score(RatingModeProvisional)
+	modAdj := mods.Adjustment()
+	got := FinalScore(base, modAdj, RatingModeProvisional)
+	if got > ProvisionalScoreCap {
+		t.Fatalf("expected provisional final score capped at %f, got %f", ProvisionalScoreCap, got)
 	}
 }
 
@@ -206,6 +228,40 @@ func TestDetectContradictions_NoContradiction(t *testing.T) {
 	mods := defaultModifiers()
 	if DetectContradictions(qs, mods, 5.0, RatingModeFinalized) {
 		t.Fatal("expected no contradiction with mid scores and neutral mods")
+	}
+}
+
+func TestDetectContradictions_LowScore_AllNegativeMods_NoFlag(t *testing.T) {
+	// Contradiction 3 should NOT fire when base score < 7.0
+	qs := finalizedQuestions()
+	for i := range qs {
+		qs[i].Value = 2 // low scores → base well below 7.0
+	}
+	mods := defaultModifiers()
+	for i := range mods {
+		mods[i].Value = -1
+	}
+	if DetectContradictions(qs, mods, 5.0, RatingModeFinalized) {
+		t.Fatal("expected no contradiction when base score < 7.0")
+	}
+}
+
+func TestDetectContradictions_HighRC_LowShelfTest_Provisional(t *testing.T) {
+	// Contradiction 2 fires in provisional mode too (not restricted to finalized)
+	qs := finalizedQuestions()
+	for i := range qs {
+		switch qs[i].Key {
+		case QuestionRecommendationConfidence:
+			qs[i].Value = 5
+		case QuestionShelfTest:
+			qs[i].Value = 1
+		default:
+			qs[i].Value = 3
+		}
+	}
+	mods := defaultModifiers()
+	if !DetectContradictions(qs, mods, 5.0, RatingModeProvisional) {
+		t.Fatal("expected contradiction 2 to fire in provisional mode")
 	}
 }
 

@@ -66,7 +66,7 @@ func (q BaseQuestion) WithValue(v int) BaseQuestion {
 type BaseQuestions []BaseQuestion
 
 // Score computes the base score (0–10) for the answered questions.
-// In provisional mode, ReturnRate is excluded and the score is capped at ProvisionalScoreCap.
+// In provisional mode, ReturnRate is excluded. The provisional cap is applied in FinalScore.
 func (qs BaseQuestions) Score(mode RatingMode) float64 {
 	var weightedSum, totalWeight float64
 	for _, q := range qs {
@@ -82,9 +82,6 @@ func (qs BaseQuestions) Score(mode RatingMode) float64 {
 	avg := weightedSum / totalWeight
 	// Map [1, 5] → [0, 10] linearly.
 	base := (avg - 1.0) / 4.0 * 10.0
-	if mode == RatingModeProvisional {
-		base = math.Min(base, ProvisionalScoreCap)
-	}
 	return math.Round(base*10) / 10
 }
 
@@ -232,8 +229,13 @@ var AllModifiers = Modifiers{
 }
 
 // FinalScore clamps and rounds the combined base score + modifier adjustment.
-func FinalScore(baseScore, modifierAdjustment float64) float64 {
-	return math.Round(utils.Clamp(baseScore+modifierAdjustment, 0.0, 10.0)*10) / 10
+// In provisional mode, the result is additionally capped at ProvisionalScoreCap.
+func FinalScore(baseScore, modifierAdjustment float64, mode RatingMode) float64 {
+	combined := baseScore + modifierAdjustment
+	if mode == RatingModeProvisional {
+		combined = math.Min(combined, ProvisionalScoreCap)
+	}
+	return math.Round(utils.Clamp(combined, 0.0, 10.0)*10) / 10
 }
 
 // DetectContradictions returns true if the answers contain internally contradictory signals.
