@@ -161,7 +161,7 @@ func (s *Service) syncAlbumsToLibrary(ctx contextx.ContextX, feed FeedDTO, syncW
 		var addedAt *time.Time = nil
 		_addedAt, err := time.Parse(time.RFC3339, album.AddedAt)
 		if err != nil {
-			slog.Error("failed to parse added at time during syncSpotifyFeed", err)
+			slog.Error("failed to parse added at time during syncSpotifyFeed", "error", err)
 		} else {
 			addedAt = &_addedAt
 		}
