@@ -31,6 +31,44 @@ func GetAlbumRowTagsSectionID(albumId string) string {
 
 const maxTagsInAlbumTagsCell = 2
 
+func ratingStateClass(album library.AlbumDTO) string {
+	if album.RatingState == nil {
+		return "text-base-content/20 hover:text-base-content/60"
+	}
+	switch album.RatingState.State {
+	case "stalled":
+		return "text-error/50 hover:text-error/70"
+	case "finalized":
+		return "text-primary hover:text-primary/80"
+	case "provisional":
+		if album.RatingState.IsRerateDue() {
+			return "text-warning hover:text-warning/80"
+		}
+		return "text-base-content/40 hover:text-base-content/60"
+	default:
+		return "text-primary hover:text-primary/80"
+	}
+}
+
+func ratingBadgeClass(album library.AlbumDTO) string {
+	if album.RatingState == nil {
+		return "badge badge-soft badge-primary text-nowrap cursor-pointer"
+	}
+	switch album.RatingState.State {
+	case "stalled":
+		return "badge badge-soft badge-error text-nowrap cursor-pointer opacity-60"
+	case "finalized":
+		return "badge badge-soft badge-primary text-nowrap cursor-pointer"
+	case "provisional":
+		if album.RatingState.IsRerateDue() {
+			return "badge badge-soft badge-warning text-nowrap cursor-pointer"
+		}
+		return "badge badge-soft badge-ghost text-nowrap cursor-pointer opacity-50"
+	default:
+		return "badge badge-soft badge-primary text-nowrap cursor-pointer"
+	}
+}
+
 func hasSoundGroupTag(album library.AlbumDTO) bool {
 	for _, t := range album.Tags {
 		if t.Group != nil && t.Group.Name == tags.TagGroupSound {
@@ -243,15 +281,18 @@ templ AlbumRating(album library.AlbumDTO, isOobSwap bool) {
 		<div
 			id={ GetAlbumRatingID(album.ID) }
 			data-testid="album-row-rating"
-			class="badge badge-soft badge-primary text-nowrap cursor-pointer"
-			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s&rating=%f", album.ID, *album.Rating.Rating) }
+			class={ ratingBadgeClass(album) }
+			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"
 			if isOobSwap {
 				hx-swap-oob="true"
 			}
 		>
-			{ *album.Rating.Rating } - { review.GetRatingLabel(*album.Rating.Rating) }
+			if album.RatingState != nil && album.RatingState.State == "stalled" {
+				Stalled —
+			}
+			{ fmt.Sprintf("%.1f", *album.Rating.Rating) } - { string(review.GetRatingLabel(*album.Rating.Rating)) }
 		</div>
 	} else {
 		<button
@@ -345,8 +386,8 @@ templ AlbumListRating(album library.AlbumDTO, isOobSwap bool) {
 		<div
 			id={ GetAlbumListRatingID(album.ID) }
 			data-testid="album-row-rating"
-			class="min-w-14 h-full flex items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none text-primary hover:text-primary/80 transition-colors"
-			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s&rating=%f", album.ID, *album.Rating.Rating) }
+			class={ "min-w-14 h-full flex flex-col items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none transition-colors", ratingStateClass(album) }
+			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"
 			if isOobSwap {
@@ -354,6 +395,9 @@ templ AlbumListRating(album library.AlbumDTO, isOobSwap bool) {
 			}
 		>
 			{ fmt.Sprintf("%.1f", *album.Rating.Rating) }
+			if album.RatingState != nil && album.RatingState.State == "stalled" {
+				<span class="text-xs font-normal badge badge-xs badge-error badge-soft">Stalled</span>
+			}
 		</div>
 	} else {
 		<div
