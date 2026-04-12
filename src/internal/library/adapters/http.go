@@ -127,7 +127,7 @@ func (h *HttpHandler) GetCarousel(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		props.RegularAlbums = albums
-	case CarouselViewReratedue:
+	case CarouselViewRerateDue:
 		albums, err := h.libraryService.GetRerateQueue(ctx, userId)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

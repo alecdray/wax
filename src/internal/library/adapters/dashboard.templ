@@ -63,7 +63,7 @@ type CarouselView string
 const (
 	CarouselViewRecentlyPlayed CarouselView = "recently-played"
 	CarouselViewUnrated        CarouselView = "unrated"
-	CarouselViewReratedue      CarouselView = "rerate-due"
+	CarouselViewRerateDue      CarouselView = "rerate-due"
 )
 
 type CarouselSectionProps struct {
@@ -995,8 +995,8 @@ templ CarouselSection(props CarouselSectionProps) {
 			>Unrated</button>
 			<span class="text-base-content/20 cursor-default">|</span>
 			<button
-				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-base-content", props.Active == CarouselViewReratedue), templ.KV("text-base-content/40 hover:text-base-content/70 cursor-pointer", props.Active != CarouselViewReratedue) }
-				if props.Active != CarouselViewReratedue {
+				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-base-content", props.Active == CarouselViewRerateDue), templ.KV("text-base-content/40 hover:text-base-content/70 cursor-pointer", props.Active != CarouselViewRerateDue) }
+				if props.Active != CarouselViewRerateDue {
 					hx-get="/app/library/dashboard/carousel?view=rerate-due"
 					hx-target="#carousel-section"
 					hx-swap="outerHTML"
@@ -1007,7 +1007,7 @@ templ CarouselSection(props CarouselSectionProps) {
 		switch props.Active {
 		case CarouselViewUnrated:
 			@carouselStrip(props.RegularAlbums, "No unrated albums in your library")
-		case CarouselViewReratedue:
+		case CarouselViewRerateDue:
 			@rerateCarouselStrip(props.RerateAlbums)
 		default:
 			@carouselStrip(props.RegularAlbums, "No recently played albums")
