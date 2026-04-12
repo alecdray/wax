@@ -8,35 +8,70 @@
   body { font-family: ui-monospace, monospace; font-size: 14px; background: #0f0f0f; color: #e0e0e0; padding: 32px; }
   h1 { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 24px; letter-spacing: 0.05em; }
 
-  .layout { display: grid; grid-template-columns: 300px 1fr; gap: 32px; align-items: start; }
+  .layout { display: grid; grid-template-columns: 340px 1fr; gap: 40px; align-items: start; }
 
   section { margin-bottom: 28px; }
   h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #666; margin-bottom: 12px; }
 
-  /* Params */
-  .param { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
-  .param label { display: flex; justify-content: space-between; color: #aaa; }
-  .param label span { color: #fff; font-weight: 600; min-width: 36px; text-align: right; }
-  input[type=range] {
-    -webkit-appearance: none;
-    width: 100%; height: 4px;
-    background: #2a2a2a; border-radius: 2px; outline: none; cursor: pointer;
+  /* Mode toggle */
+  .toggle-row { display: flex; gap: 8px; margin-bottom: 4px; }
+  .toggle-btn {
+    padding: 5px 14px; border-radius: 4px; border: 1px solid #2a2a2a;
+    background: #1a1a1a; color: #666; cursor: pointer; font: inherit; font-size: 12px;
+    transition: all 0.1s;
   }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 14px; height: 14px;
-    border-radius: 50%; background: #7c6af7; cursor: pointer;
-  }
+  .toggle-btn.active { background: #1e1a3a; border-color: #7c6af7; color: #a899ff; }
+  .cap-note { font-size: 11px; color: #444; margin-top: 6px; }
 
-  /* Curved values */
-  .cv-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-  .cv-cell {
-    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px;
-    padding: 10px 8px; text-align: center;
+  /* Questions */
+  .question { margin-bottom: 20px; }
+  .question-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+  .question-text { color: #aaa; line-height: 1.4; }
+  .question-badge {
+    font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 2px 6px; border-radius: 3px; flex-shrink: 0;
   }
-  .cv-cell .answer { font-size: 18px; font-weight: 700; color: #7c6af7; }
-  .cv-cell .arrow { font-size: 10px; color: #444; margin: 2px 0; }
-  .cv-cell .curved { font-size: 13px; color: #e0e0e0; }
+  .badge-hard { background: #2a1a1a; color: #c07070; border: 1px solid #3a2020; }
+  .badge-soft { background: #1a2a1a; color: #70a070; border: 1px solid #203a20; }
+  .question.skipped { opacity: 0.3; pointer-events: none; }
+
+  .options { display: flex; flex-direction: column; gap: 4px; }
+  .option {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 10px; border-radius: 5px; cursor: pointer;
+    border: 1px solid transparent; transition: background 0.1s;
+  }
+  .option:hover { background: #1e1e1e; }
+  .option.selected { background: #1e1a3a; border-color: #7c6af7; }
+  .option-num { color: #444; width: 14px; flex-shrink: 0; }
+  .option.selected .option-num { color: #7c6af7; }
+  .option-text { color: #aaa; }
+  .option.selected .option-text { color: #e0e0e0; }
+
+  /* Modifiers */
+  .modifier { margin-bottom: 16px; }
+  .modifier-label { color: #aaa; margin-bottom: 8px; }
+  .mod-options { display: flex; gap: 6px; }
+  .mod-opt {
+    flex: 1; padding: 6px 8px; border-radius: 4px; border: 1px solid #2a2a2a;
+    background: #1a1a1a; color: #666; cursor: pointer; font: inherit; font-size: 12px;
+    text-align: center; transition: all 0.1s;
+  }
+  .mod-opt:hover { background: #1e1e1e; color: #aaa; }
+  .mod-opt.selected-pos { background: #1a2a1a; border-color: #4a8a4a; color: #80c080; }
+  .mod-opt.selected-neu { background: #1e1e1e; border-color: #444; color: #888; }
+  .mod-opt.selected-neg { background: #2a1a1a; border-color: #8a4a4a; color: #c08080; }
+
+  /* Result */
+  .result-box {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 20px; background: #1a1a1a; border-radius: 8px;
+    border: 1px solid #2a2a2a; margin-top: 4px;
+  }
+  .result-score { font-size: 36px; font-weight: 700; color: #7c6af7; line-height: 1; }
+  .result-detail { display: flex; flex-direction: column; gap: 2px; }
+  .result-label { font-size: 18px; color: #fff; font-weight: 600; }
+  .result-breakdown { font-size: 11px; color: #555; margin-top: 2px; }
 
   /* Benchmarks */
   .benchmark { display: flex; flex-direction: column; gap: 4px; }
@@ -56,34 +91,9 @@
   .dist-bar { height: 100%; border-radius: 3px; background: #7c6af7; transition: width 0.15s; min-width: 0; }
   .dist-count { width: 28px; text-align: right; color: #666; font-size: 12px; flex-shrink: 0; }
   .dist-pct { width: 36px; text-align: right; color: #444; font-size: 12px; flex-shrink: 0; }
-
   .highlight .dist-label, .highlight .dist-count { color: #fff; }
   .highlight .dist-bar { background: #a899ff; }
-
-  /* Question tester */
-  .question { margin-bottom: 16px; }
-  .question-text { color: #aaa; margin-bottom: 8px; line-height: 1.4; }
-  .options { display: flex; flex-direction: column; gap: 4px; }
-  .option {
-    display: flex; align-items: center; gap: 10px;
-    padding: 7px 10px; border-radius: 5px; cursor: pointer;
-    border: 1px solid transparent; transition: background 0.1s;
-  }
-  .option:hover { background: #1e1e1e; }
-  .option.selected { background: #1e1a3a; border-color: #7c6af7; }
-  .option-num { color: #444; width: 14px; flex-shrink: 0; }
-  .option.selected .option-num { color: #7c6af7; }
-  .option-text { color: #aaa; }
-  .option.selected .option-text { color: #e0e0e0; }
-
-  .result-box {
-    display: flex; align-items: center; gap: 16px;
-    padding: 16px 20px; background: #1a1a1a; border-radius: 8px;
-    border: 1px solid #2a2a2a; margin-top: 4px;
-  }
-  .result-score { font-size: 36px; font-weight: 700; color: #7c6af7; line-height: 1; }
-  .result-label { font-size: 18px; color: #fff; font-weight: 600; }
-  .result-range { font-size: 12px; color: #444; margin-top: 2px; }
+  .dist-total { font-size: 11px; color: #444; margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -92,227 +102,283 @@
 
 <div class="layout">
   <div>
+
     <section>
-      <h2>Parameters</h2>
-      <div class="param">
-        <label>Floor <span id="val-floor">1.5</span></label>
-        <input type="range" id="floor" min="0" max="5" step="0.5" value="1.5">
+      <h2>Mode</h2>
+      <div class="toggle-row">
+        <button class="toggle-btn active" id="btn-finalized" onclick="setMode('finalized')">Finalized</button>
+        <button class="toggle-btn" id="btn-provisional" onclick="setMode('provisional')">Provisional</button>
       </div>
-      <div class="param">
-        <label>Ceiling <span id="val-ceiling">10.0</span></label>
-        <input type="range" id="ceiling" min="5" max="20" step="0.5" value="10">
+      <div class="cap-note" id="cap-note" style="display:none">Return Rate &amp; Shelf Test excluded · score capped at 8.0</div>
+    </section>
+
+    <section>
+      <h2>Questions</h2>
+
+      <div class="question" id="q-return_rate">
+        <div class="question-header">
+          <span class="question-badge badge-hard">Hard · ×2</span>
+          <span class="question-text">How often do you return to this record?</span>
+        </div>
+        <div class="options" data-q="return_rate">
+          <div class="option selected" data-v="1"><span class="option-num">1</span><span class="option-text">Never</span></div>
+          <div class="option" data-v="2"><span class="option-num">2</span><span class="option-text">Rarely</span></div>
+          <div class="option" data-v="3"><span class="option-num">3</span><span class="option-text">Sometimes</span></div>
+          <div class="option" data-v="4"><span class="option-num">4</span><span class="option-text">Often</span></div>
+          <div class="option" data-v="5"><span class="option-num">5</span><span class="option-text">Constantly</span></div>
+        </div>
       </div>
-      <div class="param">
-        <label>Exponent <span id="val-exponent">1.55</span></label>
-        <input type="range" id="exponent" min="0.05" max="2" step="0.05" value="1.55">
+
+      <div class="question" id="q-track_quality">
+        <div class="question-header">
+          <span class="question-badge badge-soft">Soft · ×1</span>
+          <span class="question-text">How many tracks on this record land?</span>
+        </div>
+        <div class="options" data-q="track_quality">
+          <div class="option selected" data-v="1"><span class="option-num">1</span><span class="option-text">None</span></div>
+          <div class="option" data-v="2"><span class="option-num">2</span><span class="option-text">A few</span></div>
+          <div class="option" data-v="3"><span class="option-num">3</span><span class="option-text">Most</span></div>
+          <div class="option" data-v="4"><span class="option-num">4</span><span class="option-text">Almost all</span></div>
+          <div class="option" data-v="5"><span class="option-num">5</span><span class="option-text">Every single one</span></div>
+        </div>
+      </div>
+
+      <div class="question" id="q-cohesion">
+        <div class="question-header">
+          <span class="question-badge badge-soft">Soft · ×1</span>
+          <span class="question-text">Does this record hold together as a whole?</span>
+        </div>
+        <div class="options" data-q="cohesion">
+          <div class="option selected" data-v="1"><span class="option-num">1</span><span class="option-text">No</span></div>
+          <div class="option" data-v="2"><span class="option-num">2</span><span class="option-text">Loosely</span></div>
+          <div class="option" data-v="3"><span class="option-num">3</span><span class="option-text">Mostly</span></div>
+          <div class="option" data-v="4"><span class="option-num">4</span><span class="option-text">Entirely</span></div>
+          <div class="option" data-v="5"><span class="option-num">5</span><span class="option-text">Greater than the sum of its parts</span></div>
+        </div>
+      </div>
+
+      <div class="question" id="q-emotional_resonance">
+        <div class="question-header">
+          <span class="question-badge badge-hard">Hard · ×2</span>
+          <span class="question-text">Does this record make you feel anything?</span>
+        </div>
+        <div class="options" data-q="emotional_resonance">
+          <div class="option selected" data-v="1"><span class="option-num">1</span><span class="option-text">No</span></div>
+          <div class="option" data-v="2"><span class="option-num">2</span><span class="option-text">Don't think so</span></div>
+          <div class="option" data-v="3"><span class="option-num">3</span><span class="option-text">Sort of</span></div>
+          <div class="option" data-v="4"><span class="option-num">4</span><span class="option-text">Yes</span></div>
+          <div class="option" data-v="5"><span class="option-num">5</span><span class="option-text">Profoundly</span></div>
+        </div>
+      </div>
+
+      <div class="question" id="q-sonic_pleasure">
+        <div class="question-header">
+          <span class="question-badge badge-hard">Hard · ×2</span>
+          <span class="question-text">Do you enjoy listening to this record?</span>
+        </div>
+        <div class="options" data-q="sonic_pleasure">
+          <div class="option selected" data-v="1"><span class="option-num">1</span><span class="option-text">Not at all</span></div>
+          <div class="option" data-v="2"><span class="option-num">2</span><span class="option-text">Somewhat</span></div>
+          <div class="option" data-v="3"><span class="option-num">3</span><span class="option-text">I like it</span></div>
+          <div class="option" data-v="4"><span class="option-num">4</span><span class="option-text">I love it</span></div>
+          <div class="option" data-v="5"><span class="option-num">5</span><span class="option-text">Obsessed</span></div>
+        </div>
+      </div>
+
+      <div class="question" id="q-shelf_test">
+        <div class="question-header">
+          <span class="question-badge badge-hard">Hard · ×2</span>
+          <span class="question-text">If you had to permanently delete it, would you actually care?</span>
+        </div>
+        <div class="options" data-q="shelf_test">
+          <div class="option selected" data-v="1"><span class="option-num">1</span><span class="option-text">No</span></div>
+          <div class="option" data-v="3"><span class="option-num">3</span><span class="option-text">I'd feel it</span></div>
+          <div class="option" data-v="5"><span class="option-num">5</span><span class="option-text">I'd be devastated</span></div>
+        </div>
       </div>
     </section>
 
     <section>
-      <h2>Question weights <span style="color:#444;font-size:10px;text-transform:none;letter-spacing:0">(auto-normalized)</span></h2>
-      <div class="param">
-        <label>Consistency <span id="val-wc">0.25</span></label>
-        <input type="range" id="wc" min="0.05" max="1" step="0.05" value="0.25">
+      <h2>Modifiers <span style="color:#444;font-size:10px;text-transform:none;letter-spacing:0">avg × ±0.75</span></h2>
+
+      <div class="modifier">
+        <div class="modifier-label">Life Association — Is this record tied to a specific period or feeling?</div>
+        <div class="mod-options" data-mod="life_association">
+          <button class="mod-opt selected-neg" data-v="-1">−1 Avoidant</button>
+          <button class="mod-opt selected-neu active" data-v="0">0 Neutral</button>
+          <button class="mod-opt selected-pos" data-v="1">+1 Meaningful</button>
+        </div>
       </div>
-      <div class="param">
-        <label>Impact <span id="val-wi">0.35</span></label>
-        <input type="range" id="wi" min="0.05" max="1" step="0.05" value="0.35">
-      </div>
-      <div class="param">
-        <label>Gut check <span id="val-wg">0.25</span></label>
-        <input type="range" id="wg" min="0.05" max="1" step="0.05" value="0.25">
-      </div>
-      <div class="param">
-        <label>Retrospect <span id="val-wx">0.15</span></label>
-        <input type="range" id="wx" min="0.05" max="1" step="0.05" value="0.15">
+
+      <div class="modifier">
+        <div class="modifier-label">Interest — Do you find this record interesting beyond enjoyment?</div>
+        <div class="mod-options" data-mod="interest">
+          <button class="mod-opt selected-neg" data-v="-1">−1 Not particularly</button>
+          <button class="mod-opt selected-neu active" data-v="0">0 Neutral</button>
+          <button class="mod-opt selected-pos" data-v="1">+1 Yes</button>
+        </div>
       </div>
     </section>
 
-    <section>
-      <h2>Curved values per answer</h2>
-      <div class="cv-grid" id="cv-grid"></div>
-    </section>
+    <div class="result-box">
+      <div class="result-score" id="tester-score">—</div>
+      <div class="result-detail">
+        <div class="result-label" id="tester-label">—</div>
+        <div class="result-breakdown" id="tester-breakdown"></div>
+      </div>
+    </div>
 
-    <section>
-      <h2>Uniform answer scores</h2>
-      <div class="benchmark" id="benchmarks"></div>
-    </section>
   </div>
 
   <div>
     <section>
-      <h2>Question tester</h2>
-
-      <div class="question">
-        <div class="question-text">How would you describe the album track by track?</div>
-        <div class="options" data-q="c">
-          <div class="option selected" data-v="1"><span class="option-num">1</span><span class="option-text">Almost every track is a skip</span></div>
-          <div class="option" data-v="2"><span class="option-num">2</span><span class="option-text">More misses than hits</span></div>
-          <div class="option" data-v="3"><span class="option-num">3</span><span class="option-text">Mixed — some great, some weak</span></div>
-          <div class="option" data-v="4"><span class="option-num">4</span><span class="option-text">Mostly strong with a few weak spots</span></div>
-          <div class="option" data-v="5"><span class="option-num">5</span><span class="option-text">No skips, front to back</span></div>
-        </div>
-      </div>
-
-      <div class="question">
-        <div class="question-text">How did this album make you feel while listening?</div>
-        <div class="options" data-q="i">
-          <div class="option selected" data-v="1"><span class="option-num">1</span><span class="option-text">Bored or uncomfortable</span></div>
-          <div class="option" data-v="2"><span class="option-num">2</span><span class="option-text">Mostly indifferent</span></div>
-          <div class="option" data-v="3"><span class="option-num">3</span><span class="option-text">Engaged but nothing special</span></div>
-          <div class="option" data-v="4"><span class="option-num">4</span><span class="option-text">Moved or deeply engaged</span></div>
-          <div class="option" data-v="5"><span class="option-num">5</span><span class="option-text">Completely absorbed, transported somewhere else</span></div>
-        </div>
-      </div>
-
-      <div class="question">
-        <div class="question-text">When the album ended, what was your immediate reaction?</div>
-        <div class="options" data-q="g">
-          <div class="option selected" data-v="1"><span class="option-num">1</span><span class="option-text">Relief it was over</span></div>
-          <div class="option" data-v="2"><span class="option-num">2</span><span class="option-text">Indifferent</span></div>
-          <div class="option" data-v="3"><span class="option-num">3</span><span class="option-text">Satisfied</span></div>
-          <div class="option" data-v="4"><span class="option-num">4</span><span class="option-text">Impressed</span></div>
-          <div class="option" data-v="5"><span class="option-num">5</span><span class="option-text">I immediately restarted it</span></div>
-        </div>
-      </div>
-
-      <div class="question">
-        <div class="question-text">How do you feel about the album in retrospect?</div>
-        <div class="options" data-q="x">
-          <div class="option selected" data-v="1"><span class="option-num">1</span><span class="option-text">Not good</span></div>
-          <div class="option" data-v="2"><span class="option-num">2</span><span class="option-text">Meh</span></div>
-          <div class="option" data-v="3"><span class="option-num">3</span><span class="option-text">I dig it</span></div>
-          <div class="option" data-v="4"><span class="option-num">4</span><span class="option-text">It speaks to me</span></div>
-          <div class="option" data-v="5"><span class="option-num">5</span><span class="option-text">This album is a part of who I am</span></div>
-        </div>
-      </div>
-
-      <div class="result-box">
-        <div class="result-score" id="tester-score">—</div>
-        <div>
-          <div class="result-label" id="tester-label">—</div>
-          <div class="result-range" id="tester-range"></div>
-        </div>
-      </div>
+      <h2>Uniform answer scores</h2>
+      <div class="benchmark" id="benchmarks"></div>
     </section>
 
     <section>
-      <h2>Label distribution — all 625 combos</h2>
+      <h2>Label distribution</h2>
+      <div class="dist-total" id="dist-total"></div>
       <div id="distribution"></div>
     </section>
   </div>
 </div>
 
 <script>
-function weights() {
-  const wc = parseFloat(document.getElementById('wc').value);
-  const wi = parseFloat(document.getElementById('wi').value);
-  const wg = parseFloat(document.getElementById('wg').value);
-  const wx = parseFloat(document.getElementById('wx').value);
-  const total = wc + wi + wg + wx;
-  return { c: wc / total, i: wi / total, g: wg / total, x: wx / total };
-}
-
-const LABELS = [
-  { label: "DOA",           min: 0.0,  max: 2.9  },
-  { label: "Nope",          min: 3.0,  max: 3.9  },
-  { label: "Not For Me",    min: 4.0,  max: 4.9  },
-  { label: "Lukewarm",      min: 5.0,  max: 5.9  },
-  { label: "Solid",         min: 6.0,  max: 6.9  },
-  { label: "Staff Pick",    min: 7.0,  max: 7.9  },
-  { label: "Essential",     min: 8.0,  max: 8.9  },
-  { label: "Inst. Classic", min: 9.0,  max: 9.9  },
-  { label: "Masterpiece",   min: 10.0, max: 10.0 },
+const QUESTIONS = [
+  { key: 'return_rate',         weight: 2, values: [1,2,3,4,5], hard: true,  provisional: false },
+  { key: 'track_quality',       weight: 1, values: [1,2,3,4,5], hard: false, provisional: true  },
+  { key: 'cohesion',            weight: 1, values: [1,2,3,4,5], hard: false, provisional: true  },
+  { key: 'emotional_resonance', weight: 2, values: [1,2,3,4,5], hard: true,  provisional: true  },
+  { key: 'sonic_pleasure',      weight: 2, values: [1,2,3,4,5], hard: true,  provisional: true  },
+  { key: 'shelf_test',          weight: 2, values: [1,3,5],      hard: true,  provisional: false },
 ];
 
-function curved(value, exponent) {
-  const norm = (value - 3) / 2;
-  const c = Math.sign(norm) * Math.pow(Math.abs(norm), exponent);
-  return c * 2 + 3;
+const MODIFIERS = ['life_association', 'interest'];
+const MOD_SWING = 0.75;
+const PROVISIONAL_CAP = 8.0;
+
+const LABELS = [
+  { label: "DOA",            min: 0.0,  max: 2.9  },
+  { label: "Nope",           min: 3.0,  max: 3.9  },
+  { label: "Not For Me",     min: 4.0,  max: 4.9  },
+  { label: "Lukewarm",       min: 5.0,  max: 5.9  },
+  { label: "Solid",          min: 6.0,  max: 6.9  },
+  { label: "Recommended",    min: 7.0,  max: 7.9  },
+  { label: "Essential",      min: 8.0,  max: 8.9  },
+  { label: "Inst. Classic",  min: 9.0,  max: 9.9  },
+  { label: "Masterpiece",    min: 10.0, max: 10.0 },
+];
+
+let mode = 'finalized';
+
+// Tester state: question values and modifier values
+const qValues = {};
+QUESTIONS.forEach(q => qValues[q.key] = q.values[0]);
+const modValues = {};
+MODIFIERS.forEach(m => modValues[m] = 0);
+
+function activeQuestions() {
+  if (mode === 'provisional') return QUESTIONS.filter(q => q.provisional);
+  return QUESTIONS;
 }
 
-function computeRating(c, i, g, x, floor, ceiling, exponent) {
-  const w = weights();
-  const raw = curved(c, exponent) * w.c
-            + curved(i, exponent) * w.i
-            + curved(g, exponent) * w.g
-            + curved(x, exponent) * w.x;
-  const rating = floor + ((raw - 1) / 4) * (ceiling - floor);
-  return Math.round(rating * 10) / 10;
+function computeBase(answers) {
+  // answers: { key: value }
+  const qs = activeQuestions();
+  let weightedSum = 0, totalWeight = 0;
+  for (const q of qs) {
+    const v = answers[q.key];
+    if (v == null) continue;
+    weightedSum += v * q.weight;
+    totalWeight += q.weight;
+  }
+  if (totalWeight === 0) return 0;
+  const avg = weightedSum / totalWeight;
+  let base = (avg - 1) / 4 * 10;
+  if (mode === 'provisional') base = Math.min(base, PROVISIONAL_CAP);
+  return Math.round(base * 10) / 10;
 }
 
-function getLabel(rating) {
-  const r = Math.max(0, Math.min(10, rating));
+function computeModAdj(mods) {
+  const vals = MODIFIERS.map(k => mods[k]);
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+  return Math.round(avg * MOD_SWING * 100) / 100;
+}
+
+function computeFinal(base, modAdj) {
+  return Math.round(Math.max(0, Math.min(10, base + modAdj)) * 10) / 10;
+}
+
+function getLabel(score) {
+  const r = Math.max(0, Math.min(10, score));
   return LABELS.find(e => r >= e.min && r <= e.max) || LABELS[LABELS.length - 1];
 }
 
-function params() {
-  return {
-    floor:    parseFloat(document.getElementById('floor').value),
-    ceiling:  parseFloat(document.getElementById('ceiling').value),
-    exponent: parseFloat(document.getElementById('exponent').value),
-  };
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-finalized').classList.toggle('active', m === 'finalized');
+  document.getElementById('btn-provisional').classList.toggle('active', m === 'provisional');
+  document.getElementById('cap-note').style.display = m === 'provisional' ? 'block' : 'none';
+  document.getElementById('q-return_rate').classList.toggle('skipped', m === 'provisional');
+  document.getElementById('q-shelf_test').style.display = m === 'provisional' ? 'none' : '';
+  update();
 }
 
 function update() {
-  const { floor, ceiling, exponent } = params();
+  updateBenchmarks();
+  updateDistribution();
+  updateTester();
+}
 
-  document.getElementById('val-floor').textContent    = floor.toFixed(1);
-  document.getElementById('val-ceiling').textContent  = ceiling.toFixed(1);
-  document.getElementById('val-exponent').textContent = exponent.toFixed(2);
-
-  const w = weights();
-  document.getElementById('val-wc').textContent = w.c.toFixed(2);
-  document.getElementById('val-wi').textContent = w.i.toFixed(2);
-  document.getElementById('val-wg').textContent = w.g.toFixed(2);
-  document.getElementById('val-wx').textContent = w.x.toFixed(2);
-
-  // Curved values
-  const cvGrid = document.getElementById('cv-grid');
-  cvGrid.innerHTML = '';
+function updateBenchmarks() {
+  const el = document.getElementById('benchmarks');
+  el.innerHTML = '';
   for (let v = 1; v <= 5; v++) {
-    const cv = curved(v, exponent);
-    cvGrid.innerHTML += `
-      <div class="cv-cell">
-        <div class="answer">${v}</div>
-        <div class="arrow">↓</div>
-        <div class="curved">${cv.toFixed(2)}</div>
-      </div>`;
-  }
-
-  // Benchmarks
-  const benchEl = document.getElementById('benchmarks');
-  benchEl.innerHTML = '';
-  for (let v = 1; v <= 5; v++) {
-    const score = computeRating(v, v, v, v, floor, ceiling, exponent);
-    const entry = getLabel(score);
-    const pct = ((score / 10) * 100).toFixed(0);
-    benchEl.innerHTML += `
+    const answers = {};
+    QUESTIONS.forEach(q => answers[q.key] = v);
+    // Shelf test only has 1 and 5 — snap to nearest valid
+    answers['shelf_test'] = v >= 3 ? 5 : 1;
+    const base = computeBase(answers);
+    const entry = getLabel(base);
+    const pct = ((base / 10) * 100).toFixed(0);
+    el.innerHTML += `
       <div class="bench-row">
         <span class="bench-answers">All ${v}s</span>
-        <span class="bench-score">${score.toFixed(1)}</span>
+        <span class="bench-score">${base.toFixed(1)}</span>
         <span class="bench-label">${entry.label}</span>
         <div class="bench-bar-wrap"><div class="bench-bar" style="width:${pct}%"></div></div>
       </div>`;
   }
+}
 
-  // Distribution
+function updateDistribution() {
+  const qs = activeQuestions();
   const counts = new Array(LABELS.length).fill(0);
-  for (let c = 1; c <= 5; c++)
-    for (let i = 1; i <= 5; i++)
-      for (let g = 1; g <= 5; g++)
-        for (let x = 1; x <= 5; x++) {
-          const r = computeRating(c, i, g, x, floor, ceiling, exponent);
-          const idx = LABELS.findIndex(e => r >= e.min && r <= e.max);
-          if (idx >= 0) counts[idx]++;
-        }
+  let total = 0;
+
+  function recurse(qi, answers) {
+    if (qi === qs.length) {
+      const base = computeBase(answers);
+      const idx = LABELS.findIndex(e => base >= e.min && base <= e.max);
+      if (idx >= 0) counts[idx]++;
+      total++;
+      return;
+    }
+    for (const v of qs[qi].values) {
+      recurse(qi + 1, { ...answers, [qs[qi].key]: v });
+    }
+  }
+  recurse(0, {});
 
   const maxCount = Math.max(...counts);
+  document.getElementById('dist-total').textContent = `${total} combinations`;
+
   const distEl = document.getElementById('distribution');
   distEl.innerHTML = '';
   LABELS.forEach((e, i) => {
     const pct = maxCount > 0 ? (counts[i] / maxCount * 100).toFixed(1) : 0;
-    const totalPct = (counts[i] / 625 * 100).toFixed(0);
+    const totalPct = total > 0 ? (counts[i] / total * 100).toFixed(0) : 0;
     const highlight = counts[i] === maxCount && maxCount > 0 ? 'highlight' : '';
     distEl.innerHTML += `
       <div class="dist-row ${highlight}">
@@ -325,36 +391,45 @@ function update() {
   });
 }
 
-['floor', 'ceiling', 'exponent', 'wc', 'wi', 'wg', 'wx'].forEach(id => {
-  document.getElementById(id).addEventListener('input', () => { update(); updateTester(); });
-});
-
-// Question tester state
-const testerValues = { c: 1, i: 1, g: 1, x: 1 };
-
 function updateTester() {
-  const { floor, ceiling, exponent } = params();
-  const score = computeRating(testerValues.c, testerValues.i, testerValues.g, testerValues.x, floor, ceiling, exponent);
-  const entry = getLabel(score);
-  document.getElementById('tester-score').textContent = score.toFixed(1);
+  const base = computeBase(qValues);
+  const modAdj = computeModAdj(modValues);
+  const final = computeFinal(base, modAdj);
+  const entry = getLabel(final);
+  document.getElementById('tester-score').textContent = final.toFixed(1);
   document.getElementById('tester-label').textContent = entry.label;
-  document.getElementById('tester-range').textContent = `${entry.min.toFixed(1)} – ${entry.max.toFixed(1)}`;
+  const modSign = modAdj >= 0 ? '+' : '';
+  document.getElementById('tester-breakdown').textContent =
+    `base ${base.toFixed(1)}  ${modSign}${modAdj.toFixed(2)} mod  =  ${final.toFixed(1)}`;
 }
 
+// Wire up question options
 document.querySelectorAll('.options').forEach(group => {
-  const q = group.dataset.q;
+  const key = group.dataset.q;
   group.querySelectorAll('.option').forEach(opt => {
     opt.addEventListener('click', () => {
       group.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
       opt.classList.add('selected');
-      testerValues[q] = parseInt(opt.dataset.v);
+      qValues[key] = parseInt(opt.dataset.v);
+      updateTester();
+    });
+  });
+});
+
+// Wire up modifier buttons
+document.querySelectorAll('.mod-options').forEach(group => {
+  const key = group.dataset.mod;
+  group.querySelectorAll('.mod-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      group.querySelectorAll('.mod-opt').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      modValues[key] = parseInt(btn.dataset.v);
       updateTester();
     });
   });
 });
 
 update();
-updateTester();
 </script>
 </body>
 </html>

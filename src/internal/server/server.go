@@ -98,14 +98,14 @@ func NewServices(app app.App, db *db.DB) *services {
 
 	s.notes = notes.NewService(db)
 
-	s.library = library.NewService(db, s.spotify, s.listeningHistory, s.tags, s.notes)
+	s.review = review.NewService(db)
+
+	s.library = library.NewService(db, s.spotify, s.listeningHistory, s.tags, s.notes, s.review)
 
 	s.feed = feed.NewService(db, s.spotify, s.library)
 	s.taskManager.RegisterCronTask(
 		feed.NewSyncStaleSpotifyFeedsTask(s.feed),
 	)
-
-	s.review = review.NewService(db)
 
 	return s
 }
@@ -168,6 +168,9 @@ func Start(ctx context.Context, app app.App) {
 	appMux.Handle("POST /app/review/rating-recommender/questions", httpx.HandlerFunc(reviewHandler.SubmitRatingRecommenderQuestions))
 	appMux.Handle("POST /app/review/rating-recommender/rating", httpx.HandlerFunc(reviewHandler.SubmitRatingRecommenderRating))
 	appMux.Handle("DELETE /app/review/rating-log/{id}", httpx.HandlerFunc(reviewHandler.DeleteRatingLogEntry))
+	appMux.Handle("POST /app/review/rating-recommender/modifiers", httpx.HandlerFunc(reviewHandler.SubmitModifiers))
+	appMux.Handle("POST /app/review/rating-recommender/confirm", httpx.HandlerFunc(reviewHandler.GetRatingConfirm))
+	appMux.Handle("POST /app/review/rating/snooze", httpx.HandlerFunc(reviewHandler.SnoozeRating))
 
 	// Not found handler, must be registered after all other handlers
 	rootMux.HandleFunc("/", httpx.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

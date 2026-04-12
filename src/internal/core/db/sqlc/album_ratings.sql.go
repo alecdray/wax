@@ -27,7 +27,7 @@ func (q *Queries) DeleteAlbumRatingLogEntry(ctx context.Context, arg DeleteAlbum
 }
 
 const getLatestUserAlbumRating = `-- name: GetLatestUserAlbumRating :one
-SELECT id, user_id, album_id, rating, note, created_at FROM album_rating_log
+SELECT id, user_id, album_id, rating, note, created_at, state FROM album_rating_log
 WHERE user_id = ? AND album_id = ?
 ORDER BY created_at DESC
 LIMIT 1
@@ -48,12 +48,13 @@ func (q *Queries) GetLatestUserAlbumRating(ctx context.Context, arg GetLatestUse
 		&i.Rating,
 		&i.Note,
 		&i.CreatedAt,
+		&i.State,
 	)
 	return i, err
 }
 
 const getLatestUserAlbumRatings = `-- name: GetLatestUserAlbumRatings :many
-SELECT arl.id, arl.user_id, arl.album_id, arl.rating, arl.note, arl.created_at FROM album_rating_log arl
+SELECT arl.id, arl.user_id, arl.album_id, arl.rating, arl.note, arl.created_at, arl.state FROM album_rating_log arl
 JOIN (
     SELECT arl2.album_id, MAX(arl2.created_at) AS max_created_at
     FROM album_rating_log arl2
@@ -84,6 +85,7 @@ func (q *Queries) GetLatestUserAlbumRatings(ctx context.Context, arg GetLatestUs
 			&i.Rating,
 			&i.Note,
 			&i.CreatedAt,
+			&i.State,
 		); err != nil {
 			return nil, err
 		}
@@ -175,7 +177,7 @@ func (q *Queries) GetUnratedAlbums(ctx context.Context, arg GetUnratedAlbumsPara
 }
 
 const getUserAlbumRatingLog = `-- name: GetUserAlbumRatingLog :many
-SELECT id, user_id, album_id, rating, note, created_at FROM album_rating_log
+SELECT id, user_id, album_id, rating, note, created_at, state FROM album_rating_log
 WHERE user_id = ? AND album_id = ?
 ORDER BY created_at DESC
 `
@@ -201,6 +203,7 @@ func (q *Queries) GetUserAlbumRatingLog(ctx context.Context, arg GetUserAlbumRat
 			&i.Rating,
 			&i.Note,
 			&i.CreatedAt,
+			&i.State,
 		); err != nil {
 			return nil, err
 		}
@@ -216,9 +219,9 @@ func (q *Queries) GetUserAlbumRatingLog(ctx context.Context, arg GetUserAlbumRat
 }
 
 const insertAlbumRatingLogEntry = `-- name: InsertAlbumRatingLogEntry :one
-INSERT INTO album_rating_log (id, user_id, album_id, rating, note, created_at)
-VALUES (?, ?, ?, ?, ?, current_timestamp)
-RETURNING id, user_id, album_id, rating, note, created_at
+INSERT INTO album_rating_log (id, user_id, album_id, rating, note, state, created_at)
+VALUES (?, ?, ?, ?, ?, ?, current_timestamp)
+RETURNING id, user_id, album_id, rating, note, created_at, state
 `
 
 type InsertAlbumRatingLogEntryParams struct {
@@ -227,6 +230,7 @@ type InsertAlbumRatingLogEntryParams struct {
 	AlbumID string
 	Rating  float64
 	Note    sql.NullString
+	State   sql.NullString
 }
 
 func (q *Queries) InsertAlbumRatingLogEntry(ctx context.Context, arg InsertAlbumRatingLogEntryParams) (AlbumRatingLog, error) {
@@ -236,6 +240,7 @@ func (q *Queries) InsertAlbumRatingLogEntry(ctx context.Context, arg InsertAlbum
 		arg.AlbumID,
 		arg.Rating,
 		arg.Note,
+		arg.State,
 	)
 	var i AlbumRatingLog
 	err := row.Scan(
@@ -245,6 +250,7 @@ func (q *Queries) InsertAlbumRatingLogEntry(ctx context.Context, arg InsertAlbum
 		&i.Rating,
 		&i.Note,
 		&i.CreatedAt,
+		&i.State,
 	)
 	return i, err
 }

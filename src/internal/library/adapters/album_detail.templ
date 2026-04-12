@@ -183,7 +183,10 @@ templ AlbumRatingHistory(album library.AlbumDTO, isOobSwap bool) {
 						<div class="flex items-start justify-between py-3 gap-2" data-testid="rating-history-entry">
 							<div class="flex flex-col gap-1 min-w-0">
 								<div class="flex items-center gap-2">
-									<span class="badge badge-soft badge-primary text-nowrap" data-testid="rating-history-score">{ fmt.Sprintf("%.4g", *entry.Rating) } - { review.GetRatingLabel(*entry.Rating) }</span>
+									<span class="badge badge-soft badge-primary text-nowrap" data-testid="rating-history-score">{ fmt.Sprintf("%.4g", *entry.Rating) } - { string(review.GetRatingLabel(*entry.Rating)) }</span>
+									if entry.State != nil {
+										<span class="badge badge-xs badge-ghost text-nowrap">{ string(*entry.State) }</span>
+									}
 									<span class="text-xs text-base-content/40">{ entry.CreatedAt.Format("Jan 2, 2006") }</span>
 								</div>
 								if entry.Note != nil {

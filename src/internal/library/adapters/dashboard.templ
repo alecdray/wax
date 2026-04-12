@@ -31,6 +31,44 @@ func GetAlbumRowTagsSectionID(albumId string) string {
 
 const maxTagsInAlbumTagsCell = 2
 
+func ratingStateClass(album library.AlbumDTO) string {
+	if album.RatingState == nil {
+		return "text-base-content/20 hover:text-base-content/60"
+	}
+	switch album.RatingState.State {
+	case "stalled":
+		return "text-error/50 hover:text-error/70"
+	case "finalized":
+		return "text-primary hover:text-primary/80"
+	case "provisional":
+		if album.RatingState.IsRerateDue() {
+			return "text-warning hover:text-warning/80"
+		}
+		return "text-base-content/40 hover:text-base-content/60"
+	default:
+		return "text-primary hover:text-primary/80"
+	}
+}
+
+func ratingBadgeClass(album library.AlbumDTO) string {
+	if album.RatingState == nil {
+		return "badge badge-soft badge-primary text-nowrap cursor-pointer"
+	}
+	switch album.RatingState.State {
+	case "stalled":
+		return "badge badge-soft badge-error text-nowrap cursor-pointer opacity-60"
+	case "finalized":
+		return "badge badge-soft badge-primary text-nowrap cursor-pointer"
+	case "provisional":
+		if album.RatingState.IsRerateDue() {
+			return "badge badge-soft badge-warning text-nowrap cursor-pointer"
+		}
+		return "badge badge-soft badge-ghost text-nowrap cursor-pointer opacity-50"
+	default:
+		return "badge badge-soft badge-primary text-nowrap cursor-pointer"
+	}
+}
+
 func hasSoundGroupTag(album library.AlbumDTO) bool {
 	for _, t := range album.Tags {
 		if t.Group != nil && t.Group.Name == tags.TagGroupSound {
@@ -63,7 +101,14 @@ type CarouselView string
 const (
 	CarouselViewRecentlyPlayed CarouselView = "recently-played"
 	CarouselViewUnrated        CarouselView = "unrated"
+	CarouselViewRerateDue      CarouselView = "rerate-due"
 )
+
+type CarouselSectionProps struct {
+	RegularAlbums []library.AlbumSummaryDTO
+	RerateAlbums  []library.RerateAlbumDTO
+	Active        CarouselView
+}
 
 type DashboardPageProps struct {
 	Feeds           []feed.FeedDTO
@@ -236,15 +281,18 @@ templ AlbumRating(album library.AlbumDTO, isOobSwap bool) {
 		<div
 			id={ GetAlbumRatingID(album.ID) }
 			data-testid="album-row-rating"
-			class="badge badge-soft badge-primary text-nowrap cursor-pointer"
-			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s&rating=%f", album.ID, *album.Rating.Rating) }
+			class={ ratingBadgeClass(album) }
+			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"
 			if isOobSwap {
 				hx-swap-oob="true"
 			}
 		>
-			{ *album.Rating.Rating } - { review.GetRatingLabel(*album.Rating.Rating) }
+			if album.RatingState != nil && album.RatingState.State == "stalled" {
+				Stalled —
+			}
+			{ fmt.Sprintf("%.1f", *album.Rating.Rating) } - { string(review.GetRatingLabel(*album.Rating.Rating)) }
 		</div>
 	} else {
 		<button
@@ -338,8 +386,8 @@ templ AlbumListRating(album library.AlbumDTO, isOobSwap bool) {
 		<div
 			id={ GetAlbumListRatingID(album.ID) }
 			data-testid="album-row-rating"
-			class="min-w-14 h-full flex items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none text-primary hover:text-primary/80 transition-colors"
-			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s&rating=%f", album.ID, *album.Rating.Rating) }
+			class={ "min-w-14 h-full flex flex-col items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none transition-colors", ratingStateClass(album) }
+			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"
 			if isOobSwap {
@@ -347,6 +395,9 @@ templ AlbumListRating(album library.AlbumDTO, isOobSwap bool) {
 			}
 		>
 			{ fmt.Sprintf("%.1f", *album.Rating.Rating) }
+			if album.RatingState != nil && album.RatingState.State == "stalled" {
+				<span class="text-xs font-normal badge badge-xs badge-error badge-soft">Stalled</span>
+			}
 		</div>
 	} else {
 		<div
@@ -921,7 +972,44 @@ templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 	}
 }
 
-templ CarouselSection(albums []library.AlbumSummaryDTO, active CarouselView) {
+templ rerateCarouselStrip(albums []library.RerateAlbumDTO) {
+	if len(albums) == 0 {
+		<div class="px-4 py-4 text-xs text-base-content/40">No albums due for rerate</div>
+	} else {
+		<div class="carousel carousel-end gap-3 px-4 py-2 w-full overscroll-x-none">
+			for _, album := range albums {
+				<div class="carousel-item">
+					<a
+						href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) }
+						class="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity w-26"
+					>
+						if album.ImageURL != "" {
+							<div class="avatar">
+								<div class="mask mask-squircle h-24 w-24 flex-shrink-0">
+									<img src={ album.ImageURL } alt={ album.Title }/>
+								</div>
+							</div>
+						}
+						<span class="text-xs text-nowrap truncate w-full text-left">{ album.Title }</span>
+						if album.Artists != "" {
+							<span class="text-xs text-nowrap truncate w-full text-left text-base-content/40">{ album.Artists }</span>
+						}
+						<div class="flex items-center gap-1 w-full">
+							if album.Rating != nil {
+								<span class="text-xs font-bold tabular-nums">{ fmt.Sprintf("%.1f", *album.Rating) }</span>
+							}
+							if album.RatingState == "stalled" {
+								<span class="badge badge-xs badge-error badge-soft">Stalled</span>
+							}
+						</div>
+					</a>
+				</div>
+			}
+		</div>
+	}
+}
+
+templ CarouselSection(props CarouselSectionProps) {
 	<div
 		id="carousel-section"
 		class="w-full flex-shrink-0"
@@ -931,8 +1019,8 @@ templ CarouselSection(albums []library.AlbumSummaryDTO, active CarouselView) {
 	>
 		<div class="flex items-center gap-3 px-4 pb-1">
 			<button
-				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-base-content", active == CarouselViewRecentlyPlayed), templ.KV("text-base-content/40 hover:text-base-content/70 cursor-pointer", active != CarouselViewRecentlyPlayed) }
-				if active != CarouselViewRecentlyPlayed {
+				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-base-content", props.Active == CarouselViewRecentlyPlayed), templ.KV("text-base-content/40 hover:text-base-content/70 cursor-pointer", props.Active != CarouselViewRecentlyPlayed) }
+				if props.Active != CarouselViewRecentlyPlayed {
 					hx-get="/app/library/dashboard/carousel?view=recently-played"
 					hx-target="#carousel-section"
 					hx-swap="outerHTML"
@@ -941,20 +1029,32 @@ templ CarouselSection(albums []library.AlbumSummaryDTO, active CarouselView) {
 			>Recently Spun</button>
 			<span class="text-base-content/20 cursor-default">|</span>
 			<button
-				data-testid="carousel-unrated-tab"
-				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-base-content", active == CarouselViewUnrated), templ.KV("text-base-content/40 hover:text-base-content/70 cursor-pointer", active != CarouselViewUnrated) }
-				if active != CarouselViewUnrated {
+				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-base-content", props.Active == CarouselViewUnrated), templ.KV("text-base-content/40 hover:text-base-content/70 cursor-pointer", props.Active != CarouselViewUnrated) }
+				if props.Active != CarouselViewUnrated {
 					hx-get="/app/library/dashboard/carousel?view=unrated"
 					hx-target="#carousel-section"
 					hx-swap="outerHTML"
 				}
 				data-testid="carousel-unrated-tab"
 			>Unrated</button>
+			<span class="text-base-content/20 cursor-default">|</span>
+			<button
+				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-base-content", props.Active == CarouselViewRerateDue), templ.KV("text-base-content/40 hover:text-base-content/70 cursor-pointer", props.Active != CarouselViewRerateDue) }
+				if props.Active != CarouselViewRerateDue {
+					hx-get="/app/library/dashboard/carousel?view=rerate-due"
+					hx-target="#carousel-section"
+					hx-swap="outerHTML"
+				}
+				data-testid="carousel-rerate-due-tab"
+			>Rerate Due</button>
 		</div>
-		if active == CarouselViewUnrated {
-			@carouselStrip(albums, "No unrated albums in your library")
-		} else {
-			@carouselStrip(albums, "No recently played albums")
+		switch props.Active {
+		case CarouselViewUnrated:
+			@carouselStrip(props.RegularAlbums, "No unrated albums in your library")
+		case CarouselViewRerateDue:
+			@rerateCarouselStrip(props.RerateAlbums)
+		default:
+			@carouselStrip(props.RegularAlbums, "No recently played albums")
 		}
 	</div>
 }
@@ -967,7 +1067,10 @@ templ DashboardPage(props DashboardPageProps) {
 			@DashboardHeaderBar(props.Feeds)
 			<div class="flex flex-col py-4 gap-4 items-center">
 				@LibraryStats(props.Library)
-				@CarouselSection(props.RecentAlbums, CarouselViewRecentlyPlayed)
+				@CarouselSection(CarouselSectionProps{
+					RegularAlbums: props.RecentAlbums,
+					Active:        CarouselViewRecentlyPlayed,
+				})
 				if props.Library != nil {
 					@AlbumsList(props.FirstPageAlbums, "date", "desc", props.FilterParams, props.Artists)
 				}

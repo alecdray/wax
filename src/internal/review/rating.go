@@ -6,131 +6,269 @@ import (
 	"github.com/alecdray/wax/src/internal/core/utils"
 )
 
-const (
-	// Controls how much extreme answers (1 or 5) are amplified.
-	// Lower values = more powerful extremes, higher values = closer to linear.
-	// Valid range 0.0–1.0, where 1.0 is fully linear.
-	ratingCurveExponent = 1.55
-
-	// Minimum possible rating — awarded when all answers are 1.
-	ratingFloor = 1.5
-
-	// Maximum possible rating — awarded when all answers are 5.
-	ratingCeiling = 10.0
-
-	// Weighting for Q1: track-by-track consistency.
-	// Controls how much skips and weak tracks pull the rating down.
-	RatingWeightConsistency = 0.25
-
-	// Weighting for Q2: emotional impact while listening.
-	// Highest weight — the primary differentiator between good and great.
-	RatingWeightImpact = 0.35
-
-	// Weighting for Q3: immediate gut reaction when the album ended.
-	// Captures the overall impression beyond individual tracks.
-	RatingWeightGutCheck = 0.25
-
-	// Weighting for Q4: personal resonance — how the album sits with you in retrospect.
-	RatingWeightRetrospect = 0.15
-)
-
-type RatingQuestionKey string
+// RatingMode controls which questions are active and whether the provisional cap applies.
+type RatingMode string
 
 const (
-	RatingQuestionConsistency RatingQuestionKey = "consistency"
-	RatingQuestionImpact      RatingQuestionKey = "impact"
-	RatingQuestionGutCheck    RatingQuestionKey = "gut_check"
-	RatingQuestionRetrospect  RatingQuestionKey = "retrospect"
+	RatingModeProvisional RatingMode = "provisional"
+	RatingModeFinalized   RatingMode = "finalized"
 )
 
-func (k RatingQuestionKey) String() string {
-	return string(k)
-}
+// Score constants — adjust weights here to tune the system.
+// Hard questions are near pass/fail requirements (weight 2).
+// Soft questions measure degree of quality (weight 1).
+const (
+	RatingWeightHard = 2.0
+	RatingWeightSoft = 1.0
 
-type RatingQuestionOption struct {
+	// ModifierMaxSwing is the maximum total modifier adjustment (positive or negative).
+	ModifierMaxSwing = 0.75
+
+	// ProvisionalScoreCap is the maximum score a provisional rating can produce.
+	ProvisionalScoreCap = 8.0
+)
+
+// BaseQuestionKey identifies a base question.
+type BaseQuestionKey string
+
+const (
+	QuestionReturnRate         BaseQuestionKey = "return_rate"
+	QuestionTrackQuality       BaseQuestionKey = "track_quality"
+	QuestionCohesion           BaseQuestionKey = "cohesion"
+	QuestionEmotionalResonance BaseQuestionKey = "emotional_resonance"
+	QuestionSonicPleasure      BaseQuestionKey = "sonic_pleasure"
+	QuestionShelfTest          BaseQuestionKey = "shelf_test"
+)
+
+// QuestionOption is a single selectable answer for a base question.
+type QuestionOption struct {
 	Value int
 	Label string
 }
 
-type RatingQuestion struct {
-	Key      RatingQuestionKey
+// BaseQuestion is a single base question in the rating questionnaire.
+type BaseQuestion struct {
+	Key      BaseQuestionKey
 	Question string
-	Options  []RatingQuestionOption
-	Value    int
+	Options  []QuestionOption
 	Weight   float64
+	Value    int // 0 = unanswered
 }
 
-func (qs RatingQuestion) CurvedValue() float64 {
-	normalized := (float64(qs.Value) - 3.0) / 2.0
-	curved := math.Copysign(math.Pow(math.Abs(normalized), ratingCurveExponent), normalized)
-	return curved*2.0 + 3.0
+func (q BaseQuestion) WithValue(v int) BaseQuestion {
+	q.Value = v
+	return q
 }
 
-func (qs RatingQuestion) WithValue(value int) RatingQuestion {
-	qs.Value = value
-	return qs
-}
+// BaseQuestions is a slice of BaseQuestion.
+type BaseQuestions []BaseQuestion
 
-type RatingQuestions []RatingQuestion
-
-func (qs RatingQuestions) Rating() float64 {
-	var raw float64
-	for _, question := range qs {
-		raw += question.CurvedValue() * question.Weight
+// Score computes the base score (0–10) for the answered questions.
+// In provisional mode, ReturnRate and ShelfTest are excluded (attachment questions requiring lived experience).
+// The provisional cap is applied in FinalScore.
+func (qs BaseQuestions) Score(mode RatingMode) float64 {
+	var weightedSum, totalWeight float64
+	for _, q := range qs {
+		if mode == RatingModeProvisional && (q.Key == QuestionReturnRate || q.Key == QuestionShelfTest) {
+			continue
+		}
+		if q.Value == 0 {
+			continue
+		}
+		weightedSum += float64(q.Value) * q.Weight
+		totalWeight += q.Weight
 	}
-	rating := ratingFloor + ((raw-1.0)/4.0)*(ratingCeiling-ratingFloor)
-	return math.Round(rating*10) / 10
+	if totalWeight == 0 {
+		return 0
+	}
+	avg := weightedSum / totalWeight
+	// Map [1, 5] → [0, 10] linearly.
+	base := (avg - 1.0) / 4.0 * 10.0
+	return math.Round(base*10) / 10
 }
 
-var RatingRecommenderQuestions RatingQuestions = RatingQuestions{
+// AllBaseQuestions is the canonical ordered list of base questions.
+var AllBaseQuestions = BaseQuestions{
 	{
-		Key:      RatingQuestionConsistency,
-		Question: "How would you describe the album track by track?",
-		Options: []RatingQuestionOption{
-			{1, "Almost every track is a skip"},
-			{2, "More misses than hits"},
-			{3, "Mixed — some great, some weak"},
-			{4, "Mostly strong with a few weak spots"},
-			{5, "No skips, front to back"},
+		Key:      QuestionReturnRate,
+		Question: "How often do you return to this record?",
+		Options: []QuestionOption{
+			{1, "Never"},
+			{2, "Rarely"},
+			{3, "Sometimes"},
+			{4, "Often"},
+			{5, "Constantly"},
 		},
-		Weight: RatingWeightConsistency,
+		Weight: RatingWeightHard,
 	},
 	{
-		Key:      RatingQuestionImpact,
-		Question: "How did this album make you feel while listening?",
-		Options: []RatingQuestionOption{
-			{1, "Bored or uncomfortable"},
-			{2, "Mostly indifferent"},
-			{3, "Engaged but nothing special"},
-			{4, "Moved or deeply engaged"},
-			{5, "Completely absorbed, transported somewhere else"},
+		Key:      QuestionTrackQuality,
+		Question: "How many tracks on this record land?",
+		Options: []QuestionOption{
+			{1, "None"},
+			{2, "A few"},
+			{3, "Most"},
+			{4, "Almost all"},
+			{5, "Every single one"},
 		},
-		Weight: RatingWeightImpact,
+		Weight: RatingWeightSoft,
 	},
 	{
-		Key:      RatingQuestionGutCheck,
-		Question: "When the album ended, what was your immediate reaction?",
-		Options: []RatingQuestionOption{
-			{1, "Relief it was over"},
-			{2, "Indifferent"},
-			{3, "Satisfied"},
-			{4, "Impressed"},
-			{5, "I immediately restarted it"},
+		Key:      QuestionCohesion,
+		Question: "Does this record hold together as a whole?",
+		Options: []QuestionOption{
+			{1, "No"},
+			{2, "Loosely"},
+			{3, "Mostly"},
+			{4, "Entirely"},
+			{5, "Greater than the sum of its parts"},
 		},
-		Weight: RatingWeightGutCheck,
+		Weight: RatingWeightSoft,
 	},
 	{
-		Key:      RatingQuestionRetrospect,
-		Question: "How do you feel about the album in retrospect?",
-		Options: []RatingQuestionOption{
-			{1, "Not good"},
-			{2, "Meh"},
-			{3, "I dig it"},
-			{4, "It speaks to me"},
-			{5, "This album is a part of who I am"},
+		Key:      QuestionEmotionalResonance,
+		Question: "Does this record make you feel anything?",
+		Options: []QuestionOption{
+			{1, "No"},
+			{2, "Don't think so"},
+			{3, "Sort of"},
+			{4, "Yes"},
+			{5, "Profoundly"},
 		},
-		Weight: RatingWeightRetrospect,
+		Weight: RatingWeightHard,
 	},
+	{
+		Key:      QuestionSonicPleasure,
+		Question: "Do you enjoy listening to this record?",
+		Options: []QuestionOption{
+			{1, "Not at all"},
+			{2, "Somewhat"},
+			{3, "I like it"},
+			{4, "I love it"},
+			{5, "Obsessed"},
+		},
+		Weight: RatingWeightHard,
+	},
+	{
+		Key:      QuestionShelfTest,
+		Question: "If you had to permanently delete it, would you actually care?",
+		Options: []QuestionOption{
+			{1, "No"},
+			{3, "I'd feel it"},
+			{5, "I'd be devastated"},
+		},
+		Weight: RatingWeightHard,
+	},
+}
+
+// ModifierKey identifies a modifier.
+type ModifierKey string
+
+const (
+	ModifierLifeAssociation ModifierKey = "life_association"
+	ModifierInterest        ModifierKey = "interest"
+)
+
+// ModifierOption is a selectable value for a modifier.
+type ModifierOption struct {
+	Value int // -1, 0, or +1
+	Label string
+}
+
+// Modifier is a single gut-check adjustment applied on top of the base score.
+type Modifier struct {
+	Key     ModifierKey
+	Label   string
+	Options []ModifierOption
+	Value   int // -1, 0, or +1
+}
+
+func (m Modifier) WithValue(v int) Modifier {
+	m.Value = v
+	return m
+}
+
+// Modifiers is a slice of Modifier.
+type Modifiers []Modifier
+
+// Adjustment computes the total modifier adjustment: average(values) × ModifierMaxSwing.
+func (ms Modifiers) Adjustment() float64 {
+	if len(ms) == 0 {
+		return 0
+	}
+	var sum float64
+	for _, m := range ms {
+		sum += float64(m.Value)
+	}
+	return (sum / float64(len(ms))) * ModifierMaxSwing
+}
+
+// AllModifiers is the canonical list of modifiers.
+var AllModifiers = Modifiers{
+	{
+		Key:   ModifierLifeAssociation,
+		Label: "Life Association",
+		Options: []ModifierOption{
+			{1, "Meaningful association"},
+			{0, "No strong history"},
+			{-1, "Avoidant association"},
+		},
+	},
+	{
+		Key:   ModifierInterest,
+		Label: "Interest",
+		Options: []ModifierOption{
+			{1, "Yes"},
+			{0, "Neutral"},
+			{-1, "Not particularly"},
+		},
+	},
+}
+
+// FinalScore clamps and rounds the combined base score + modifier adjustment.
+// In provisional mode, the result is additionally capped at ProvisionalScoreCap.
+func FinalScore(baseScore, modifierAdjustment float64, mode RatingMode) float64 {
+	combined := baseScore + modifierAdjustment
+	if mode == RatingModeProvisional {
+		combined = math.Min(combined, ProvisionalScoreCap)
+	}
+	return math.Round(utils.Clamp(combined, 0.0, 10.0)*10) / 10
+}
+
+// DetectContradictions returns true if the answers contain internally contradictory signals.
+// Contradiction 1 (finalized only): high Emotional Resonance AND Sonic Pleasure, but low Return Rate.
+// Contradiction 2: high base score but all modifiers negative.
+func DetectContradictions(qs BaseQuestions, mods Modifiers, baseScore float64, mode RatingMode) bool {
+	qByKey := make(map[BaseQuestionKey]int, len(qs))
+	for _, q := range qs {
+		qByKey[q.Key] = q.Value
+	}
+
+	// Contradiction 1 — finalized only
+	if mode == RatingModeFinalized {
+		er := qByKey[QuestionEmotionalResonance]
+		sp := qByKey[QuestionSonicPleasure]
+		rr := qByKey[QuestionReturnRate]
+		if er >= 4 && sp >= 4 && rr <= 2 {
+			return true
+		}
+	}
+
+	// Contradiction 2
+	if baseScore >= 7.0 && len(mods) > 0 {
+		allNeg := true
+		for _, m := range mods {
+			if m.Value != -1 {
+				allNeg = false
+				break
+			}
+		}
+		if allNeg {
+			return true
+		}
+	}
+
+	return false
 }
 
 type RatingLabel string
@@ -147,14 +285,10 @@ const (
 	RatingLabelMasterpiece    RatingLabel = "Masterpiece"
 )
 
-// RatingKeyEntry defines an inclusive rating range and its associated label.
 type RatingKeyEntry struct {
-	// MinValue is the lowest rating (inclusive) that maps to this label.
 	MinValue float64
-	// MaxValue is the highest rating (inclusive) that maps to this label.
 	MaxValue float64
-	// Label is the human-readable name for this rating range.
-	Label RatingLabel
+	Label    RatingLabel
 }
 
 var RatingKey = []RatingKeyEntry{
@@ -170,11 +304,11 @@ var RatingKey = []RatingKeyEntry{
 }
 
 func GetRatingLabel(rating float64) RatingLabel {
-	clampedRating := utils.Clamp(rating, 0, 10)
-	for _, entry := range RatingKey {
-		if clampedRating >= entry.MinValue && clampedRating <= entry.MaxValue {
-			return entry.Label
+	clamped := utils.Clamp(rating, 0, 10)
+	for i := len(RatingKey) - 1; i >= 0; i-- {
+		if clamped >= RatingKey[i].MinValue {
+			return RatingKey[i].Label
 		}
 	}
-	return RatingKey[len(RatingKey)-1].Label
+	return RatingKey[0].Label
 }

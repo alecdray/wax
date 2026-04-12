@@ -89,6 +89,47 @@ CREATE TABLE track_plays (
     played_at datetime not null,
     unique(user_id, track_id, played_at)
 );
+CREATE TABLE album_rating_log (
+    id         text primary key,
+    user_id    text not null references users(id) on delete cascade,
+    album_id   text not null references albums(id) on delete cascade,
+    rating     float not null,
+    note       text,
+    created_at datetime not null default current_timestamp
+, state TEXT CHECK(state IN ('provisional', 'finalized', 'stalled')));
+CREATE TABLE album_notes (
+    id         TEXT NOT NULL PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    album_id   TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+    content    TEXT NOT NULL DEFAULT '',
+    updated_at DATETIME NOT NULL DEFAULT current_timestamp,
+    UNIQUE(user_id, album_id)
+);
+CREATE TABLE album_genres (
+    id           TEXT PRIMARY KEY,
+    user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    album_id     TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+    genre_id     TEXT NOT NULL,
+    genre_label  TEXT NOT NULL,
+    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, album_id, genre_id)
+);
+CREATE TABLE album_moods (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    album_id   TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+    mood       TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, album_id, mood)
+);
+CREATE TABLE album_user_tags (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    album_id   TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+    tag        TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, album_id, tag)
+);
 CREATE TABLE tag_groups (
     id         TEXT PRIMARY KEY,
     user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -112,19 +153,18 @@ CREATE TABLE album_tags (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, album_id, tag_id)
 );
-CREATE TABLE album_rating_log (
-    id         text primary key,
-    user_id    text not null references users(id) on delete cascade,
-    album_id   text not null references albums(id) on delete cascade,
-    rating     float not null,
-    note       text,
-    created_at datetime not null default current_timestamp
-);
-CREATE TABLE album_notes (
-    id         TEXT NOT NULL PRIMARY KEY,
-    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    album_id   TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
-    content    TEXT NOT NULL DEFAULT '',
-    updated_at DATETIME NOT NULL DEFAULT current_timestamp,
+CREATE TABLE album_rating_state (
+    id             TEXT PRIMARY KEY,
+    user_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    album_id       TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+    state          TEXT NOT NULL CHECK(state IN ('provisional', 'finalized', 'stalled')),
+    snooze_count   INTEGER NOT NULL DEFAULT 0,
+    next_rerate_at DATETIME CHECK(
+        (state = 'stalled' AND next_rerate_at IS NULL)
+        OR
+        (state != 'stalled' AND next_rerate_at IS NOT NULL)
+    ),
+    created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, album_id)
 );

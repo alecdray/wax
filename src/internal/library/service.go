@@ -120,6 +120,17 @@ type AlbumDTO struct {
 	Tags         []tags.TagDTO
 	SleeveNote   *notes.AlbumNoteDTO
 	LastPlayedAt *time.Time
+	RatingState  *review.RatingStateDTO
+}
+
+type RerateAlbumDTO struct {
+	ID          string
+	SpotifyID   string
+	Title       string
+	Artists     string
+	ImageURL    string
+	Rating      *float64
+	RatingState review.RatingState
 }
 
 func NewAlbumDTOFromModel(model sqlc.Album, artists []ArtistDTO, tracks []TrackDTO, releases []ReleaseDTO, rating *review.AlbumRatingDTO) AlbumDTO {
@@ -363,15 +374,17 @@ type Service struct {
 	listeningHistoryService *listeninghistory.Service
 	tagsService             *tags.Service
 	notesService            *notes.Service
+	reviewService           *review.Service
 }
 
-func NewService(db *db.DB, spotifyService *spotify.Service, listeningHistoryService *listeninghistory.Service, tagsService *tags.Service, notesService *notes.Service) *Service {
+func NewService(db *db.DB, spotifyService *spotify.Service, listeningHistoryService *listeninghistory.Service, tagsService *tags.Service, notesService *notes.Service, reviewService *review.Service) *Service {
 	return &Service{
 		db:                      db,
 		spotifyService:          spotifyService,
 		listeningHistoryService: listeningHistoryService,
 		tagsService:             tagsService,
 		notesService:            notesService,
+		reviewService:           reviewService,
 	}
 }
 
@@ -464,6 +477,11 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 		return nil, err
 	}
 
+	ratingStates, err := s.reviewService.GetAllRatingStates(ctx, userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get rating states: %w", err)
+	}
+
 	var albumDTOs []AlbumDTO
 	for _, album := range albums {
 		dto := NewAlbumDTOFromModel(
@@ -478,6 +496,7 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 		}
 		dto.Tags = tagsByAlbumId[album.ID]
 		dto.SleeveNote = notesByAlbumId[album.ID]
+		dto.RatingState = ratingStates[album.ID]
 		albumDTOs = append(albumDTOs, dto)
 	}
 
@@ -691,6 +710,12 @@ func (s *Service) GetAlbumInLibrary(ctx context.Context, userId string, albumId 
 	}
 	albumDto.SleeveNote = sleeveNote
 
+	ratingState, err := s.reviewService.GetRatingState(ctx, userId, albumId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get rating state: %w", err)
+	}
+	albumDto.RatingState = ratingState
+
 	lastPlayedAtByAlbumId, err := s.listeningHistoryService.GetLastPlayedAtByAlbumIds(ctx, userId, []string{albumId})
 	if err != nil {
 		err = fmt.Errorf("failed to get last played at: %w", err)
@@ -741,6 +766,40 @@ func (s *Service) RemoveAlbumFromLibrary(ctx contextx.ContextX, userId, albumId 
 	}
 
 	return nil
+}
+
+func (s *Service) GetRerateQueue(ctx context.Context, userID string) ([]RerateAlbumDTO, error) {
+	rows, err := s.db.Queries().GetRerateQueueAlbums(ctx, sqlc.GetRerateQueueAlbumsParams{
+		UserID:   userID,
+		UserID_2: userID,
+		UserID_3: userID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get rerate queue: %w", err)
+	}
+	dtos := make([]RerateAlbumDTO, 0, len(rows))
+	for _, row := range rows {
+		dto := RerateAlbumDTO{
+			ID:          row.ID,
+			SpotifyID:   row.SpotifyID,
+			Title:       row.Title,
+			RatingState: review.RatingState(row.State),
+		}
+		if row.ImageUrl.Valid {
+			dto.ImageURL = row.ImageUrl.String
+		}
+		if names, ok := row.ArtistNames.(string); ok {
+			dto.Artists = names
+		}
+		// Rating is 0 for albums with no rating (LEFT JOIN returns 0 for NULLs)
+		// Only set it if there's actually a rating state with existing data
+		if row.Rating != 0 {
+			r := row.Rating
+			dto.Rating = &r
+		}
+		dtos = append(dtos, dto)
+	}
+	return dtos, nil
 }
 
 func (s *Service) GetUnratedAlbums(ctx context.Context, userID string) ([]AlbumSummaryDTO, error) {

@@ -109,25 +109,31 @@ Both changes ship as a single Goose migration.
 | First rating | — | `provisional` | Creates `album_rating_state`; `next_rerate_at` = now + 1 month |
 | Snooze (snooze_count < 3) | `provisional` | `provisional` | `snooze_count++`; `next_rerate_at` += 1 week |
 | Snooze (snooze_count = 3) | `provisional` | `stalled` | State set to `stalled`; no further rerate prompts |
-| Update provisional | `provisional` | `provisional` | New log entry (state=provisional); `next_rerate_at` = now + 1 month; snooze_count unchanged |
+| Update provisional | `provisional` | `provisional` | New log entry (state=provisional); `next_rerate_at` unchanged; snooze_count unchanged |
 | Finalize | `provisional` or `stalled` | `finalized` | Full 6-question questionnaire; new log entry (state=finalized); no further rerate prompts |
+| Re-rate finalized | `finalized` | `finalized` | Full 6-question questionnaire; new log entry (state=finalized); state record updated |
 
 ### Rerate Prompt Trigger
 
-A rating is "due" when `next_rerate_at <= now()` and state is `provisional`. Stalled albums are not prompted via the carousel — they appear in the main library list with a Stalled badge.
+A rating is "due" when `next_rerate_at <= now()` and state is `provisional`. Stalled albums always appear in the carousel regardless of `next_rerate_at` — they are permanently due for finalization.
 
 Clicking the rating of a due album opens the **rerate prompt screen** in the rating modal.
 
 ### Rerate Prompt Screen
 
-Three options:
+Always two options, with the second option determined by whether the rating is due:
+
+**When due** (`next_rerate_at <= now()`):
 - **Rate now** → full 6-question flow → finalize
-- **Update provisional** → 5-question flow (Return Rate excluded) → stays provisional, resets next_rerate_at to now + 1 month
 - **Snooze 1 week** → single HTMX POST, closes modal, updates snooze_count and next_rerate_at
 
-For albums not yet due, clicking the rating opens the confirm screen pre-filled with the current score (manual re-rating always possible).
+**When not yet due** (provisional but `next_rerate_at` is in the future):
+- **Rate now** → full 6-question flow → finalize
+- **Update provisional** → 5-question flow (Return Rate excluded) → stays provisional, next_rerate_at unchanged
 
-**Stalled albums:** Clicking the rating of a stalled album opens a simplified rerate prompt with only **"Rate now"** (full 6-question flow → finalize). Snooze and Update Provisional are not offered — the record has exhausted its provisional period.
+Clicking the rating of a provisional album always opens this prompt. Clicking the rating of a finalized album opens the confirm screen pre-filled with the current score (manual re-rating always possible).
+
+**Stalled albums:** Clicking the rating (from the list or the carousel) opens a simplified rerate prompt with only **"Rate now"** (full 6-question flow → finalize). Snooze and Update Provisional are not offered — the record has exhausted its provisional period.
 
 ---
 
@@ -161,9 +167,7 @@ Stalled albums display a small "Stalled" badge alongside the rating.
 
 ### Dashboard Carousel
 
-A new **"Rerate Due"** tab added to the existing carousel alongside "Recently Spun" and "Unrated". Shows albums where `next_rerate_at <= now()` and state is `provisional` (not stalled). Each card: album art, title, artist, current score, state badge.
-
-Stalled albums surface in the main library list via color coding and badge only — not in the carousel.
+A new **"Rerate Due"** tab added to the existing carousel alongside "Recently Spun" and "Unrated". Shows: (1) provisional albums where `next_rerate_at <= now()`, and (2) all stalled albums. Each card: album art, title, artist, current score, state badge.
 
 ---
 
