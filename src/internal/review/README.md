@@ -85,6 +85,6 @@ After a cycle (default 30 days), the record enters the rerate queue. You can fin
 |---|---|---|---|
 | No rating | `base-content/20` | `badge-primary` | `badge-ghost text-base-content/60` |
 | Provisional | `base-content` | `badge-ghost` | `badge-ghost text-base-content/60` |
-| Provisional, rerate due | `base-content/40` | `badge-ghost opacity-40` | `badge-ghost text-base-content/60` |
+| Provisional, rerate due | `base-content/40` | `badge-ghost` | `badge-ghost text-base-content/60` |
 | Finalized | `primary` | `badge-primary` | `badge-primary` |
 | Stalled | `error/50` | `badge-error` | `badge-ghost text-base-content/60` |

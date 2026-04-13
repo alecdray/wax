@@ -62,9 +62,6 @@ func ratingColorClass(album library.AlbumDTO) string {
 	case "finalized":
 		return "badge-primary"
 	case "provisional":
-		if album.RatingState.IsRerateDue() {
-			return "badge-ghost opacity-40"
-		}
 		return "badge-ghost"
 	default:
 		return "badge-primary"
@@ -1011,14 +1008,6 @@ templ rerateCarouselStrip(albums []library.RerateAlbumDTO) {
 						if album.Artists != "" {
 							<span class="text-xs text-nowrap truncate w-full text-left text-base-content/40">{ album.Artists }</span>
 						}
-						<div class="flex items-center gap-1 w-full">
-							if album.Rating != nil {
-								<span class="text-xs font-bold tabular-nums">{ fmt.Sprintf("%.1f", *album.Rating) }</span>
-							}
-							if album.RatingState == "stalled" {
-								<span class="badge badge-xs badge-error badge-soft">Stalled</span>
-							}
-						</div>
 					</a>
 				</div>
 			}
