@@ -347,11 +347,11 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libAdapters.AlbumListRating(*album, true).Render(ctx, w); err != nil {
+	if err := libAdapters.AlbumScoreReadout(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libAdapters.AlbumRating(*album, true).Render(ctx, w); err != nil {
+	if err := libAdapters.AlbumScoreBadge(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
@@ -395,7 +395,7 @@ func (h *HttpHandler) SnoozeRating(w http.ResponseWriter, r *http.Request) {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libAdapters.AlbumListRating(*album, true).Render(ctx, w); err != nil {
+	if err := libAdapters.AlbumScoreReadout(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
@@ -433,11 +433,11 @@ func (h *HttpHandler) DeleteRatingLogEntry(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := libAdapters.AlbumListRating(*album, true).Render(ctx, w); err != nil {
+	if err := libAdapters.AlbumScoreReadout(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libAdapters.AlbumRating(*album, true).Render(ctx, w); err != nil {
+	if err := libAdapters.AlbumScoreBadge(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}

@@ -13,12 +13,14 @@ import (
 	"strings"
 )
 
-func GetAlbumRatingID(albumId string) string {
-	return fmt.Sprintf("album-rating-%s", albumId)
+// GetAlbumScoreBadgeID returns the DOM ID for the score badge (detail panel).
+func GetAlbumScoreBadgeID(albumId string) string {
+	return fmt.Sprintf("album-score-badge-%s", albumId)
 }
 
-func GetAlbumListRatingID(albumId string) string {
-	return fmt.Sprintf("album-list-rating-%s", albumId)
+// GetAlbumScoreReadoutID returns the DOM ID for the score readout (list view).
+func GetAlbumScoreReadoutID(albumId string) string {
+	return fmt.Sprintf("album-score-readout-%s", albumId)
 }
 
 func GetAlbumTagsID(albumId string) string {
@@ -42,31 +44,42 @@ func ratingStateClass(album library.AlbumDTO) string {
 		return "text-primary hover:text-primary/80"
 	case "provisional":
 		if album.RatingState.IsRerateDue() {
-			return "text-warning hover:text-warning/80"
+			return "text-base-content/40 hover:text-base-content/60"
 		}
-		return "text-base-content/40 hover:text-base-content/60"
+		return "text-base-content hover:text-base-content/80"
 	default:
 		return "text-primary hover:text-primary/80"
 	}
 }
 
-func ratingBadgeClass(album library.AlbumDTO) string {
+func ratingColorClass(album library.AlbumDTO) string {
 	if album.RatingState == nil {
-		return "badge badge-soft badge-primary text-nowrap cursor-pointer"
+		return "badge-primary"
 	}
 	switch album.RatingState.State {
 	case "stalled":
-		return "badge badge-soft badge-error text-nowrap cursor-pointer opacity-60"
+		return "badge-error"
 	case "finalized":
-		return "badge badge-soft badge-primary text-nowrap cursor-pointer"
+		return "badge-primary"
 	case "provisional":
 		if album.RatingState.IsRerateDue() {
-			return "badge badge-soft badge-warning text-nowrap cursor-pointer"
+			return "badge-ghost opacity-40"
 		}
-		return "badge badge-soft badge-ghost text-nowrap cursor-pointer opacity-50"
+		return "badge-ghost"
 	default:
-		return "badge badge-soft badge-primary text-nowrap cursor-pointer"
+		return "badge-primary"
 	}
+}
+
+func ratingBadgeClass(album library.AlbumDTO) string {
+	return "badge badge-soft text-nowrap cursor-pointer " + ratingColorClass(album)
+}
+
+func ratingLabelTagClass(album library.AlbumDTO) string {
+	if album.RatingState != nil && album.RatingState.State == "finalized" {
+		return "badge badge-sm badge-soft badge-primary text-xs text-nowrap"
+	}
+	return "badge badge-sm badge-soft badge-ghost text-xs text-nowrap text-base-content/60"
 }
 
 func hasSoundGroupTag(album library.AlbumDTO) bool {
@@ -276,11 +289,13 @@ templ formatIcon(releases library.ReleaseDTOs, format models.ReleaseFormat) {
 	}
 }
 
-templ AlbumRating(album library.AlbumDTO, isOobSwap bool) {
+// AlbumScoreBadge renders the score badge used in the detail panel.
+// Shows "score - label" (e.g. "7.3 - Staff Pick"), clickable to open the rating modal.
+templ AlbumScoreBadge(album library.AlbumDTO, isOobSwap bool) {
 	if album.Rating != nil && album.Rating.Rating != nil {
 		<div
-			id={ GetAlbumRatingID(album.ID) }
-			data-testid="album-row-rating"
+			id={ GetAlbumScoreBadgeID(album.ID) }
+			data-testid="album-score-badge"
 			class={ ratingBadgeClass(album) }
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
@@ -296,8 +311,8 @@ templ AlbumRating(album library.AlbumDTO, isOobSwap bool) {
 		</div>
 	} else {
 		<button
-			id={ GetAlbumRatingID(album.ID) }
-			data-testid="album-row-rating"
+			id={ GetAlbumScoreBadgeID(album.ID) }
+			data-testid="album-score-badge"
 			class="btn btn-xs btn-ghost opacity-20 hover:opacity-100 cursor-pointer text-nowrap"
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
@@ -380,12 +395,13 @@ func sortLabel(sortBy string) string {
 	}
 }
 
-// AlbumListRating renders a numeric rating for the list view.
-templ AlbumListRating(album library.AlbumDTO, isOobSwap bool) {
+// AlbumScoreReadout renders the score readout used in the list view.
+// Shows the score as a large prominent number, clickable to open the rating modal.
+templ AlbumScoreReadout(album library.AlbumDTO, isOobSwap bool) {
 	if album.Rating != nil && album.Rating.Rating != nil {
 		<div
-			id={ GetAlbumListRatingID(album.ID) }
-			data-testid="album-row-rating"
+			id={ GetAlbumScoreReadoutID(album.ID) }
+			data-testid="album-score-readout"
 			class={ "min-w-14 h-full flex flex-col items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none transition-colors", ratingStateClass(album) }
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
@@ -401,8 +417,8 @@ templ AlbumListRating(album library.AlbumDTO, isOobSwap bool) {
 		</div>
 	} else {
 		<div
-			id={ GetAlbumListRatingID(album.ID) }
-			data-testid="album-row-rating"
+			id={ GetAlbumScoreReadoutID(album.ID) }
+			data-testid="album-score-readout"
 			class="min-w-14 h-full flex items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none text-base-content/20 hover:text-base-content/60 transition-colors"
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
@@ -426,7 +442,8 @@ templ AlbumRowTagsSection(album library.AlbumDTO, isOobSwap bool) {
 	>
 		<div class="flex flex-wrap items-center gap-1">
 			if album.Rating != nil && album.Rating.Rating != nil {
-				<span class="badge badge-sm badge-soft badge-primary text-xs text-nowrap">{ review.GetRatingLabel(*album.Rating.Rating) }</span>
+				// Score label tag: non-interactive label-only display in the metadata row
+				<span class={ ratingLabelTagClass(album) }>{ string(review.GetRatingLabel(*album.Rating.Rating)) }</span>
 			}
 			if album.SleeveNote != nil && album.SleeveNote.Content != "" {
 				<span class="badge badge-sm badge-ghost text-xs text-base-content/60" data-testid="album-row-notes-icon">
@@ -498,7 +515,7 @@ templ albumListRow(album library.AlbumDTO) {
 			@AlbumRowTagsSection(album, false)
 		</div>
 		<div class="flex-shrink-0 self-stretch flex items-center">
-			@AlbumListRating(album, false)
+			@AlbumScoreReadout(album, false)
 		</div>
 	</li>
 }
