@@ -10,6 +10,9 @@ templ RootComponent(props RootProps) {
     <head>
       <title>{ props.Title }</title>
       <meta name="viewport" content="width=device-width, initial-scale=1"/>
+      <meta name="apple-mobile-web-app-capable" content="yes"/>
+      <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+      <link rel="manifest" href="/static/manifest.json"/>
       <link rel="icon" sizes="any" type="image/svg+xml" href="/static/favicon.svg"/>
       <link rel="stylesheet" href={ "/static/main.css?v=" + cssVersion }/>
       <script src="/static/htmx.min.js"></script>

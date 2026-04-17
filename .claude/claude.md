@@ -40,6 +40,9 @@
 - All `go build` commands must output to `./bin/` using `-o ./bin/<name>` — never build to the project root
 - Environment variables documented in `.env.template`
 - Run `task` without arguments to list available commands
+- Worktrees don't have a `.env` — copy from the main project: `cp /Users/shmoopy/workshop/projects/wax/.env .env`
+- Also run `npm install` in the worktree before `task dev` if `node_modules` is missing
+- Copy the DB from the main project to avoid 500s from missing users: `cp /Users/shmoopy/workshop/projects/wax/tmp/db.sql ./tmp/db.sql`
 
 ## Testing
 

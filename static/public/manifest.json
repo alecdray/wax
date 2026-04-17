@@ -1,0 +1,16 @@
+{
+  "name": "wax",
+  "short_name": "wax",
+  "display": "standalone",
+  "start_url": "/app/library/dashboard",
+  "scope": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/static/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
