@@ -23,7 +23,7 @@ type ModalProps struct {
 templ Modal(id string, props ModalProps) {
 	@ModalContainer(true) {
 		<dialog id={ FormatCallableID(id) } class="modal modal-bottom sm:modal-middle" open>
-			<div class="modal-box max-h-[95vh]">
+			<div class="modal-box sm:max-h-[95vh]">
 				<form method="dialog">
 					<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
 				</form>

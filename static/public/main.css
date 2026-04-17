@@ -4099,6 +4099,11 @@
       }
     }
   }
+  .sm\:max-h-\[95vh\] {
+    @media (width >= 40rem) {
+      max-height: 95vh;
+    }
+  }
   .md\:block {
     @media (width >= 48rem) {
       display: block;
