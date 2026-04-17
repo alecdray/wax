@@ -5,52 +5,52 @@ import "fmt"
 const globalModalContainerId = "global-modal-container"
 
 templ ModalContainer(isSwap bool) {
-  <div
-    id={ globalModalContainerId }
-    if isSwap {
-      hx-swap-oob="true"
-    }
-  >
-    { children... }
-  </div>
+	<div
+		id={ globalModalContainerId }
+		if isSwap {
+			hx-swap-oob="true"
+		}
+	>
+		{ children... }
+	</div>
 }
 
 type ModalProps struct {
-  ModalContent templ.Component
-  ModalActions templ.Component
+	ModalContent templ.Component
+	ModalActions templ.Component
 }
 
 templ Modal(id string, props ModalProps) {
-  @ModalContainer(true) {
-    <dialog id={ FormatCallableID(id) } class="modal" open>
-      <div class="modal-box">
-        <form method="dialog">
-          <button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
-        </form>
-        if props.ModalContent != nil {
-          @props.ModalContent
-        }
-        if props.ModalActions != nil {
-          <div class="modal-action">
-            <form method="dialog">
-              @props.ModalActions
-            </form>
-          </div>
-        }
-      </div>
-      <div
-        id={ fmt.Sprintf("%s-script", id) }
-        class="hidden"
-      ></div>
-    </dialog>
-  }
+	@ModalContainer(true) {
+		<dialog id={ FormatCallableID(id) } class="modal modal-bottom sm:modal-middle" open>
+			<div class="modal-box max-h-[95vh]">
+				<form method="dialog">
+					<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
+				</form>
+				if props.ModalContent != nil {
+					@props.ModalContent
+				}
+				if props.ModalActions != nil {
+					<div class="modal-action">
+						<form method="dialog">
+							@props.ModalActions
+						</form>
+					</div>
+				}
+				<div
+					id={ fmt.Sprintf("%s-script", id) }
+					class="hidden"
+				></div>
+			</div>
+		</dialog>
+	}
 }
 
 templ ForceCloseModal(id string) {
-  <div
-    id={ fmt.Sprintf("%s-script", id) }
-    class="hidden"
-    hx-on:htmx:load={ templ.JSFuncCall(fmt.Sprintf("%s.close", FormatCallableID(id))) }
-    hx-swap-oob="true"
-  ></div>
+	<div
+		id={ fmt.Sprintf("%s-script", id) }
+		class="hidden"
+		hx-on:htmx:load={ templ.JSFuncCall(fmt.Sprintf("%s.close", FormatCallableID(id))) }
+		hx-swap-oob="true"
+	></div>
 }

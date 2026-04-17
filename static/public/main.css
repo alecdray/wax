@@ -3199,6 +3199,9 @@
   .max-h-56 {
     max-height: calc(var(--spacing) * 56);
   }
+  .max-h-\[95vh\] {
+    max-height: 95vh;
+  }
   .min-h-0 {
     min-height: calc(var(--spacing) * 0);
   }
@@ -4073,6 +4076,25 @@
         @layer daisyui.l1.l2 {
           --badge-color: var(--color-primary);
           --badge-fg: var(--color-primary-content);
+        }
+      }
+    }
+  }
+  .sm\:modal-middle {
+    @media (width >= 40rem) {
+      @layer daisyui.l1.l2 {
+        place-items: center;
+        .modal-box {
+          height: auto;
+          width: calc(11/12 * 100%);
+          max-width: 32rem;
+          max-height: calc(100vh - 5em);
+          translate: 0 2%;
+          scale: 98%;
+          --modal-tl: var(--radius-box);
+          --modal-tr: var(--radius-box);
+          --modal-bl: var(--radius-box);
+          --modal-br: var(--radius-box);
         }
       }
     }
