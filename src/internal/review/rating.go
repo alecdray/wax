@@ -20,9 +20,6 @@ const (
 const (
 	RatingWeightHard = 2.0
 	RatingWeightSoft = 1.0
-
-	// ProvisionalScoreCap is the maximum score a provisional rating can produce.
-	ProvisionalScoreCap = 8.0
 )
 
 // BaseQuestionKey identifies a base question.
@@ -60,15 +57,11 @@ func (q BaseQuestion) WithValue(v int) BaseQuestion {
 // BaseQuestions is a slice of BaseQuestion.
 type BaseQuestions []BaseQuestion
 
-// Score computes the base score (0–10) for the answered questions.
-// In provisional mode, ReturnRate and ShelfTest are excluded (attachment questions requiring lived experience).
-// The provisional cap is applied in FinalScore.
-func (qs BaseQuestions) Score(mode RatingMode) float64 {
+// Score computes the score (0–10) for the answered questions.
+// Unanswered questions (Value == 0) are excluded from both sums.
+func (qs BaseQuestions) Score() float64 {
 	var weightedSum, totalWeight float64
 	for _, q := range qs {
-		if mode == RatingModeProvisional && (q.Key == QuestionReturnRate || q.Key == QuestionShelfTest) {
-			continue
-		}
 		if q.Value == 0 {
 			continue
 		}
@@ -132,17 +125,13 @@ var AllBaseQuestions = BaseQuestions{
 	},
 }
 
-// FinalScore clamps and rounds the base score.
-// In provisional mode, the result is additionally capped at ProvisionalScoreCap.
-func FinalScore(baseScore float64, mode RatingMode) float64 {
-	if mode == RatingModeProvisional {
-		baseScore = math.Min(baseScore, ProvisionalScoreCap)
-	}
+// FinalScore clamps and rounds the score to one decimal place.
+func FinalScore(baseScore float64) float64 {
 	return math.Round(utils.Clamp(baseScore, 0.0, 10.0)*10) / 10
 }
 
 // DetectContradictions returns true if the answers contain internally contradictory signals.
-// Finalized only: high Sonic Pleasure but low Return Rate.
+// Only checked in finalized mode: high Sonic Pleasure but low Return Rate.
 func DetectContradictions(qs BaseQuestions, mode RatingMode) bool {
 	if mode != RatingModeFinalized {
 		return false

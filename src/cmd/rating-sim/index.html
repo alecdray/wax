@@ -96,7 +96,6 @@
         <button class="toggle-btn active" id="btn-finalized" onclick="setMode('finalized')">Finalized</button>
         <button class="toggle-btn" id="btn-provisional" onclick="setMode('provisional')">Provisional</button>
       </div>
-      <div class="cap-note" id="cap-note" style="display:none">Return Rate &amp; Shelf Test excluded · score capped at 8.0</div>
     </section>
 
     <section>
@@ -213,15 +212,13 @@
 
 <script>
 const QUESTIONS = [
-  { key: 'return_rate',         weight: 2, values: [1,2,3,4,5], hard: true,  provisional: false },
-  { key: 'track_quality',       weight: 1, values: [1,2,3,4,5], hard: false, provisional: true  },
-  { key: 'cohesion',            weight: 1, values: [1,2,3,4,5], hard: false, provisional: true  },
-  { key: 'emotional_resonance', weight: 1, values: [1,2,3,4,5], hard: false, provisional: true  },
-  { key: 'sonic_pleasure',      weight: 2, values: [1,2,3,4,5], hard: true,  provisional: true  },
-  { key: 'shelf_test',          weight: 2, values: [1,2,3,4,5],  hard: true,  provisional: false },
+  { key: 'return_rate',         weight: 2, values: [1,2,3,4,5], hard: true  },
+  { key: 'track_quality',       weight: 1, values: [1,2,3,4,5], hard: false },
+  { key: 'cohesion',            weight: 1, values: [1,2,3,4,5], hard: false },
+  { key: 'emotional_resonance', weight: 1, values: [1,2,3,4,5], hard: false },
+  { key: 'sonic_pleasure',      weight: 2, values: [1,2,3,4,5], hard: true  },
+  { key: 'shelf_test',          weight: 2, values: [1,2,3,4,5], hard: true  },
 ];
-
-const PROVISIONAL_CAP = 8.0;
 
 const LABELS = [
   { label: "DOA",            min: 0.0,  max: 2.9  },
@@ -240,16 +237,9 @@ let mode = 'finalized';
 const qValues = {};
 QUESTIONS.forEach(q => qValues[q.key] = q.values[0]);
 
-function activeQuestions() {
-  if (mode === 'provisional') return QUESTIONS.filter(q => q.provisional);
-  return QUESTIONS;
-}
-
 function computeBase(answers) {
-  // answers: { key: value }
-  const qs = activeQuestions();
   let weightedSum = 0, totalWeight = 0;
-  for (const q of qs) {
+  for (const q of QUESTIONS) {
     const v = answers[q.key];
     if (v == null) continue;
     weightedSum += v * q.weight;
@@ -257,8 +247,7 @@ function computeBase(answers) {
   }
   if (totalWeight === 0) return 0;
   const avg = weightedSum / totalWeight;
-  let base = (avg - 1) / 4 * 10;
-  if (mode === 'provisional') base = Math.min(base, PROVISIONAL_CAP);
+  const base = (avg - 1) / 4 * 10;
   return Math.round(base * 10) / 10;
 }
 
@@ -275,9 +264,6 @@ function setMode(m) {
   mode = m;
   document.getElementById('btn-finalized').classList.toggle('active', m === 'finalized');
   document.getElementById('btn-provisional').classList.toggle('active', m === 'provisional');
-  document.getElementById('cap-note').style.display = m === 'provisional' ? 'block' : 'none';
-  document.getElementById('q-return_rate').classList.toggle('skipped', m === 'provisional');
-  document.getElementById('q-shelf_test').style.display = m === 'provisional' ? 'none' : '';
   update();
 }
 
@@ -307,7 +293,7 @@ function updateBenchmarks() {
 }
 
 function updateDistribution() {
-  const qs = activeQuestions();
+  const qs = QUESTIONS;
   const counts = new Array(LABELS.length).fill(0);
   let total = 0;
 

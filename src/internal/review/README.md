@@ -41,7 +41,7 @@ If a modifier feels important enough to weight, it should be promoted to a base 
 
 **Sonic Pleasure** *(Hard)* — Purely personal taste, not quality. A record can be well made but not resonate with you, or poorly made but speak to you completely. Intentionally captures subjective enjoyment rather than craft.
 
-**Shelf Test** *(Hard)* — Finalized only — alongside Return Rate, it requires lived experience to answer honestly. Saying no to a lot of records is the point: it reveals how much of your collection you're genuinely attached to versus keeping out of inertia.
+**Shelf Test** *(Hard)* — Alongside Return Rate, it requires lived experience to answer honestly. Saying no to a lot of records is the point: it reveals how much of your collection you're genuinely attached to versus keeping out of inertia.
 
 ## Scoring
 
@@ -54,7 +54,7 @@ Unanswered questions are excluded from both sums, so partial ratings self-adjust
 
 ## Rating Lifecycle
 
-Ratings are provisional by default. Return Rate and Shelf Test are excluded from provisional scoring — both are attachment questions that require lived experience to answer honestly. The provisional set is purely about the music itself: Track Quality, Cohesion, Emotional Resonance, and Sonic Pleasure. Provisional scores are capped at 8.0.
+Ratings are provisional by default — all six questions are presented regardless of mode. The mode is a marker on the rating itself, not a filter on the questionnaire. Answering all questions for a provisional rating is encouraged; the score is the same calculation either way.
 
 After a cycle (default 30 days), the record enters the rerate queue. You can finalize the rating, snooze it (reschedules for 7 days), or let it stall after three snoozes. Stalled records remain in the queue until acted on.
 

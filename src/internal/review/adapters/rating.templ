@@ -66,11 +66,7 @@ templ BaseQuestionsForm(albumId string, mode review.RatingMode, questions review
 		class="flex flex-col gap-8"
 	>
 		for _, q := range questions {
-			if mode == review.RatingModeProvisional && (q.Key == review.QuestionReturnRate || q.Key == review.QuestionShelfTest) {
-				// skip attachment questions in provisional mode
-			} else {
-				@BaseQuestionFieldset(q)
-			}
+			@BaseQuestionFieldset(q)
 		}
 		<button class="btn btn-primary" type="submit" data-testid="rating-calculate">Next</button>
 	</form>

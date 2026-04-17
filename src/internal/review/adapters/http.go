@@ -117,9 +117,6 @@ func (h *HttpHandler) SubmitRatingRecommenderQuestions(w http.ResponseWriter, r 
 
 	questionValues := make(map[string]string)
 	for i, q := range questions {
-		if mode == review.RatingModeProvisional && (q.Key == review.QuestionReturnRate || q.Key == review.QuestionShelfTest) {
-			continue
-		}
 		rawVal := r.Form.Get(string(q.Key))
 		if rawVal == "" {
 			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
@@ -137,8 +134,7 @@ func (h *HttpHandler) SubmitRatingRecommenderQuestions(w http.ResponseWriter, r 
 		questionValues[string(q.Key)] = rawVal
 	}
 
-	baseScore := questions.Score(mode)
-	finalScore := review.FinalScore(baseScore, mode)
+	finalScore := review.FinalScore(questions.Score())
 
 	if review.DetectContradictions(questions, mode) {
 		questionValues["mode"] = string(mode)

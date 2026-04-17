@@ -7,92 +7,70 @@ import (
 
 // --- BaseQuestions.Score ---
 
-func TestBaseScore_AllMax_Finalized(t *testing.T) {
-	qs := finalizedQuestions()
+func TestBaseScore_AllMax(t *testing.T) {
+	qs := allQuestions()
 	for i := range qs {
 		qs[i].Value = 5
 	}
-	got := qs.Score(RatingModeFinalized)
+	got := qs.Score()
 	if math.Abs(got-10.0) > 0.01 {
-		t.Fatalf("expected 10.0 with all 5s (finalized), got %f", got)
+		t.Fatalf("expected 10.0 with all 5s, got %f", got)
 	}
 }
 
-func TestBaseScore_AllMin_Finalized(t *testing.T) {
-	qs := finalizedQuestions()
+func TestBaseScore_AllMin(t *testing.T) {
+	qs := allQuestions()
 	for i := range qs {
 		qs[i].Value = 1
 	}
-	got := qs.Score(RatingModeFinalized)
+	got := qs.Score()
 	if math.Abs(got-0.0) > 0.01 {
-		t.Fatalf("expected 0.0 with all 1s (finalized), got %f", got)
+		t.Fatalf("expected 0.0 with all 1s, got %f", got)
 	}
 }
 
-func TestBaseScore_AllMid_Finalized(t *testing.T) {
-	qs := finalizedQuestions()
+func TestBaseScore_AllMid(t *testing.T) {
+	qs := allQuestions()
 	for i := range qs {
 		qs[i].Value = 3
 	}
-	got := qs.Score(RatingModeFinalized)
+	got := qs.Score()
 	if math.Abs(got-5.0) > 0.01 {
-		t.Fatalf("expected 5.0 with all 3s (finalized), got %f", got)
-	}
-}
-
-func TestBaseScore_Provisional_ExcludesAttachmentQuestions(t *testing.T) {
-	qs := finalizedQuestions()
-	for i := range qs {
-		switch qs[i].Key {
-		case QuestionReturnRate, QuestionShelfTest:
-			qs[i].Value = 1 // would drag score down if included
-		default:
-			qs[i].Value = 5
-		}
-	}
-	got := qs.Score(RatingModeProvisional)
-	// ReturnRate and ShelfTest are excluded in provisional — only TQ, Cohesion, ER, SP contribute
-	// all at 5, so score should be 10
-	if math.Abs(got-10.0) > 0.01 {
-		t.Fatalf("expected 10.0 with attachment questions excluded, got %f", got)
-	}
-}
-
-func TestFinalScore_Provisional_CappedAt8(t *testing.T) {
-	qs := finalizedQuestions()
-	for i := range qs {
-		qs[i].Value = 5
-	}
-	base := qs.Score(RatingModeProvisional)
-	got := FinalScore(base, RatingModeProvisional)
-	if got > ProvisionalScoreCap {
-		t.Fatalf("provisional final score %f exceeds cap %f", got, ProvisionalScoreCap)
+		t.Fatalf("expected 5.0 with all 3s, got %f", got)
 	}
 }
 
 func TestBaseScore_IsRounded(t *testing.T) {
-	qs := finalizedQuestions()
+	qs := allQuestions()
 	for i := range qs {
 		qs[i].Value = 2
 	}
-	got := qs.Score(RatingModeFinalized)
+	got := qs.Score()
 	rounded := math.Round(got*10) / 10
 	if got != rounded {
 		t.Fatalf("expected score rounded to 1dp, got %f", got)
 	}
 }
 
+func TestBaseScore_AllUnanswered_ReturnsZero(t *testing.T) {
+	qs := allQuestions()
+	got := qs.Score()
+	if got != 0 {
+		t.Fatalf("expected 0 for unanswered questions, got %f", got)
+	}
+}
+
 // --- FinalScore ---
 
 func TestFinalScore_ClampedAbove10(t *testing.T) {
-	got := FinalScore(11.0, RatingModeFinalized)
+	got := FinalScore(11.0)
 	if got > 10.0 {
 		t.Fatalf("expected clamped to 10.0, got %f", got)
 	}
 }
 
 func TestFinalScore_ClampedBelow0(t *testing.T) {
-	got := FinalScore(-1.0, RatingModeFinalized)
+	got := FinalScore(-1.0)
 	if got < 0.0 {
 		t.Fatalf("expected clamped to 0.0, got %f", got)
 	}
@@ -101,7 +79,7 @@ func TestFinalScore_ClampedBelow0(t *testing.T) {
 // --- DetectContradictions ---
 
 func TestDetectContradictions_HighSP_LowRR_Finalized(t *testing.T) {
-	qs := finalizedQuestions()
+	qs := allQuestions()
 	for i := range qs {
 		switch qs[i].Key {
 		case QuestionSonicPleasure:
@@ -118,7 +96,7 @@ func TestDetectContradictions_HighSP_LowRR_Finalized(t *testing.T) {
 }
 
 func TestDetectContradictions_HighSP_LowRR_Provisional_NoFlag(t *testing.T) {
-	qs := finalizedQuestions()
+	qs := allQuestions()
 	for i := range qs {
 		switch qs[i].Key {
 		case QuestionSonicPleasure:
@@ -135,7 +113,7 @@ func TestDetectContradictions_HighSP_LowRR_Provisional_NoFlag(t *testing.T) {
 }
 
 func TestDetectContradictions_NoContradiction(t *testing.T) {
-	qs := finalizedQuestions()
+	qs := allQuestions()
 	for i := range qs {
 		qs[i].Value = 3
 	}
@@ -177,19 +155,8 @@ func TestGetRatingLabel_Ranges(t *testing.T) {
 	}
 }
 
-func TestBaseScore_AllUnanswered_ReturnsZero(t *testing.T) {
-	qs := finalizedQuestions()
-	got := qs.Score(RatingModeFinalized)
-	if got != 0 {
-		t.Fatalf("expected 0 for unanswered questions, got %f", got)
-	}
-}
-
 func TestGetRatingLabel_MidRangeFloat_NoGap(t *testing.T) {
 	got := GetRatingLabel(2.95)
-	if got == RatingLabelMasterpiece {
-		t.Fatal("GetRatingLabel(2.95) should not return Masterpiece")
-	}
 	if got != RatingLabelDOA {
 		t.Fatalf("expected DOA for 2.95, got %q", got)
 	}
@@ -197,7 +164,7 @@ func TestGetRatingLabel_MidRangeFloat_NoGap(t *testing.T) {
 
 // helpers
 
-func finalizedQuestions() BaseQuestions {
+func allQuestions() BaseQuestions {
 	qs := make(BaseQuestions, len(AllBaseQuestions))
 	copy(qs, AllBaseQuestions)
 	return qs
