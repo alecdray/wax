@@ -138,74 +138,12 @@ func (h *HttpHandler) SubmitRatingRecommenderQuestions(w http.ResponseWriter, r 
 	}
 
 	baseScore := questions.Score(mode)
+	finalScore := review.FinalScore(baseScore, mode)
 
-	if err := ModifiersForm(albumID, mode, baseScore, questionValues).Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-	}
-}
-
-func (h *HttpHandler) SubmitModifiers(w http.ResponseWriter, r *http.Request) {
-	ctx := contextx.NewContextX(r.Context())
-
-	albumID := r.URL.Query().Get("albumId")
-
-	if err := r.ParseForm(); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: err})
-		return
-	}
-
-	mode := review.RatingMode(r.Form.Get("mode"))
-	if mode != review.RatingModeProvisional && mode != review.RatingModeFinalized {
-		mode = review.RatingModeProvisional
-	}
-
-	baseScore, err := strconv.ParseFloat(r.Form.Get("base_score"), 64)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("invalid base_score: %w", err)})
-		return
-	}
-
-	mods := make(review.Modifiers, len(review.AllModifiers))
-	copy(mods, review.AllModifiers)
-	for i, m := range mods {
-		rawVal := r.Form.Get(string(m.Key))
-		if rawVal == "" {
-			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("missing value for modifier %s", m.Key)})
-			return
-		}
-		val, err := strconv.Atoi(rawVal)
-		if err != nil {
-			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("invalid value for modifier %s: %w", m.Key, err)})
-			return
-		}
-		mods[i] = m.WithValue(val)
-	}
-
-	finalScore := review.FinalScore(baseScore, mods.Adjustment(), mode)
-
-	questions := make(review.BaseQuestions, len(review.AllBaseQuestions))
-	copy(questions, review.AllBaseQuestions)
-	for i, q := range questions {
-		rawVal := r.Form.Get(string(q.Key))
-		if rawVal != "" {
-			val, _ := strconv.Atoi(rawVal)
-			questions[i] = q.WithValue(val)
-		}
-	}
-
-	if review.DetectContradictions(questions, mods, baseScore, mode) {
-		allValues := make(map[string]string)
-		for _, q := range questions {
-			k := string(q.Key)
-			if v := r.Form.Get(k); v != "" {
-				allValues[k] = v
-			}
-		}
-		for _, m := range mods {
-			k := string(m.Key)
-			allValues[k] = r.Form.Get(k)
-		}
-		if err := ConfidenceInterstitial(albumID, mode, finalScore, allValues).Render(ctx, w); err != nil {
+	if review.DetectContradictions(questions, mode) {
+		questionValues["mode"] = string(mode)
+		questionValues["final_score"] = strconv.FormatFloat(finalScore, 'f', 2, 64)
+		if err := ConfidenceInterstitial(albumID, mode, finalScore, questionValues).Render(ctx, w); err != nil {
 			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		}
 		return

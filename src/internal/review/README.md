@@ -47,20 +47,10 @@ If a modifier feels important enough to weight, it should be promoted to a base 
 
 ```
 avg   = weightedSum / totalWeight
-base  = (avg - 1.0) / 4.0 * 10.0
-final = base + modifier_adjustment   [clamped 0–10, rounded to 1dp]
+base  = (avg - 1.0) / 4.0 * 10.0   [clamped 0–10, rounded to 1dp]
 ```
 
 Unanswered questions are excluded from both sums, so partial ratings self-adjust without distorting the score.
-
-## Modifiers
-
-Modifiers are fast gut checks, not scored questions. They are ternary (−1 / 0 / +1), unweighted, and averaged together then multiplied by the max swing constant (default ±0.75). Their job is to nudge close calls, not reclassify records.
-
-| Modifier | Purpose |
-|---|---|
-| Life Association | Is this record tied to a specific period or feeling in your life? |
-| Interest | Do you find this record interesting beyond whether you enjoy it? |
 
 ## Rating Lifecycle
 

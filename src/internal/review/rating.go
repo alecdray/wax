@@ -21,9 +21,6 @@ const (
 	RatingWeightHard = 2.0
 	RatingWeightSoft = 1.0
 
-	// ModifierMaxSwing is the maximum total modifier adjustment (positive or negative).
-	ModifierMaxSwing = 0.75
-
 	// ProvisionalScoreCap is the maximum score a provisional rating can produce.
 	ProvisionalScoreCap = 8.0
 )
@@ -135,114 +132,28 @@ var AllBaseQuestions = BaseQuestions{
 	},
 }
 
-// ModifierKey identifies a modifier.
-type ModifierKey string
-
-const (
-	ModifierLifeAssociation ModifierKey = "life_association"
-	ModifierInterest        ModifierKey = "interest"
-)
-
-// ModifierOption is a selectable value for a modifier.
-type ModifierOption struct {
-	Value int // -1, 0, or +1
-	Label string
-}
-
-// Modifier is a single gut-check adjustment applied on top of the base score.
-type Modifier struct {
-	Key     ModifierKey
-	Label   string
-	Options []ModifierOption
-	Value   int // -1, 0, or +1
-}
-
-func (m Modifier) WithValue(v int) Modifier {
-	m.Value = v
-	return m
-}
-
-// Modifiers is a slice of Modifier.
-type Modifiers []Modifier
-
-// Adjustment computes the total modifier adjustment: average(values) × ModifierMaxSwing.
-func (ms Modifiers) Adjustment() float64 {
-	if len(ms) == 0 {
-		return 0
-	}
-	var sum float64
-	for _, m := range ms {
-		sum += float64(m.Value)
-	}
-	return (sum / float64(len(ms))) * ModifierMaxSwing
-}
-
-// AllModifiers is the canonical list of modifiers.
-var AllModifiers = Modifiers{
-	{
-		Key:   ModifierLifeAssociation,
-		Label: "Life Association",
-		Options: []ModifierOption{
-			{1, "Meaningful association"},
-			{0, "No strong history"},
-			{-1, "Avoidant association"},
-		},
-	},
-	{
-		Key:   ModifierInterest,
-		Label: "Interest",
-		Options: []ModifierOption{
-			{1, "Yes"},
-			{0, "Neutral"},
-			{-1, "Not particularly"},
-		},
-	},
-}
-
-// FinalScore clamps and rounds the combined base score + modifier adjustment.
+// FinalScore clamps and rounds the base score.
 // In provisional mode, the result is additionally capped at ProvisionalScoreCap.
-func FinalScore(baseScore, modifierAdjustment float64, mode RatingMode) float64 {
-	combined := baseScore + modifierAdjustment
+func FinalScore(baseScore float64, mode RatingMode) float64 {
 	if mode == RatingModeProvisional {
-		combined = math.Min(combined, ProvisionalScoreCap)
+		baseScore = math.Min(baseScore, ProvisionalScoreCap)
 	}
-	return math.Round(utils.Clamp(combined, 0.0, 10.0)*10) / 10
+	return math.Round(utils.Clamp(baseScore, 0.0, 10.0)*10) / 10
 }
 
 // DetectContradictions returns true if the answers contain internally contradictory signals.
-// Contradiction 1 (finalized only): high Emotional Resonance AND Sonic Pleasure, but low Return Rate.
-// Contradiction 2: high base score but all modifiers negative.
-func DetectContradictions(qs BaseQuestions, mods Modifiers, baseScore float64, mode RatingMode) bool {
+// Finalized only: high Sonic Pleasure but low Return Rate.
+func DetectContradictions(qs BaseQuestions, mode RatingMode) bool {
+	if mode != RatingModeFinalized {
+		return false
+	}
 	qByKey := make(map[BaseQuestionKey]int, len(qs))
 	for _, q := range qs {
 		qByKey[q.Key] = q.Value
 	}
-
-	// Contradiction 1 — finalized only
-	if mode == RatingModeFinalized {
-		er := qByKey[QuestionEmotionalResonance]
-		sp := qByKey[QuestionSonicPleasure]
-		rr := qByKey[QuestionReturnRate]
-		if er >= 4 && sp >= 4 && rr <= 2 {
-			return true
-		}
-	}
-
-	// Contradiction 2
-	if baseScore >= 7.0 && len(mods) > 0 {
-		allNeg := true
-		for _, m := range mods {
-			if m.Value != -1 {
-				allNeg = false
-				break
-			}
-		}
-		if allNeg {
-			return true
-		}
-	}
-
-	return false
+	sp := qByKey[QuestionSonicPleasure]
+	rr := qByKey[QuestionReturnRate]
+	return sp >= 4 && rr <= 2
 }
 
 type RatingLabel string

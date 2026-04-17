@@ -48,19 +48,6 @@
   .option-text { color: #aaa; }
   .option.selected .option-text { color: #e0e0e0; }
 
-  /* Modifiers */
-  .modifier { margin-bottom: 16px; }
-  .modifier-label { color: #aaa; margin-bottom: 8px; }
-  .mod-options { display: flex; gap: 6px; }
-  .mod-opt {
-    flex: 1; padding: 6px 8px; border-radius: 4px; border: 1px solid #2a2a2a;
-    background: #1a1a1a; color: #666; cursor: pointer; font: inherit; font-size: 12px;
-    text-align: center; transition: all 0.1s;
-  }
-  .mod-opt:hover { background: #1e1e1e; color: #aaa; }
-  .mod-opt.selected-pos { background: #1a2a1a; border-color: #4a8a4a; color: #80c080; }
-  .mod-opt.selected-neu { background: #1e1e1e; border-color: #444; color: #888; }
-  .mod-opt.selected-neg { background: #2a1a1a; border-color: #8a4a4a; color: #c08080; }
 
   /* Result */
   .result-box {
@@ -200,28 +187,6 @@
       </div>
     </section>
 
-    <section>
-      <h2>Modifiers <span style="color:#444;font-size:10px;text-transform:none;letter-spacing:0">avg × ±0.75</span></h2>
-
-      <div class="modifier">
-        <div class="modifier-label">Life Association — Is this record tied to a specific period or feeling?</div>
-        <div class="mod-options" data-mod="life_association">
-          <button class="mod-opt selected-neg" data-v="-1">−1 Avoidant</button>
-          <button class="mod-opt selected-neu active" data-v="0">0 Neutral</button>
-          <button class="mod-opt selected-pos" data-v="1">+1 Meaningful</button>
-        </div>
-      </div>
-
-      <div class="modifier">
-        <div class="modifier-label">Interest — Do you find this record interesting beyond enjoyment?</div>
-        <div class="mod-options" data-mod="interest">
-          <button class="mod-opt selected-neg" data-v="-1">−1 Not particularly</button>
-          <button class="mod-opt selected-neu active" data-v="0">0 Neutral</button>
-          <button class="mod-opt selected-pos" data-v="1">+1 Yes</button>
-        </div>
-      </div>
-    </section>
-
     <div class="result-box">
       <div class="result-score" id="tester-score">—</div>
       <div class="result-detail">
@@ -256,8 +221,6 @@ const QUESTIONS = [
   { key: 'shelf_test',          weight: 2, values: [1,2,3,4,5],  hard: true,  provisional: false },
 ];
 
-const MODIFIERS = ['life_association', 'interest'];
-const MOD_SWING = 0.75;
 const PROVISIONAL_CAP = 8.0;
 
 const LABELS = [
@@ -274,11 +237,8 @@ const LABELS = [
 
 let mode = 'finalized';
 
-// Tester state: question values and modifier values
 const qValues = {};
 QUESTIONS.forEach(q => qValues[q.key] = q.values[0]);
-const modValues = {};
-MODIFIERS.forEach(m => modValues[m] = 0);
 
 function activeQuestions() {
   if (mode === 'provisional') return QUESTIONS.filter(q => q.provisional);
@@ -302,14 +262,8 @@ function computeBase(answers) {
   return Math.round(base * 10) / 10;
 }
 
-function computeModAdj(mods) {
-  const vals = MODIFIERS.map(k => mods[k]);
-  const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-  return Math.round(avg * MOD_SWING * 100) / 100;
-}
-
-function computeFinal(base, modAdj) {
-  return Math.round(Math.max(0, Math.min(10, base + modAdj)) * 10) / 10;
+function computeFinal(base) {
+  return Math.round(Math.max(0, Math.min(10, base)) * 10) / 10;
 }
 
 function getLabel(score) {
@@ -393,14 +347,11 @@ function updateDistribution() {
 
 function updateTester() {
   const base = computeBase(qValues);
-  const modAdj = computeModAdj(modValues);
-  const final = computeFinal(base, modAdj);
+  const final = computeFinal(base);
   const entry = getLabel(final);
   document.getElementById('tester-score').textContent = final.toFixed(1);
   document.getElementById('tester-label').textContent = entry.label;
-  const modSign = modAdj >= 0 ? '+' : '';
-  document.getElementById('tester-breakdown').textContent =
-    `base ${base.toFixed(1)}  ${modSign}${modAdj.toFixed(2)} mod  =  ${final.toFixed(1)}`;
+  document.getElementById('tester-breakdown').textContent = `score ${final.toFixed(1)}`;
 }
 
 // Wire up question options
@@ -411,19 +362,6 @@ document.querySelectorAll('.options').forEach(group => {
       group.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
       opt.classList.add('selected');
       qValues[key] = parseInt(opt.dataset.v);
-      updateTester();
-    });
-  });
-});
-
-// Wire up modifier buttons
-document.querySelectorAll('.mod-options').forEach(group => {
-  const key = group.dataset.mod;
-  group.querySelectorAll('.mod-opt').forEach(btn => {
-    btn.addEventListener('click', () => {
-      group.querySelectorAll('.mod-opt').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      modValues[key] = parseInt(btn.dataset.v);
       updateTester();
     });
   });

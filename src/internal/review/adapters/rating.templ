@@ -76,52 +76,6 @@ templ BaseQuestionsForm(albumId string, mode review.RatingMode, questions review
 	</form>
 }
 
-// --- Modifiers form ---
-
-templ ModifierRadio(m review.Modifier, opt review.ModifierOption) {
-	<label class="flex items-center gap-3 cursor-pointer">
-		<input
-			type="radio"
-			name={ string(m.Key) }
-			value={ strconv.Itoa(opt.Value) }
-			class="radio radio-primary radio-sm"
-			required
-		/>
-		<span class="text-base-content/70">{ opt.Label }</span>
-	</label>
-}
-
-templ ModifierFieldset(m review.Modifier) {
-	<fieldset class="flex flex-col gap-3">
-		<legend class="text-base-content font-medium mb-2">{ m.Label }</legend>
-		for _, opt := range m.Options {
-			@ModifierRadio(m, opt)
-		}
-	</fieldset>
-}
-
-// ModifiersForm renders the modifiers step.
-// Hidden inputs carry the mode and base score forward.
-templ ModifiersForm(albumId string, mode review.RatingMode, baseScore float64, questionValues map[string]string) {
-	<form
-		data-testid="rating-modifiers"
-		hx-post={ fmt.Sprintf("/app/review/rating-recommender/modifiers?albumId=%s", albumId) }
-		hx-swap="outerHTML"
-		class="flex flex-col gap-8"
-	>
-		<input type="hidden" name="mode" value={ string(mode) }/>
-		<input type="hidden" name="base_score" value={ strconv.FormatFloat(baseScore, 'f', 2, 64) }/>
-		for k, v := range questionValues {
-			<input type="hidden" name={ k } value={ v }/>
-		}
-		<p class="text-xs text-base-content/50 uppercase tracking-widest font-semibold">Quick gut checks</p>
-		for _, m := range review.AllModifiers {
-			@ModifierFieldset(m)
-		}
-		<button class="btn btn-primary" type="submit" data-testid="rating-modifiers-submit">Calculate Score</button>
-	</form>
-}
-
 // --- Confidence interstitial ---
 
 templ ConfidenceInterstitial(albumId string, mode review.RatingMode, finalScore float64, formValues map[string]string) {
