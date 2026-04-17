@@ -23,6 +23,7 @@ templ RootComponent(props RootProps) {
     <body
       class="w-screen min-h-dvh min-w-xs flex flex-col items-center"
       hx-ext="response-targets"
+      hx-boost="true"
     >
       { children... }
       @ModalContainer(false)
