@@ -88,76 +88,50 @@ func (qs BaseQuestions) Score(mode RatingMode) float64 {
 }
 
 // AllBaseQuestions is the canonical ordered list of base questions.
+var likertOptions = []QuestionOption{
+	{1, "Strongly disagree"},
+	{2, "Disagree"},
+	{3, "Neutral"},
+	{4, "Agree"},
+	{5, "Strongly agree"},
+}
+
 var AllBaseQuestions = BaseQuestions{
 	{
 		Key:      QuestionReturnRate,
-		Question: "How often do you return to this record?",
-		Options: []QuestionOption{
-			{1, "Never"},
-			{2, "Rarely"},
-			{3, "Sometimes"},
-			{4, "Often"},
-			{5, "Constantly"},
-		},
-		Weight: RatingWeightHard,
+		Question: "I will keep coming back to this record",
+		Options:  likertOptions,
+		Weight:   RatingWeightHard,
 	},
 	{
 		Key:      QuestionTrackQuality,
-		Question: "How many tracks on this record land?",
-		Options: []QuestionOption{
-			{1, "None"},
-			{2, "A few"},
-			{3, "Most"},
-			{4, "Almost all"},
-			{5, "Every single one"},
-		},
-		Weight: RatingWeightSoft,
+		Question: "The tracks on this record consistently land",
+		Options:  likertOptions,
+		Weight:   RatingWeightSoft,
 	},
 	{
 		Key:      QuestionCohesion,
-		Question: "Does this record hold together as a whole?",
-		Options: []QuestionOption{
-			{1, "No"},
-			{2, "Loosely"},
-			{3, "Mostly"},
-			{4, "Entirely"},
-			{5, "Greater than the sum of its parts"},
-		},
-		Weight: RatingWeightSoft,
+		Question: "This record works as a complete piece",
+		Options:  likertOptions,
+		Weight:   RatingWeightSoft,
 	},
 	{
 		Key:      QuestionEmotionalResonance,
-		Question: "Does this record make you feel anything?",
-		Options: []QuestionOption{
-			{1, "No"},
-			{2, "Don't think so"},
-			{3, "Sort of"},
-			{4, "Yes"},
-			{5, "Profoundly"},
-		},
-		Weight: RatingWeightHard,
+		Question: "This record makes me feel something",
+		Options:  likertOptions,
+		Weight:   RatingWeightSoft,
 	},
 	{
 		Key:      QuestionSonicPleasure,
-		Question: "Do you enjoy listening to this record?",
-		Options: []QuestionOption{
-			{1, "Not at all"},
-			{2, "Somewhat"},
-			{3, "I like it"},
-			{4, "I love it"},
-			{5, "Obsessed"},
-		},
-		Weight: RatingWeightHard,
+		Question: "I enjoy listening to this record",
+		Options:  likertOptions,
+		Weight:   RatingWeightHard,
 	},
 	{
 		Key:      QuestionShelfTest,
-		Question: "If you had to permanently delete it, would you actually care?",
-		Options: []QuestionOption{
-			{1, "No"},
-			{3, "I'd feel it"},
-			{5, "I'd be devastated"},
-		},
-		Weight: RatingWeightHard,
+		Question: "I would care if I had to permanently delete this record",
+		Options:  likertOptions,
+		Weight:   RatingWeightHard,
 	},
 }
 

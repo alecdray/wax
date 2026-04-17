@@ -8,13 +8,10 @@ The rating system is personal, not critical. It measures your relationship with 
 
 ## Question Design
 
-- Questions should be fast and easy to answer — directional accuracy matters more than precision
-- Each question should measure one thing only. If a question is secretly two questions, split it
-- Questions and answers must be naturally aligned — the answers should feel like genuine responses to the question as worded
-- Answers should feel like a natural internal monologue, not an analytical framework
+- Questions are statements answered on a standard Likert scale: Strongly Disagree / Disagree / Neutral / Agree / Strongly Agree (1–5)
+- Each statement should measure one thing only and be fast to answer — directional accuracy matters more than precision
+- The Likert framing means statements just need to point at the right thing; the scale handles the gradation
 - Clarity beats personality, but personality is welcome where it doesn't sacrifice clarity
-
-**The scale:** All questions follow a none → some → most → all → transcendent arc. The transcendent tier (5) is always qualitatively different from the others, not just more of the same.
 
 ## Hard vs Soft Questions
 
@@ -25,26 +22,26 @@ If a modifier feels important enough to weight, it should be promoted to a base 
 
 ## Base Questions
 
-| Question | Type |
+| Statement | Type |
 |---|---|
-| Return Rate | Hard |
-| Track Quality | Soft |
-| Cohesion | Soft |
-| Emotional Resonance | Hard |
-| Sonic Pleasure | Hard |
-| Shelf Test | Hard |
+| I will keep coming back to this record | Hard |
+| The tracks on this record consistently land | Soft |
+| This record works as a complete piece | Soft |
+| This record makes me feel something | Soft |
+| I enjoy listening to this record | Hard |
+| I would care if I had to permanently delete this record | Hard |
 
-**Return Rate** *(Hard)* — Behavioural signal. How often you return is a reliable proxy for how much you actually value a record.
+**Return Rate** *(Hard)* — Behavioural signal. Whether you'll keep coming back is a reliable proxy for how much you actually value a record. Forward-looking phrasing works for both provisional and finalized.
 
 **Track Quality** *(Soft)* — How much of the record is good. Orthogonal to Sonic Pleasure: a record can have strong track quality in a genre you don't personally enjoy, or vice versa.
 
 **Cohesion** *(Soft)* — Whether the record works as a complete piece. Split from Track Quality because they measure genuinely different things — a record can have great individual tracks but no cohesion, or strong cohesion with inconsistent track quality.
 
-**Emotional Resonance** *(Hard)* — Uses confidence as a proxy for intensity, since dancing, crying, and contemplating life can't be put on the same scale. If you're certain you feel something, you score high. Strongly felt emotions and uncertainty are practically inversely correlated — if something hits hard, you know it. "Profoundly" at 5 collapses both certainty and intensity into one answer.
+**Emotional Resonance** *(Soft)* — Whether the record moves you. Soft because emotional response varies by mood and context more than the hard signals do.
 
 **Sonic Pleasure** *(Hard)* — Purely personal taste, not quality. A record can be well made but not resonate with you, or poorly made but speak to you completely. Intentionally captures subjective enjoyment rather than craft.
 
-**Shelf Test** *(Hard)* — Ternary (No / I'd feel it / I'd be devastated). Finalized only — alongside Return Rate, it requires lived experience to answer honestly. Saying no to a lot of records is the point: it reveals how much of your collection you're genuinely attached to versus keeping out of inertia.
+**Shelf Test** *(Hard)* — Finalized only — alongside Return Rate, it requires lived experience to answer honestly. Saying no to a lot of records is the point: it reveals how much of your collection you're genuinely attached to versus keeping out of inertia.
 
 ## Scoring
 
