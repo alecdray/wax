@@ -95,13 +95,13 @@ var AllBaseQuestions = BaseQuestions{
 	},
 	{
 		Key:      QuestionTrackQuality,
-		Question: "The tracks on this record consistently land",
+		Question: "This record has great tracks",
 		Options:  likertOptions,
 		Weight:   RatingWeightSoft,
 	},
 	{
 		Key:      QuestionCohesion,
-		Question: "This record works as a complete piece",
+		Question: "This record is more than the sum of its parts",
 		Options:  likertOptions,
 		Weight:   RatingWeightSoft,
 	},

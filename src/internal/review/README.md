@@ -25,17 +25,17 @@ If a modifier feels important enough to weight, it should be promoted to a base 
 | Statement | Type |
 |---|---|
 | I will keep coming back to this record | Hard |
-| The tracks on this record consistently land | Soft |
-| This record works as a complete piece | Soft |
+| This record has great tracks | Soft |
+| This record is more than the sum of its parts | Soft |
 | This record makes me feel something | Soft |
 | I enjoy listening to this record | Hard |
 | I would care if I had to permanently delete this record | Hard |
 
 **Return Rate** *(Hard)* — Behavioural signal. Whether you'll keep coming back is a reliable proxy for how much you actually value a record. Forward-looking phrasing works for both provisional and finalized.
 
-**Track Quality** *(Soft)* — How much of the record is good. Orthogonal to Sonic Pleasure: a record can have strong track quality in a genre you don't personally enjoy, or vice versa.
+**Track Quality** *(Soft)* — How much of the record is good. Orthogonal to Sonic Pleasure: a record can have great tracks in a genre you don't personally enjoy, or vice versa.
 
-**Cohesion** *(Soft)* — Whether the record works as a complete piece. Split from Track Quality because they measure genuinely different things — a record can have great individual tracks but no cohesion, or strong cohesion with inconsistent track quality.
+**Cohesion** *(Soft)* — Whether the record works as a complete piece. Split from Track Quality because they measure genuinely different things — a record can have great individual tracks but no cohesion, or strong cohesion with weaker tracks.
 
 **Emotional Resonance** *(Soft)* — Whether the record moves you. Soft because emotional response varies by mood and context more than the hard signals do.
 
