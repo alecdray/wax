@@ -43,3 +43,6 @@ playwright-report/
 memory/
 
 static/public/main.css
+
+# Brainstorm mockups (superpowers visual companion)
+.superpowers/
