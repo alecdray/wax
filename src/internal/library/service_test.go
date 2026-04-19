@@ -1,10 +1,12 @@
 package library
 
 import (
+	"database/sql"
 	"testing"
 	"time"
 
 	"github.com/alecdray/wax/src/internal/core/db/models"
+	"github.com/alecdray/wax/src/internal/core/db/sqlc"
 	"github.com/alecdray/wax/src/internal/review"
 )
 
@@ -381,4 +383,252 @@ func TestFilter_CombinedFormatAndRating(t *testing.T) {
 	if len(result) != 1 || result[0].ID != "1" {
 		t.Fatalf("expected only album 1, got %d albums", len(result))
 	}
+}
+
+// --- NewReleaseDTOFromModel ---
+
+func TestNewReleaseDTOFromModel_MapsDiscogsFields(t *testing.T) {
+	now := time.Now()
+	release := sqlc.Release{
+		ID:        "r1",
+		AlbumID:   "a1",
+		Format:    models.ReleaseFormatVinyl,
+		CreatedAt: now,
+		DiscogsID: sql.NullString{String: "12345", Valid: true},
+		Label:     sql.NullString{String: "Warner Bros.", Valid: true},
+		ReleasedAt: sql.NullTime{Time: now, Valid: true},
+	}
+	userRelease := &sqlc.UserRelease{AddedAt: now}
+
+	dto := NewReleaseDTOFromModel(release, userRelease)
+
+	if dto.DiscogsID != "12345" {
+		t.Errorf("expected DiscogsID %q, got %q", "12345", dto.DiscogsID)
+	}
+	if dto.Label != "Warner Bros." {
+		t.Errorf("expected Label %q, got %q", "Warner Bros.", dto.Label)
+	}
+	if dto.ReleasedAt == nil || !dto.ReleasedAt.Equal(now) {
+		t.Errorf("expected ReleasedAt %v, got %v", now, dto.ReleasedAt)
+	}
+}
+
+// --- AlbumFormatDTO helpers ---
+
+func TestAlbumFormatDTO_OwnedFormat_HasDiscogsData(t *testing.T) {
+	now := time.Now()
+	release := sqlc.Release{
+		ID:         "r1",
+		AlbumID:    "a1",
+		Format:     models.ReleaseFormatVinyl,
+		DiscogsID:  sql.NullString{String: "99", Valid: true},
+		Label:      sql.NullString{String: "ECM", Valid: true},
+		ReleasedAt: sql.NullTime{Time: now, Valid: true},
+	}
+	userRelease := sqlc.UserRelease{AddedAt: now}
+
+	dto := albumFormatDTOFromRelease(release, &userRelease)
+
+	t.Run("owned is true", func(t *testing.T) {
+		if !dto.Owned {
+			t.Error("expected Owned = true")
+		}
+	})
+	t.Run("release ID set", func(t *testing.T) {
+		if dto.ReleaseID != "r1" {
+			t.Errorf("expected ReleaseID %q, got %q", "r1", dto.ReleaseID)
+		}
+	})
+	t.Run("discogs ID mapped", func(t *testing.T) {
+		if dto.DiscogsID != "99" {
+			t.Errorf("expected DiscogsID %q, got %q", "99", dto.DiscogsID)
+		}
+	})
+	t.Run("label mapped", func(t *testing.T) {
+		if dto.Label != "ECM" {
+			t.Errorf("expected Label %q, got %q", "ECM", dto.Label)
+		}
+	})
+	t.Run("released_at mapped", func(t *testing.T) {
+		if dto.ReleasedAt == nil || !dto.ReleasedAt.Equal(now) {
+			t.Errorf("expected ReleasedAt %v, got %v", now, dto.ReleasedAt)
+		}
+	})
+}
+
+func TestAlbumFormatDTO_UnownedReleaseExists(t *testing.T) {
+	release := sqlc.Release{
+		ID:      "r2",
+		AlbumID: "a1",
+		Format:  models.ReleaseFormatCD,
+	}
+
+	dto := albumFormatDTOFromRelease(release, nil)
+
+	t.Run("owned is false", func(t *testing.T) {
+		if dto.Owned {
+			t.Error("expected Owned = false")
+		}
+	})
+	t.Run("release ID still set", func(t *testing.T) {
+		if dto.ReleaseID != "r2" {
+			t.Errorf("expected ReleaseID %q, got %q", "r2", dto.ReleaseID)
+		}
+	})
+}
+
+// --- buildAlbumFormats ---
+
+func TestBuildAlbumFormats(t *testing.T) {
+	now := time.Now()
+
+	t.Run("owned format is marked owned with Discogs data", func(t *testing.T) {
+		releases := []sqlc.Release{
+			{ID: "r-vinyl", AlbumID: "a1", Format: models.ReleaseFormatVinyl,
+				DiscogsID: sql.NullString{String: "42", Valid: true},
+				Label:     sql.NullString{String: "ECM", Valid: true},
+				ReleasedAt: sql.NullTime{Time: now, Valid: true},
+			},
+		}
+		userReleases := []sqlc.GetUserReleasesByAlbumIdRow{
+			{Release: releases[0], UserRelease: sqlc.UserRelease{AddedAt: now}},
+		}
+
+		result := buildAlbumFormats(releases, userReleases)
+
+		var vinyl *AlbumFormatDTO
+		for i := range result {
+			if result[i].Format == models.ReleaseFormatVinyl {
+				vinyl = &result[i]
+			}
+		}
+		if vinyl == nil {
+			t.Fatal("vinyl format not found in result")
+		}
+		if !vinyl.Owned {
+			t.Error("expected vinyl to be owned")
+		}
+		if vinyl.ReleaseID != "r-vinyl" {
+			t.Errorf("expected ReleaseID %q, got %q", "r-vinyl", vinyl.ReleaseID)
+		}
+		if vinyl.DiscogsID != "42" {
+			t.Errorf("expected DiscogsID %q, got %q", "42", vinyl.DiscogsID)
+		}
+		if vinyl.Label != "ECM" {
+			t.Errorf("expected Label %q, got %q", "ECM", vinyl.Label)
+		}
+	})
+
+	t.Run("release exists but not owned has ReleaseID and Owned=false", func(t *testing.T) {
+		releases := []sqlc.Release{
+			{ID: "r-cd", AlbumID: "a1", Format: models.ReleaseFormatCD},
+		}
+		result := buildAlbumFormats(releases, nil)
+
+		var cd *AlbumFormatDTO
+		for i := range result {
+			if result[i].Format == models.ReleaseFormatCD {
+				cd = &result[i]
+			}
+		}
+		if cd == nil {
+			t.Fatal("CD format not found in result")
+		}
+		if cd.Owned {
+			t.Error("expected Owned = false")
+		}
+		if cd.ReleaseID != "r-cd" {
+			t.Errorf("expected ReleaseID %q, got %q", "r-cd", cd.ReleaseID)
+		}
+	})
+
+	t.Run("format with no release row gets empty DTO placeholder", func(t *testing.T) {
+		result := buildAlbumFormats(nil, nil)
+
+		if len(result) != len(allFormats) {
+			t.Fatalf("expected %d formats, got %d", len(allFormats), len(result))
+		}
+		for _, dto := range result {
+			if dto.Owned {
+				t.Errorf("expected Owned = false for format %v with no release", dto.Format)
+			}
+			if dto.ReleaseID != "" {
+				t.Errorf("expected empty ReleaseID for format %v with no release", dto.Format)
+			}
+		}
+	})
+
+	t.Run("result always has all four formats in order", func(t *testing.T) {
+		result := buildAlbumFormats(nil, nil)
+
+		if len(result) != 4 {
+			t.Fatalf("expected 4 formats, got %d", len(result))
+		}
+		expected := []models.ReleaseFormat{
+			models.ReleaseFormatDigital,
+			models.ReleaseFormatVinyl,
+			models.ReleaseFormatCD,
+			models.ReleaseFormatCassette,
+		}
+		for i, f := range expected {
+			if result[i].Format != f {
+				t.Errorf("position %d: expected %v, got %v", i, f, result[i].Format)
+			}
+		}
+	})
+}
+
+func TestNewReleaseDTOFromModel_NullDiscogsFieldsAreEmpty(t *testing.T) {
+	release := sqlc.Release{
+		ID:      "r1",
+		AlbumID: "a1",
+		Format:  models.ReleaseFormatVinyl,
+	}
+
+	dto := NewReleaseDTOFromModel(release, nil)
+
+	if dto.DiscogsID != "" {
+		t.Errorf("expected empty DiscogsID, got %q", dto.DiscogsID)
+	}
+	if dto.Label != "" {
+		t.Errorf("expected empty Label, got %q", dto.Label)
+	}
+	if dto.ReleasedAt != nil {
+		t.Errorf("expected nil ReleasedAt, got %v", dto.ReleasedAt)
+	}
+}
+
+// --- SaveFormatInput ---
+
+func TestSaveFormatInput_PhysicalFormats(t *testing.T) {
+	t.Run("owned input has format set", func(t *testing.T) {
+		input := SaveFormatInput{
+			Format:    models.ReleaseFormatVinyl,
+			Owned:     true,
+			DiscogsID: "42",
+			Label:     "Blue Note",
+		}
+		if input.Format != models.ReleaseFormatVinyl {
+			t.Errorf("expected vinyl, got %v", input.Format)
+		}
+		if !input.Owned {
+			t.Error("expected Owned = true")
+		}
+		if input.DiscogsID != "42" {
+			t.Errorf("expected DiscogsID %q, got %q", "42", input.DiscogsID)
+		}
+	})
+
+	t.Run("unowned input with empty discogs", func(t *testing.T) {
+		input := SaveFormatInput{
+			Format: models.ReleaseFormatCD,
+			Owned:  false,
+		}
+		if input.Owned {
+			t.Error("expected Owned = false")
+		}
+		if input.DiscogsID != "" {
+			t.Errorf("expected empty DiscogsID, got %q", input.DiscogsID)
+		}
+	})
 }

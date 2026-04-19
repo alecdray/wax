@@ -1,0 +1,234 @@
+package adapters
+
+import (
+	"fmt"
+	"net/url"
+	"github.com/alecdray/wax/src/internal/core/db/models"
+	"github.com/alecdray/wax/src/internal/core/templates"
+	"github.com/alecdray/wax/src/internal/discogs"
+	"github.com/alecdray/wax/src/internal/library"
+)
+
+const FormatsModalId = "formats-modal"
+
+func formatsReleasesID(albumID string) string {
+	return fmt.Sprintf("album-detail-releases-%s", albumID)
+}
+
+func dashboardReleasesID(albumID string) string {
+	return fmt.Sprintf("dashboard-releases-%s", albumID)
+}
+
+templ FormatsModal(albumID string, defaultSearch string, formats []library.AlbumFormatDTO) {
+	@templates.Modal(FormatsModalId, templates.ModalProps{
+		ModalContent: formatsModalContent(albumID, defaultSearch, formats),
+	})
+}
+
+templ formatsModalContent(albumID string, defaultSearch string, formats []library.AlbumFormatDTO) {
+	<h3 class="font-bold text-lg mb-4">Formats</h3>
+	<form
+		hx-put={ fmt.Sprintf("/app/library/albums/%s/formats", albumID) }
+		hx-swap="none"
+	>
+		<div class="flex flex-col gap-3">
+			for _, f := range formats {
+				if f.Format == models.ReleaseFormatDigital {
+					@digitalFormatRow(f)
+				} else {
+					@physicalFormatRow(albumID, defaultSearch, f)
+				}
+			}
+		</div>
+		<div class="modal-action mt-6">
+			<button type="submit" class="btn btn-primary btn-sm">Save</button>
+		</div>
+	</form>
+}
+
+templ digitalFormatRow(f library.AlbumFormatDTO) {
+	<div class="flex items-center gap-3 py-2 opacity-50 cursor-not-allowed">
+		<div class="w-5 h-5 flex items-center justify-center">
+			@releaseFormatIcon(f.Format)
+		</div>
+		<span class="text-sm capitalize flex-1">{ string(f.Format) }</span>
+		<span class="text-xs text-base-content/50">via Spotify</span>
+	</div>
+}
+
+templ physicalFormatRow(albumID string, defaultSearch string, f library.AlbumFormatDTO) {
+	<div
+		x-data={ fmt.Sprintf(`{owned: %t, showDiscogs: false, hasRelease: %t}`, f.Owned, f.DiscogsID != "") }
+		class="flex flex-col gap-2 py-2 border-b border-base-200 last:border-0"
+		@htmx:after-swap={ fmt.Sprintf("if ($event.detail.target.id === 'discogs-details-%s') hasRelease = true", string(f.Format)) }
+	>
+		<div class="flex items-center gap-3">
+			<div class="w-5 h-5 flex items-center justify-center" :class="owned ? 'opacity-70' : 'opacity-20'">
+				@releaseFormatIcon(f.Format)
+			</div>
+			<span class="text-sm capitalize flex-1">{ string(f.Format) }</span>
+			<input type="hidden" name={ fmt.Sprintf("%s_owned", string(f.Format)) } :value="owned ? 'true' : 'false'"/>
+			<input
+				type="checkbox"
+				class="toggle toggle-sm"
+				x-model="owned"
+			/>
+		</div>
+		<div x-show="owned" x-cloak class="pl-8 flex flex-col gap-2">
+			@discogsAttachedDetails(f)
+			<div class="flex gap-2">
+				<button
+					type="button"
+					class="btn btn-ghost btn-xs text-base-content/50"
+					@click="showDiscogs = !showDiscogs"
+					hx-get={ fmt.Sprintf("/app/library/albums/%s/formats/%s/discogs/search", albumID, string(f.Format)) }
+					hx-include={ fmt.Sprintf("#discogs-search-input-%s", string(f.Format)) }
+					hx-target={ fmt.Sprintf("#discogs-results-%s", string(f.Format)) }
+					hx-swap="innerHTML"
+					hx-trigger="click"
+				>
+					if f.DiscogsID != "" {
+						Change release
+					} else {
+						+ Add release
+					}
+				</button>
+				<button
+					type="button"
+					class="btn btn-ghost btn-xs text-error"
+					x-show="hasRelease"
+					@click={ fmt.Sprintf("hasRelease = false; document.getElementById('discogs-details-%s').innerHTML=''", string(f.Format)) }
+				>
+					Remove release
+				</button>
+			</div>
+			<div x-show="showDiscogs" x-cloak>
+				@discogsSearchSection(albumID, defaultSearch, f.Format, f.DiscogsID)
+			</div>
+		</div>
+	</div>
+}
+
+templ discogsAttachedDetails(f library.AlbumFormatDTO) {
+	<div class="text-xs text-base-content/60 flex flex-col gap-0.5" id={ fmt.Sprintf("discogs-details-%s", string(f.Format)) }>
+		if f.Label != "" {
+			<span>{ f.Label }</span>
+		}
+		if f.ReleasedAt != nil {
+			<span>{ f.ReleasedAt.Format("2006") }</span>
+		}
+		if f.DiscogsID != "" {
+			<input type="hidden" name={ fmt.Sprintf("%s_discogs_id", string(f.Format)) } value={ f.DiscogsID }/>
+		}
+		if f.Label != "" {
+			<input type="hidden" name={ fmt.Sprintf("%s_label", string(f.Format)) } value={ f.Label }/>
+		}
+		if f.ReleasedAt != nil {
+			<input type="hidden" name={ fmt.Sprintf("%s_released_at", string(f.Format)) } value={ f.ReleasedAt.Format("2006-01-02") }/>
+		}
+	</div>
+}
+
+templ discogsSearchSection(albumID string, defaultSearch string, format models.ReleaseFormat, currentDiscogsID string) {
+	<div class="flex flex-col gap-2">
+		<div class="flex gap-2">
+			<input
+				type="text"
+				id={ fmt.Sprintf("discogs-search-input-%s", string(format)) }
+				class="input input-bordered input-xs flex-1"
+				placeholder="Search Discogs..."
+				name="q"
+				value={ defaultSearch }
+				hx-get={ fmt.Sprintf("/app/library/albums/%s/formats/%s/discogs/search", albumID, string(format)) }
+				hx-trigger="input changed delay:400ms"
+				hx-target={ fmt.Sprintf("#discogs-results-%s", string(format)) }
+				hx-swap="innerHTML"
+				hx-include="this"
+			/>
+		</div>
+		<div id={ fmt.Sprintf("discogs-results-%s", string(format)) } class="flex flex-col gap-1 max-h-48 overflow-y-auto">
+		</div>
+	</div>
+}
+
+func firstLabel(item discogs.SearchItem) string {
+	if len(item.Label) > 0 {
+		return item.Label[0]
+	}
+	return ""
+}
+
+// DiscogsSearchResults is returned by the search endpoint — injected into #discogs-results-{format}.
+templ DiscogsSearchResults(albumID string, format models.ReleaseFormat, results []discogs.SearchItem) {
+	if len(results) == 0 {
+		<p class="text-xs text-base-content/40">No results</p>
+	} else {
+		for _, item := range results {
+			<div
+				class="flex items-center gap-2 p-1.5 rounded hover:bg-base-200 cursor-pointer text-xs"
+				hx-get={ fmt.Sprintf("/app/library/albums/%s/formats/%s/discogs/releases/%d?label=%s&year=%s", albumID, string(format), item.ID, url.QueryEscape(firstLabel(item)), url.QueryEscape(item.Year)) }
+				hx-target={ fmt.Sprintf("#discogs-details-%s", string(format)) }
+				hx-swap="outerHTML"
+			>
+				if item.Thumb != "" {
+					<img src={ item.Thumb } class="w-8 h-8 rounded flex-shrink-0" alt=""/>
+				}
+				<div class="flex flex-col min-w-0">
+					<span class="truncate font-medium">{ item.Title }</span>
+					<span class="text-base-content/50 truncate">
+						if len(item.Label) > 0 {
+							{ item.Label[0] }
+						}
+						if item.Year != "" {
+							· { item.Year }
+						}
+					</span>
+				</div>
+			</div>
+		}
+	}
+}
+
+// DiscogsReleaseDetails is returned by the release detail endpoint — replaces #discogs-details-{format}.
+templ DiscogsReleaseDetails(format models.ReleaseFormat, item discogs.SearchItem) {
+	<div class="text-xs text-base-content/60 flex flex-col gap-0.5" id={ fmt.Sprintf("discogs-details-%s", string(format)) }>
+		if len(item.Label) > 0 {
+			<span>{ item.Label[0] }</span>
+		}
+		if item.Year != "" {
+			<span>{ item.Year }</span>
+		}
+		<input type="hidden" name={ fmt.Sprintf("%s_discogs_id", string(format)) } value={ fmt.Sprintf("%d", item.ID) }/>
+		if len(item.Label) > 0 {
+			<input type="hidden" name={ fmt.Sprintf("%s_label", string(format)) } value={ item.Label[0] }/>
+		}
+		if item.Year != "" {
+			<input type="hidden" name={ fmt.Sprintf("%s_released_at", string(format)) } value={ item.Year }/>
+		}
+	</div>
+}
+
+// FormatsReleasesOOB updates the format icons on the album detail page and dashboard after a save.
+templ FormatsReleasesOOB(albumID string, releases library.ReleaseDTOs) {
+	<div
+		id={ formatsReleasesID(albumID) }
+		class="flex flex-wrap gap-2 items-center"
+		data-testid="album-detail-releases"
+		hx-swap-oob="true"
+	>
+		@formatIcon(releases, models.ReleaseFormatDigital)
+		@formatIcon(releases, models.ReleaseFormatVinyl)
+		@formatIcon(releases, models.ReleaseFormatCD)
+		@formatIcon(releases, models.ReleaseFormatCassette)
+	</div>
+	<div
+		id={ dashboardReleasesID(albumID) }
+		class="flex flex-col gap-2"
+		hx-swap-oob="true"
+	>
+		@formatIcon(releases, models.ReleaseFormatDigital)
+		@formatIcon(releases, models.ReleaseFormatVinyl)
+		@formatIcon(releases, models.ReleaseFormatCD)
+		@formatIcon(releases, models.ReleaseFormatCassette)
+	</div>
+}

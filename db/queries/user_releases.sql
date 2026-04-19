@@ -2,11 +2,8 @@
 INSERT INTO user_releases (id, user_id, release_id, added_at) VALUES (?, ?, ?, ?)
 ON CONFLICT (user_id, release_id)
 DO UPDATE SET
-    added_at = COALESCE(EXCLUDED.added_at, added_at),
-    removed_at = CASE
-        WHEN removed_at IS NOT NULL AND EXCLUDED.added_at > removed_at THEN NULL
-        ELSE removed_at
-    END
+    added_at = EXCLUDED.added_at,
+    removed_at = NULL
 RETURNING *;
 
 -- name: GetUserReleases :many
@@ -27,3 +24,8 @@ SET removed_at = current_timestamp
 WHERE user_id = ? AND release_id IN (
     SELECT id FROM releases WHERE album_id = ?
 );
+
+-- name: SoftDeleteUserRelease :exec
+UPDATE user_releases
+SET removed_at = current_timestamp
+WHERE user_id = ? AND release_id = ? AND removed_at IS NULL;

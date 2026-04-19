@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/alecdray/wax/src/internal/core/db/models"
 )
@@ -30,7 +31,7 @@ const getOrCreateRelease = `-- name: GetOrCreateRelease :one
 INSERT INTO releases (id, album_id, format) VALUES (?, ?, ?)
 ON CONFLICT (album_id, format)
 DO UPDATE SET album_id = album_id
-RETURNING id, album_id, format, created_at, deleted_at
+RETURNING id, album_id, format, created_at, deleted_at, discogs_id, label, released_at
 `
 
 type GetOrCreateReleaseParams struct {
@@ -48,12 +49,15 @@ func (q *Queries) GetOrCreateRelease(ctx context.Context, arg GetOrCreateRelease
 		&i.Format,
 		&i.CreatedAt,
 		&i.DeletedAt,
+		&i.DiscogsID,
+		&i.Label,
+		&i.ReleasedAt,
 	)
 	return i, err
 }
 
 const getRelease = `-- name: GetRelease :one
-SELECT id, album_id, format, created_at, deleted_at FROM releases WHERE id = ?
+SELECT id, album_id, format, created_at, deleted_at, discogs_id, label, released_at FROM releases WHERE id = ?
 `
 
 func (q *Queries) GetRelease(ctx context.Context, id string) (Release, error) {
@@ -65,12 +69,15 @@ func (q *Queries) GetRelease(ctx context.Context, id string) (Release, error) {
 		&i.Format,
 		&i.CreatedAt,
 		&i.DeletedAt,
+		&i.DiscogsID,
+		&i.Label,
+		&i.ReleasedAt,
 	)
 	return i, err
 }
 
 const getReleases = `-- name: GetReleases :many
-SELECT id, album_id, format, created_at, deleted_at FROM releases WHERE album_id = ?
+SELECT id, album_id, format, created_at, deleted_at, discogs_id, label, released_at FROM releases WHERE album_id = ?
 `
 
 func (q *Queries) GetReleases(ctx context.Context, albumID string) ([]Release, error) {
@@ -88,6 +95,9 @@ func (q *Queries) GetReleases(ctx context.Context, albumID string) ([]Release, e
 			&i.Format,
 			&i.CreatedAt,
 			&i.DeletedAt,
+			&i.DiscogsID,
+			&i.Label,
+			&i.ReleasedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -118,5 +128,31 @@ type UpdateReleaseParams struct {
 
 func (q *Queries) UpdateRelease(ctx context.Context, arg UpdateReleaseParams) error {
 	_, err := q.db.ExecContext(ctx, updateRelease, arg.AlbumID, arg.Format, arg.ID)
+	return err
+}
+
+const updateReleaseDiscogsInfo = `-- name: UpdateReleaseDiscogsInfo :exec
+UPDATE releases
+SET
+    discogs_id = ?,
+    label = ?,
+    released_at = ?
+WHERE id = ?
+`
+
+type UpdateReleaseDiscogsInfoParams struct {
+	DiscogsID  sql.NullString
+	Label      sql.NullString
+	ReleasedAt sql.NullTime
+	ID         string
+}
+
+func (q *Queries) UpdateReleaseDiscogsInfo(ctx context.Context, arg UpdateReleaseDiscogsInfoParams) error {
+	_, err := q.db.ExecContext(ctx, updateReleaseDiscogsInfo,
+		arg.DiscogsID,
+		arg.Label,
+		arg.ReleasedAt,
+		arg.ID,
+	)
 	return err
 }

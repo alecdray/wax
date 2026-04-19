@@ -19,3 +19,11 @@ SET
     album_id = COALESCE(?, album_id),
     format = COALESCE(?, format)
 WHERE id = ?;
+
+-- name: UpdateReleaseDiscogsInfo :exec
+UPDATE releases
+SET
+    discogs_id = ?,
+    label = ?,
+    released_at = ?
+WHERE id = ?;

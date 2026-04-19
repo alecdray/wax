@@ -37,7 +37,7 @@ CREATE TABLE releases (
     album_id text not null references albums(id) on delete cascade,
     format text not null check(format in ('digital', 'vinyl', 'cd', 'cassette')),
     created_at datetime not null default current_timestamp,
-    deleted_at datetime,
+    deleted_at datetime, discogs_id TEXT, label TEXT, released_at DATETIME,
     unique(album_id, format)
 );
 CREATE TABLE user_releases (

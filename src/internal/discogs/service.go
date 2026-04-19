@@ -28,6 +28,15 @@ func (s *Service) SearchReleases(ctx contextx.ContextX, query string) (*SearchRe
 	})
 }
 
+func (s *Service) SearchReleasesForFormat(ctx contextx.ContextX, query, format string) (*SearchResult, error) {
+	return s.client.SearchDatabase(ctx, SearchProps{
+		Query:  query,
+		Type:   SearchTypeRelease,
+		Format: format,
+		Page:   PageProps{PerPage: 25},
+	})
+}
+
 func (s *Service) SearchMasters(ctx contextx.ContextX, query string) (*SearchResult, error) {
 	return s.client.SearchDatabase(ctx, SearchProps{
 		Query: query,

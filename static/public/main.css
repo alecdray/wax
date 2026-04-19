@@ -3825,6 +3825,12 @@
       color: color-mix(in oklab, var(--color-error) 50%, transparent);
     }
   }
+  .text-error\/60 {
+    color: var(--color-error);
+    @supports (color: color-mix(in lab, red, red)) {
+      color: color-mix(in oklab, var(--color-error) 60%, transparent);
+    }
+  }
   .text-info {
     color: var(--color-info);
   }

@@ -118,11 +118,14 @@ type GooseDbVersion struct {
 }
 
 type Release struct {
-	ID        string
-	AlbumID   string
-	Format    models.ReleaseFormat
-	CreatedAt time.Time
-	DeletedAt sql.NullTime
+	ID         string
+	AlbumID    string
+	Format     models.ReleaseFormat
+	CreatedAt  time.Time
+	DeletedAt  sql.NullTime
+	DiscogsID  sql.NullString
+	Label      sql.NullString
+	ReleasedAt sql.NullTime
 }
 
 type SqliteSequence struct {

@@ -469,19 +469,22 @@ templ AlbumRowTagsSection(album library.AlbumDTO, isOobSwap bool) {
 
 templ albumListRow(album library.AlbumDTO) {
 	<li class="list-row items-center" data-testid="album-list-row">
-		<div class="flex flex-col gap-2">
-			for _, format := range []models.ReleaseFormat{models.ReleaseFormatDigital, models.ReleaseFormatVinyl, models.ReleaseFormatCD, models.ReleaseFormatCassette} {
-				if release := album.Releases.FindFormat(format); release != nil && release.AddedAt != nil {
-					<div class="opacity-70">
-						@releaseFormatIcon(format)
-					</div>
-				} else {
-					<div class="opacity-15">
-						@releaseFormatIcon(format)
-					</div>
-				}
-			}
-		</div>
+		<button
+			class="flex flex-col gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+			hx-get={ fmt.Sprintf("/app/library/albums/%s/formats", album.ID) }
+			hx-trigger="click"
+			hx-swap="none"
+		>
+			<div
+				id={ dashboardReleasesID(album.ID) }
+				class="flex flex-col gap-2"
+			>
+				@formatIcon(album.Releases, models.ReleaseFormatDigital)
+				@formatIcon(album.Releases, models.ReleaseFormatVinyl)
+				@formatIcon(album.Releases, models.ReleaseFormatCD)
+				@formatIcon(album.Releases, models.ReleaseFormatCassette)
+			</div>
+		</button>
 		<a href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) } class="flex-shrink-0">
 			if album.ImageURL != "" {
 				<div class="avatar">

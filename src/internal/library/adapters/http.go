@@ -10,6 +10,7 @@ import (
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/httpx"
 	"github.com/alecdray/wax/src/internal/core/task"
+	"github.com/alecdray/wax/src/internal/discogs"
 	"github.com/alecdray/wax/src/internal/feed"
 	"github.com/alecdray/wax/src/internal/library"
 	"github.com/alecdray/wax/src/internal/musicbrainz"
@@ -17,20 +18,22 @@ import (
 )
 
 type HttpHandler struct {
-	spotifyAuth *spotify.AuthService
-	mb          *musicbrainz.Service
-	feedService *feed.Service
+	spotifyAuth    *spotify.AuthService
+	mb             *musicbrainz.Service
+	feedService    *feed.Service
 	libraryService *library.Service
-	taskManager *task.TaskManager
+	taskManager    *task.TaskManager
+	discogsService *discogs.Service
 }
 
-func NewHttpHandler(spotifyAuth *spotify.AuthService, mb *musicbrainz.Service, feedService *feed.Service, libraryService *library.Service, taskManager *task.TaskManager) *HttpHandler {
+func NewHttpHandler(spotifyAuth *spotify.AuthService, mb *musicbrainz.Service, feedService *feed.Service, libraryService *library.Service, taskManager *task.TaskManager, discogsService *discogs.Service) *HttpHandler {
 	return &HttpHandler{
 		spotifyAuth:    spotifyAuth,
 		mb:             mb,
 		feedService:    feedService,
 		libraryService: libraryService,
 		taskManager:    taskManager,
+		discogsService: discogsService,
 	}
 }
 
