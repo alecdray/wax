@@ -75,3 +75,9 @@
 .ticker-container:hover .ticker-track.scrolling {
     animation-play-state: paused;
 }
+
+/* Elevate tooltip stacking context above sticky headers (z-10) and other fixed elements */
+.tooltip:hover,
+.tooltip.tooltip-open {
+    z-index: 9999;
+}
