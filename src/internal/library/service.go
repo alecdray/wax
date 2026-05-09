@@ -6,10 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
+	"strconv"
+	"time"
+
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/db"
 	"github.com/alecdray/wax/src/internal/core/db/models"
-	"github.com/alecdray/wax/src/internal/core/db/sqlc"
 	"github.com/alecdray/wax/src/internal/core/utils"
 	"github.com/alecdray/wax/src/internal/discogs"
 	"github.com/alecdray/wax/src/internal/listeninghistory"
@@ -17,11 +20,6 @@ import (
 	"github.com/alecdray/wax/src/internal/review"
 	"github.com/alecdray/wax/src/internal/spotify"
 	"github.com/alecdray/wax/src/internal/tags"
-	"sort"
-	"strconv"
-	"time"
-
-	"github.com/google/uuid"
 )
 
 type AlbumSummaryDTO struct {
@@ -41,23 +39,6 @@ type ReleaseDTO struct {
 	DiscogsID  string
 	Label      string
 	ReleasedAt *time.Time
-}
-
-func NewReleaseDTOFromModel(model sqlc.Release, userRelease *sqlc.UserRelease) ReleaseDTO {
-	dto := ReleaseDTO{
-		ID:        model.ID,
-		AlbumID:   model.AlbumID,
-		Format:    model.Format,
-		DiscogsID: model.DiscogsID.String,
-		Label:     model.Label.String,
-	}
-	if model.ReleasedAt.Valid {
-		dto.ReleasedAt = &model.ReleasedAt.Time
-	}
-	if userRelease != nil {
-		dto.AddedAt = &userRelease.AddedAt
-	}
-	return dto
 }
 
 type ReleaseDTOs []ReleaseDTO
@@ -87,7 +68,7 @@ func (releases ReleaseDTOs) FindFormat(format models.ReleaseFormat) *ReleaseDTO 
 // It exists for all 4 formats regardless of whether the user owns that format.
 type AlbumFormatDTO struct {
 	Format     models.ReleaseFormat
-	ReleaseID  string     // empty if this format has never been added for this album
+	ReleaseID  string // empty if this format has never been added for this album
 	Owned      bool
 	AddedAt    *time.Time
 	DiscogsID  string
@@ -102,53 +83,16 @@ var allFormats = []models.ReleaseFormat{
 	models.ReleaseFormatCassette,
 }
 
-func albumFormatDTOFromRelease(r sqlc.Release, ur *sqlc.UserRelease) AlbumFormatDTO {
-	dto := AlbumFormatDTO{
-		Format:    r.Format,
-		ReleaseID: r.ID,
-		DiscogsID: r.DiscogsID.String,
-		Label:     r.Label.String,
-	}
-	if r.ReleasedAt.Valid {
-		dto.ReleasedAt = &r.ReleasedAt.Time
-	}
-	if ur != nil {
-		dto.Owned = true
-		dto.AddedAt = &ur.AddedAt
-	}
-	return dto
-}
-
 type TrackDTO struct {
 	ID        string
 	SpotifyID string
 	Title     string
 }
 
-func NewTrackDTOFromModel(model sqlc.Track) TrackDTO {
-	dto := TrackDTO{
-		ID:        model.ID,
-		SpotifyID: model.SpotifyID,
-		Title:     model.Title,
-	}
-
-	return dto
-}
-
 type ArtistDTO struct {
 	ID        string
 	SpotifyID string
 	Name      string
-}
-
-func NewArtistDTOFromModel(model sqlc.Artist) ArtistDTO {
-	dto := ArtistDTO{
-		ID:        model.ID,
-		SpotifyID: model.SpotifyID,
-		Name:      model.Name,
-	}
-
-	return dto
 }
 
 type AlbumDTO struct {
@@ -175,19 +119,6 @@ type RerateAlbumDTO struct {
 	ImageURL    string
 	Rating      *float64
 	RatingState review.RatingState
-}
-
-func NewAlbumDTOFromModel(model sqlc.Album, artists []ArtistDTO, tracks []TrackDTO, releases []ReleaseDTO, rating *review.AlbumRatingDTO) AlbumDTO {
-	return AlbumDTO{
-		ID:        model.ID,
-		SpotifyID: model.SpotifyID,
-		Title:     model.Title,
-		ImageURL:  model.ImageUrl.String,
-		Artists:   artists,
-		Tracks:    tracks,
-		Releases:  releases,
-		Rating:    rating,
-	}
 }
 
 const AlbumsPageSize = 20
@@ -414,6 +345,7 @@ func (l *Library) tracks() []TrackDTO {
 
 type Service struct {
 	db                      *db.DB
+	repo                    *Repo
 	spotifyService          *spotify.Service
 	listeningHistoryService *listeninghistory.Service
 	tagsService             *tags.Service
@@ -421,9 +353,10 @@ type Service struct {
 	reviewService           *review.Service
 }
 
-func NewService(db *db.DB, spotifyService *spotify.Service, listeningHistoryService *listeninghistory.Service, tagsService *tags.Service, notesService *notes.Service, reviewService *review.Service) *Service {
+func NewService(d *db.DB, spotifyService *spotify.Service, listeningHistoryService *listeninghistory.Service, tagsService *tags.Service, notesService *notes.Service, reviewService *review.Service) *Service {
 	return &Service{
-		db:                      db,
+		db:                      d,
+		repo:                    NewRepo(d.Queries()),
 		spotifyService:          spotifyService,
 		listeningHistoryService: listeningHistoryService,
 		tagsService:             tagsService,
@@ -433,17 +366,10 @@ func NewService(db *db.DB, spotifyService *spotify.Service, listeningHistoryServ
 }
 
 func (s *Service) GetReleasesInLibrary(ctx context.Context, userId string) ([]ReleaseDTO, error) {
-	releases, err := s.db.Queries().GetUserReleases(ctx, userId)
+	releaseDTOs, err := s.repo.GetUserReleases(ctx, userId)
 	if err != nil {
-		err = fmt.Errorf("failed to get user releases: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get user releases: %w", err)
 	}
-
-	var releaseDTOs []ReleaseDTO
-	for _, release := range releases {
-		releaseDTOs = append(releaseDTOs, NewReleaseDTOFromModel(release.Release, &release.UserRelease))
-	}
-
 	return releaseDTOs, nil
 }
 
@@ -458,67 +384,41 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 	for _, release := range releases {
 		albumIds = append(albumIds, release.AlbumID)
 		releasesByAlbumId[release.AlbumID] = append(releasesByAlbumId[release.AlbumID], release)
-
 	}
 
-	albums, err := s.db.Queries().GetAlbumsByIDs(ctx, albumIds)
+	albums, err := s.repo.GetAlbumsByIDs(ctx, albumIds)
 	if err != nil {
-		err = fmt.Errorf("failed to get albums: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get albums: %w", err)
 	}
 
-	artists, err := s.db.Queries().GetAlbumArtistsByAlbumIds(ctx, albumIds)
+	artistsByAlbumId, err := s.repo.GetArtistsByAlbumIDs(ctx, albumIds)
 	if err != nil {
-		err = fmt.Errorf("failed to get album artists: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get album artists: %w", err)
 	}
 
-	artistsByAlbumId := make(map[string][]ArtistDTO, len(albumIds))
-	for _, artist := range artists {
-		artistsByAlbumId[artist.AlbumID] = append(artistsByAlbumId[artist.AlbumID], NewArtistDTOFromModel(artist.Artist))
-	}
-
-	tracks, err := s.db.Queries().GetAlbumTracksByAlbumIds(ctx, albumIds)
+	tracksByAlbumId, err := s.repo.GetTracksByAlbumIDs(ctx, albumIds)
 	if err != nil {
-		err = fmt.Errorf("failed to get album tracks: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get album tracks: %w", err)
 	}
 
-	tracksByAlbumId := make(map[string][]TrackDTO, len(albumIds))
-	for _, track := range tracks {
-		tracksByAlbumId[track.AlbumID] = append(tracksByAlbumId[track.AlbumID], NewTrackDTOFromModel(track.Track))
-	}
-
-	ratings, err := s.db.Queries().GetLatestUserAlbumRatings(ctx, sqlc.GetLatestUserAlbumRatingsParams{
-		UserID:   userId,
-		UserID_2: userId,
-	})
+	ratingsByAlbumId, err := s.repo.GetLatestUserAlbumRatings(ctx, userId)
 	if err != nil {
-		err = fmt.Errorf("failed to get ratings: %w", err)
-		return nil, err
-	}
-
-	ratingsByAlbumId := make(map[string]review.AlbumRatingDTO, len(ratings))
-	for _, rating := range ratings {
-		ratingsByAlbumId[rating.AlbumID] = *review.NewAlbumRatingDTOFromModel(rating)
+		return nil, fmt.Errorf("failed to get ratings: %w", err)
 	}
 
 	lastPlayedAtByAlbumId, err := s.listeningHistoryService.GetLastPlayedAtByAlbumIds(ctx, userId, albumIds)
 	if err != nil {
-		err = fmt.Errorf("failed to get last played at: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get last played at: %w", err)
 	}
 
 	tagsByAlbumId, err := s.tagsService.GetAlbumTagsByAlbumIds(ctx, userId, albumIds)
 	if err != nil {
-		err = fmt.Errorf("failed to get album tags: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get album tags: %w", err)
 	}
 
 	notesByAlbumId, err := s.notesService.GetAlbumNotesByAlbumIds(ctx, userId, albumIds)
 	if err != nil {
-		err = fmt.Errorf("failed to get album notes: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get album notes: %w", err)
 	}
 
 	ratingStates, err := s.reviewService.GetAllRatingStates(ctx, userId)
@@ -528,13 +428,12 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 
 	var albumDTOs []AlbumDTO
 	for _, album := range albums {
-		dto := NewAlbumDTOFromModel(
-			album,
-			artistsByAlbumId[album.ID],
-			tracksByAlbumId[album.ID],
-			releasesByAlbumId[album.ID],
-			utils.NewPointer(ratingsByAlbumId[album.ID]),
-		)
+		dto := album
+		dto.Artists = artistsByAlbumId[album.ID]
+		dto.Tracks = tracksByAlbumId[album.ID]
+		dto.Releases = releasesByAlbumId[album.ID]
+		rating := ratingsByAlbumId[album.ID]
+		dto.Rating = utils.NewPointer(rating)
 		if t, ok := lastPlayedAtByAlbumId[album.ID]; ok {
 			dto.LastPlayedAt = &t
 		}
@@ -550,262 +449,114 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 func (s *Service) GetLibrary(ctx context.Context, userId string) (*Library, error) {
 	albums, err := s.GetAlbumsInLibrary(ctx, userId)
 	if err != nil {
-		err = fmt.Errorf("failed to get user albums: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get user albums: %w", err)
 	}
-
 	return NewLibrary(userId, albums), nil
 }
 
 func (s *Service) AddAlbumsToLibrary(ctx context.Context, userId string, albums []AlbumDTO) error {
-	err := s.db.WithTx(func(tx *db.DB) error {
+	return s.db.WithTx(func(tx *db.DB) error {
+		txRepo := NewRepo(tx.Queries())
 		for _, album := range albums {
-			// insert album
-			albumModel, err := tx.Queries().GetOrCreateAlbum(ctx, sqlc.GetOrCreateAlbumParams{
-				ID:        album.ID,
-				SpotifyID: album.SpotifyID,
-				Title:     album.Title,
-				ImageUrl:  sql.NullString{String: album.ImageURL, Valid: album.ImageURL != ""},
-			})
-			if err != nil {
-				err = fmt.Errorf("failed to get/create album: %w", err)
-				return err
-			}
-			album = NewAlbumDTOFromModel(albumModel, album.Artists, album.Tracks, album.Releases, album.Rating)
-
-			for i, track := range album.Tracks {
-				// insert tracks
-				trackModel, err := tx.Queries().GetOrCreateTrack(ctx, sqlc.GetOrCreateTrackParams{
-					ID:        track.ID,
-					SpotifyID: track.SpotifyID,
-					Title:     track.Title,
-				})
-				if err != nil {
-					err = fmt.Errorf("failed to get/create track: %w", err)
-					return err
-				}
-
-				// insert album_tracks
-				_, err = tx.Queries().GetOrCreateAlbumTrack(ctx, sqlc.GetOrCreateAlbumTrackParams{
-					AlbumID: albumModel.ID,
-					TrackID: trackModel.ID,
-				})
-				if err != nil {
-					err = fmt.Errorf("failed to get/create album track: %w", err)
-					return err
-				}
-
-				album.Tracks[i] = NewTrackDTOFromModel(trackModel)
-			}
-
-			for i, artist := range album.Artists {
-				// insert artsits
-				artistModel, err := tx.Queries().GetOrCreateArtist(ctx, sqlc.GetOrCreateArtistParams{
-					ID:        artist.ID,
-					SpotifyID: artist.SpotifyID,
-					Name:      artist.Name,
-				})
-				if err != nil {
-					err = fmt.Errorf("failed to get/create artist: %w", err)
-					return err
-				}
-
-				// insert album_artists
-				_, err = tx.Queries().GetOrCreateAlbumArtist(ctx, sqlc.GetOrCreateAlbumArtistParams{
-					AlbumID:  albumModel.ID,
-					ArtistID: artistModel.ID,
-				})
-				if err != nil {
-					err = fmt.Errorf("failed to get/create album artist: %w", err)
-					return err
-				}
-
-				album.Artists[i] = NewArtistDTOFromModel(artistModel)
-			}
-
-			for i, release := range album.Releases {
-				// insert releases
-				releaseModel, err := tx.Queries().GetOrCreateRelease(ctx, sqlc.GetOrCreateReleaseParams{
-					ID:      release.ID,
-					AlbumID: album.ID,
-					Format:  release.Format,
-				})
-				if err != nil {
-					err = fmt.Errorf("failed to get/create release: %w", err)
-					return err
-				}
-
-				// insert user_releases
-				userRelease, err := tx.Queries().UpsertUserRelease(ctx, sqlc.UpsertUserReleaseParams{
-					ID:        uuid.New().String(),
-					UserID:    userId,
-					ReleaseID: releaseModel.ID,
-					AddedAt:   *release.AddedAt,
-				})
-				if err != nil {
-					err = fmt.Errorf("failed to get/create user release: %w", err)
-					return err
-				}
-
-				album.Releases[i] = NewReleaseDTOFromModel(releaseModel, &userRelease)
+			if _, err := txRepo.AddAlbumToCollection(ctx, userId, album); err != nil {
+				return fmt.Errorf("failed to add album to collection: %w", err)
 			}
 		}
-
 		return nil
 	})
-
-	return err
 }
 
 func (s *Service) GetAlbumInLibrary(ctx context.Context, userId string, albumId string) (*AlbumDTO, error) {
-	album, err := s.db.Queries().GetAlbum(ctx, albumId)
+	album, err := s.repo.GetAlbumByID(ctx, albumId)
 	if err != nil {
-		err = fmt.Errorf("failed to get albums: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get albums: %w", err)
 	}
 
-	releases, err := s.db.Queries().GetUserReleasesByAlbumId(ctx, sqlc.GetUserReleasesByAlbumIdParams{
-		UserID:  userId,
-		AlbumID: albumId,
-	})
+	releasesDtos, err := s.repo.GetUserReleasesByAlbumID(ctx, userId, albumId)
 	if err != nil {
-		err = fmt.Errorf("failed to get releases: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get releases: %w", err)
 	}
 
-	if len(releases) < 1 {
+	if len(releasesDtos) < 1 {
 		return nil, errors.New("album not in library")
 	}
 
-	releasesDtos := make([]ReleaseDTO, len(releases))
-	for i, release := range releases {
-		releasesDtos[i] = NewReleaseDTOFromModel(release.Release, &release.UserRelease)
-	}
-
-	artists, err := s.db.Queries().GetAlbumArtistByAlbumId(ctx, album.ID)
+	artistDtos, err := s.repo.GetArtistsByAlbumID(ctx, album.ID)
 	if err != nil {
-		err = fmt.Errorf("failed to get album artists: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get album artists: %w", err)
 	}
 
-	artistDtos := make([]ArtistDTO, len(artists))
-	for i, artist := range artists {
-		artistDtos[i] = NewArtistDTOFromModel(artist.Artist)
-	}
-
-	tracks, err := s.db.Queries().GetAlbumTracksByAlbumId(ctx, album.ID)
+	trackDtos, err := s.repo.GetTracksByAlbumID(ctx, album.ID)
 	if err != nil {
-		err = fmt.Errorf("failed to get album tracks: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get album tracks: %w", err)
 	}
 
-	trackDtos := make([]TrackDTO, len(tracks))
-	for i, track := range tracks {
-		trackDtos[i] = NewTrackDTOFromModel(track.Track)
-	}
-
-	latestRating, err := s.db.Queries().GetLatestUserAlbumRating(ctx, sqlc.GetLatestUserAlbumRatingParams{
-		UserID:  userId,
-		AlbumID: album.ID,
-	})
-	var ratingDTO *review.AlbumRatingDTO
+	ratingDTO, err := s.repo.GetLatestUserAlbumRating(ctx, userId, album.ID)
 	if errors.Is(err, sql.ErrNoRows) {
-		// no rating
+		ratingDTO = nil
 	} else if err != nil {
-		err = fmt.Errorf("failed to get rating: %w", err)
-		return nil, err
-	} else {
-		ratingDTO = review.NewAlbumRatingDTOFromModel(latestRating)
+		return nil, fmt.Errorf("failed to get rating: %w", err)
 	}
 
-	ratingLogRows, err := s.db.Queries().GetUserAlbumRatingLog(ctx, sqlc.GetUserAlbumRatingLogParams{
-		UserID:  userId,
-		AlbumID: album.ID,
-	})
+	ratingLog, err := s.repo.GetUserAlbumRatingLog(ctx, userId, album.ID)
 	if err != nil {
-		err = fmt.Errorf("failed to get rating log: %w", err)
-		return nil, err
-	}
-	ratingLog := make([]*review.AlbumRatingDTO, len(ratingLogRows))
-	for i, row := range ratingLogRows {
-		ratingLog[i] = review.NewAlbumRatingDTOFromModel(row)
+		return nil, fmt.Errorf("failed to get rating log: %w", err)
 	}
 
-	albumDto := NewAlbumDTOFromModel(
-		album,
-		artistDtos,
-		trackDtos,
-		releasesDtos,
-		ratingDTO,
-	)
-	albumDto.RatingLog = ratingLog
+	album.Artists = artistDtos
+	album.Tracks = trackDtos
+	album.Releases = releasesDtos
+	album.Rating = ratingDTO
+	album.RatingLog = ratingLog
 
 	albumTags, err := s.tagsService.GetAlbumTags(ctx, userId, albumId)
 	if err != nil {
-		err = fmt.Errorf("failed to get album tags: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get album tags: %w", err)
 	}
-	albumDto.Tags = albumTags
+	album.Tags = albumTags
 
 	sleeveNote, err := s.notesService.GetAlbumNote(ctx, userId, albumId)
 	if err != nil {
-		err = fmt.Errorf("failed to get album note: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get album note: %w", err)
 	}
-	albumDto.SleeveNote = sleeveNote
+	album.SleeveNote = sleeveNote
 
 	ratingState, err := s.reviewService.GetRatingState(ctx, userId, albumId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get rating state: %w", err)
 	}
-	albumDto.RatingState = ratingState
+	album.RatingState = ratingState
 
 	lastPlayedAtByAlbumId, err := s.listeningHistoryService.GetLastPlayedAtByAlbumIds(ctx, userId, []string{albumId})
 	if err != nil {
-		err = fmt.Errorf("failed to get last played at: %w", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to get last played at: %w", err)
 	}
 	if t, ok := lastPlayedAtByAlbumId[albumId]; ok {
-		albumDto.LastPlayedAt = &t
+		album.LastPlayedAt = &t
 	}
 
-	return &albumDto, nil
+	return album, nil
 }
 
 func (s *Service) GetRecentlyPlayedAlbums(ctx context.Context, userID string) ([]AlbumSummaryDTO, error) {
-	rows, err := s.db.Queries().GetRecentlyPlayedAlbums(ctx, userID)
+	dtos, err := s.repo.GetRecentlyPlayedAlbums(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get recently played albums: %w", err)
-	}
-
-	dtos := make([]AlbumSummaryDTO, 0, len(rows))
-	for _, row := range rows {
-		dtos = append(dtos, AlbumSummaryDTO{
-			ID:        row.ID,
-			SpotifyID: row.SpotifyID,
-			Title:     row.Title,
-			Artists:   fmt.Sprintf("%s", row.ArtistNames),
-			ImageURL:  row.ImageUrl.String,
-			InLibrary: row.InLibrary != 0,
-		})
 	}
 	return dtos, nil
 }
 
 func (s *Service) RemoveAlbumFromLibrary(ctx contextx.ContextX, userId, albumId string) error {
-	album, err := s.db.Queries().GetAlbum(ctx, albumId)
+	spotifyID, err := s.repo.GetAlbumSpotifyID(ctx, albumId)
 	if err != nil {
 		return fmt.Errorf("failed to get album: %w", err)
 	}
 
-	if err := s.db.Queries().SoftDeleteUserReleasesByAlbumId(ctx, sqlc.SoftDeleteUserReleasesByAlbumIdParams{
-		UserID:  userId,
-		AlbumID: albumId,
-	}); err != nil {
+	if err := s.repo.SoftDeleteUserReleasesByAlbumID(ctx, userId, albumId); err != nil {
 		return fmt.Errorf("failed to soft delete releases: %w", err)
 	}
 
-	if err := s.spotifyService.RemoveAlbumFromSavedLibrary(ctx, userId, album.SpotifyID); err != nil {
+	if err := s.spotifyService.RemoveAlbumFromSavedLibrary(ctx, userId, spotifyID); err != nil {
 		slog.WarnContext(ctx, "failed to remove album from spotify saved library", "error", err)
 	}
 
@@ -813,81 +564,19 @@ func (s *Service) RemoveAlbumFromLibrary(ctx contextx.ContextX, userId, albumId 
 }
 
 func (s *Service) GetRerateQueue(ctx context.Context, userID string) ([]RerateAlbumDTO, error) {
-	rows, err := s.db.Queries().GetRerateQueueAlbums(ctx, sqlc.GetRerateQueueAlbumsParams{
-		UserID:   userID,
-		UserID_2: userID,
-		UserID_3: userID,
-	})
+	dtos, err := s.repo.GetRerateQueue(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get rerate queue: %w", err)
-	}
-	dtos := make([]RerateAlbumDTO, 0, len(rows))
-	for _, row := range rows {
-		dto := RerateAlbumDTO{
-			ID:          row.ID,
-			SpotifyID:   row.SpotifyID,
-			Title:       row.Title,
-			RatingState: review.RatingState(row.State),
-		}
-		if row.ImageUrl.Valid {
-			dto.ImageURL = row.ImageUrl.String
-		}
-		if names, ok := row.ArtistNames.(string); ok {
-			dto.Artists = names
-		}
-		// Rating is 0 for albums with no rating (LEFT JOIN returns 0 for NULLs)
-		// Only set it if there's actually a rating state with existing data
-		if row.Rating != 0 {
-			r := row.Rating
-			dto.Rating = &r
-		}
-		dtos = append(dtos, dto)
 	}
 	return dtos, nil
 }
 
-func buildAlbumFormats(releases []sqlc.Release, userReleases []sqlc.GetUserReleasesByAlbumIdRow) []AlbumFormatDTO {
-	releaseByFormat := make(map[models.ReleaseFormat]sqlc.Release, len(releases))
-	for _, r := range releases {
-		releaseByFormat[r.Format] = r
-	}
-
-	ownedByReleaseID := make(map[string]sqlc.UserRelease, len(userReleases))
-	for _, ur := range userReleases {
-		ownedByReleaseID[ur.Release.ID] = ur.UserRelease
-	}
-
-	result := make([]AlbumFormatDTO, len(allFormats))
-	for i, format := range allFormats {
-		if r, ok := releaseByFormat[format]; ok {
-			var ur *sqlc.UserRelease
-			if entry, owned := ownedByReleaseID[r.ID]; owned {
-				ur = &entry
-			}
-			result[i] = albumFormatDTOFromRelease(r, ur)
-		} else {
-			result[i] = AlbumFormatDTO{Format: format}
-		}
-	}
-
-	return result
-}
-
 func (s *Service) GetAlbumFormats(ctx context.Context, userID, albumID string) ([]AlbumFormatDTO, error) {
-	allReleases, err := s.db.Queries().GetReleases(ctx, albumID)
+	formats, err := s.repo.GetAlbumFormats(ctx, userID, albumID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get releases: %w", err)
+		return nil, fmt.Errorf("failed to get album formats: %w", err)
 	}
-
-	userReleases, err := s.db.Queries().GetUserReleasesByAlbumId(ctx, sqlc.GetUserReleasesByAlbumIdParams{
-		UserID:  userID,
-		AlbumID: albumID,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user releases: %w", err)
-	}
-
-	return buildAlbumFormats(allReleases, userReleases), nil
+	return formats, nil
 }
 
 type SaveFormatInput struct {
@@ -900,19 +589,12 @@ type SaveFormatInput struct {
 
 func (s *Service) SaveAlbumFormats(ctx context.Context, userID, albumID string, inputs []SaveFormatInput) error {
 	return s.db.WithTx(func(tx *db.DB) error {
-		allReleases, err := tx.Queries().GetReleases(ctx, albumID)
-		if err != nil {
-			return fmt.Errorf("failed to get releases: %w", err)
-		}
-		userReleases, err := tx.Queries().GetUserReleasesByAlbumId(ctx, sqlc.GetUserReleasesByAlbumIdParams{
-			UserID:  userID,
-			AlbumID: albumID,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to get user releases: %w", err)
-		}
+		txRepo := NewRepo(tx.Queries())
 
-		currentFormats := buildAlbumFormats(allReleases, userReleases)
+		currentFormats, err := txRepo.GetAlbumFormats(ctx, userID, albumID)
+		if err != nil {
+			return fmt.Errorf("failed to get current formats: %w", err)
+		}
 		currentByFormat := make(map[models.ReleaseFormat]AlbumFormatDTO, len(currentFormats))
 		for _, f := range currentFormats {
 			currentByFormat[f.Format] = f
@@ -928,56 +610,24 @@ func (s *Service) SaveAlbumFormats(ctx context.Context, userID, albumID string, 
 
 			if input.Owned {
 				if !current.Owned {
-					if releaseID == "" {
-						r, err := tx.Queries().GetOrCreateRelease(ctx, sqlc.GetOrCreateReleaseParams{
-							ID:      uuid.New().String(),
-							AlbumID: albumID,
-							Format:  input.Format,
-						})
-						if err != nil {
-							return fmt.Errorf("failed to get/create release: %w", err)
-						}
-						releaseID = r.ID
-					}
-					_, err := tx.Queries().UpsertUserRelease(ctx, sqlc.UpsertUserReleaseParams{
-						ID:        uuid.New().String(),
-						UserID:    userID,
-						ReleaseID: releaseID,
-						AddedAt:   time.Now(),
-					})
+					newReleaseID, err := txRepo.AddOwnedRelease(ctx, userID, albumID, input.Format, releaseID, time.Now())
 					if err != nil {
-						return fmt.Errorf("failed to upsert user release: %w", err)
+						return fmt.Errorf("failed to add owned release: %w", err)
 					}
+					releaseID = newReleaseID
 				}
 
 				if releaseID != "" && input.DiscogsID != "" {
-					var releasedAt sql.NullTime
-					if input.ReleasedAt != nil {
-						releasedAt = sql.NullTime{Time: *input.ReleasedAt, Valid: true}
-					}
-					err := tx.Queries().UpdateReleaseDiscogsInfo(ctx, sqlc.UpdateReleaseDiscogsInfoParams{
-						ID:         releaseID,
-						DiscogsID:  sql.NullString{String: input.DiscogsID, Valid: true},
-						Label:      sql.NullString{String: input.Label, Valid: input.Label != ""},
-						ReleasedAt: releasedAt,
-					})
-					if err != nil {
+					if err := txRepo.UpdateReleaseDiscogsInfo(ctx, releaseID, input.DiscogsID, input.Label, input.ReleasedAt); err != nil {
 						return fmt.Errorf("failed to update release discogs info: %w", err)
 					}
 				} else if releaseID != "" && input.DiscogsID == "" && current.DiscogsID != "" {
-					err := tx.Queries().UpdateReleaseDiscogsInfo(ctx, sqlc.UpdateReleaseDiscogsInfoParams{
-						ID: releaseID,
-					})
-					if err != nil {
+					if err := txRepo.ClearReleaseDiscogsInfo(ctx, releaseID); err != nil {
 						return fmt.Errorf("failed to clear release discogs info: %w", err)
 					}
 				}
 			} else if current.Owned && releaseID != "" {
-				err := tx.Queries().SoftDeleteUserRelease(ctx, sqlc.SoftDeleteUserReleaseParams{
-					UserID:    userID,
-					ReleaseID: releaseID,
-				})
-				if err != nil {
+				if err := txRepo.SoftDeleteUserRelease(ctx, userID, releaseID); err != nil {
 					return fmt.Errorf("failed to soft delete user release: %w", err)
 				}
 			}
@@ -1024,25 +674,9 @@ func NormalizeDiscogsReleasedDate(release *discogs.Release, fallbackYear string)
 }
 
 func (s *Service) GetUnratedAlbums(ctx context.Context, userID string) ([]AlbumSummaryDTO, error) {
-	rows, err := s.db.Queries().GetUnratedAlbums(ctx, sqlc.GetUnratedAlbumsParams{
-		UserID:   userID,
-		UserID_2: userID,
-		UserID_3: userID,
-	})
+	dtos, err := s.repo.GetUnratedAlbums(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get unrated albums: %w", err)
-	}
-
-	dtos := make([]AlbumSummaryDTO, 0, len(rows))
-	for _, row := range rows {
-		dtos = append(dtos, AlbumSummaryDTO{
-			ID:        row.ID,
-			SpotifyID: row.SpotifyID,
-			Title:     row.Title,
-			Artists:   fmt.Sprintf("%s", row.ArtistNames),
-			ImageURL:  row.ImageUrl.String,
-			InLibrary: true,
-		})
 	}
 	return dtos, nil
 }

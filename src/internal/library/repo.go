@@ -1,0 +1,546 @@
+package library
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"time"
+
+	"github.com/alecdray/wax/src/internal/core/db/models"
+	"github.com/alecdray/wax/src/internal/core/db/sqlc"
+	"github.com/alecdray/wax/src/internal/review"
+
+	"github.com/google/uuid"
+)
+
+// Repo is the library module's data access layer. It is the only file in
+// package library that imports core/db/sqlc. Repo methods return library
+// DTOs (AlbumDTO, ArtistDTO, etc.) — never sqlc.* types.
+type Repo struct {
+	q *sqlc.Queries
+}
+
+// NewRepo binds a Repo to the given Queries. Callers can bind to db.Queries()
+// for the global handle or to tx.Queries() inside a db.WithTx callback for
+// transactional work.
+func NewRepo(q *sqlc.Queries) *Repo {
+	return &Repo{q: q}
+}
+
+// --- DTO conversion helpers (private — only repo.go touches sqlc types) ---
+
+func releaseDTOFromModel(model sqlc.Release, userRelease *sqlc.UserRelease) ReleaseDTO {
+	dto := ReleaseDTO{
+		ID:        model.ID,
+		AlbumID:   model.AlbumID,
+		Format:    model.Format,
+		DiscogsID: model.DiscogsID.String,
+		Label:     model.Label.String,
+	}
+	if model.ReleasedAt.Valid {
+		dto.ReleasedAt = &model.ReleasedAt.Time
+	}
+	if userRelease != nil {
+		dto.AddedAt = &userRelease.AddedAt
+	}
+	return dto
+}
+
+func albumFormatDTOFromRelease(r sqlc.Release, ur *sqlc.UserRelease) AlbumFormatDTO {
+	dto := AlbumFormatDTO{
+		Format:    r.Format,
+		ReleaseID: r.ID,
+		DiscogsID: r.DiscogsID.String,
+		Label:     r.Label.String,
+	}
+	if r.ReleasedAt.Valid {
+		dto.ReleasedAt = &r.ReleasedAt.Time
+	}
+	if ur != nil {
+		dto.Owned = true
+		dto.AddedAt = &ur.AddedAt
+	}
+	return dto
+}
+
+func trackDTOFromModel(model sqlc.Track) TrackDTO {
+	return TrackDTO{
+		ID:        model.ID,
+		SpotifyID: model.SpotifyID,
+		Title:     model.Title,
+	}
+}
+
+func artistDTOFromModel(model sqlc.Artist) ArtistDTO {
+	return ArtistDTO{
+		ID:        model.ID,
+		SpotifyID: model.SpotifyID,
+		Name:      model.Name,
+	}
+}
+
+func albumDTOFromModel(model sqlc.Album, artists []ArtistDTO, tracks []TrackDTO, releases []ReleaseDTO, rating *review.AlbumRatingDTO) AlbumDTO {
+	return AlbumDTO{
+		ID:        model.ID,
+		SpotifyID: model.SpotifyID,
+		Title:     model.Title,
+		ImageURL:  model.ImageUrl.String,
+		Artists:   artists,
+		Tracks:    tracks,
+		Releases:  releases,
+		Rating:    rating,
+	}
+}
+
+func buildAlbumFormats(releases []sqlc.Release, userReleases []sqlc.GetUserReleasesByAlbumIdRow) []AlbumFormatDTO {
+	releaseByFormat := make(map[models.ReleaseFormat]sqlc.Release, len(releases))
+	for _, r := range releases {
+		releaseByFormat[r.Format] = r
+	}
+
+	ownedByReleaseID := make(map[string]sqlc.UserRelease, len(userReleases))
+	for _, ur := range userReleases {
+		ownedByReleaseID[ur.Release.ID] = ur.UserRelease
+	}
+
+	result := make([]AlbumFormatDTO, len(allFormats))
+	for i, format := range allFormats {
+		if r, ok := releaseByFormat[format]; ok {
+			var ur *sqlc.UserRelease
+			if entry, owned := ownedByReleaseID[r.ID]; owned {
+				ur = &entry
+			}
+			result[i] = albumFormatDTOFromRelease(r, ur)
+		} else {
+			result[i] = AlbumFormatDTO{Format: format}
+		}
+	}
+
+	return result
+}
+
+// --- Album lookups ---
+
+// GetAlbumByID returns the album row converted to a partial AlbumDTO with no
+// artists/tracks/releases/rating populated. Callers compose the rest.
+func (r *Repo) GetAlbumByID(ctx context.Context, albumID string) (*AlbumDTO, error) {
+	model, err := r.q.GetAlbum(ctx, albumID)
+	if err != nil {
+		return nil, err
+	}
+	dto := albumDTOFromModel(model, nil, nil, nil, nil)
+	return &dto, nil
+}
+
+// GetAlbumSpotifyID returns the spotify ID for an album. Used by callers that
+// need to talk to the Spotify API without rebuilding a full DTO.
+func (r *Repo) GetAlbumSpotifyID(ctx context.Context, albumID string) (string, error) {
+	model, err := r.q.GetAlbum(ctx, albumID)
+	if err != nil {
+		return "", err
+	}
+	return model.SpotifyID, nil
+}
+
+// GetAlbumsByIDs returns base AlbumDTOs (no artists/tracks/releases/rating)
+// for the given album IDs.
+func (r *Repo) GetAlbumsByIDs(ctx context.Context, albumIDs []string) ([]AlbumDTO, error) {
+	rows, err := r.q.GetAlbumsByIDs(ctx, albumIDs)
+	if err != nil {
+		return nil, err
+	}
+	dtos := make([]AlbumDTO, len(rows))
+	for i, row := range rows {
+		dtos[i] = albumDTOFromModel(row, nil, nil, nil, nil)
+	}
+	return dtos, nil
+}
+
+// --- Artist lookups ---
+
+func (r *Repo) GetArtistsByAlbumID(ctx context.Context, albumID string) ([]ArtistDTO, error) {
+	rows, err := r.q.GetAlbumArtistByAlbumId(ctx, albumID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]ArtistDTO, len(rows))
+	for i, row := range rows {
+		out[i] = artistDTOFromModel(row.Artist)
+	}
+	return out, nil
+}
+
+// GetArtistsByAlbumIDs returns artists grouped by album ID.
+func (r *Repo) GetArtistsByAlbumIDs(ctx context.Context, albumIDs []string) (map[string][]ArtistDTO, error) {
+	rows, err := r.q.GetAlbumArtistsByAlbumIds(ctx, albumIDs)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string][]ArtistDTO, len(albumIDs))
+	for _, row := range rows {
+		result[row.AlbumID] = append(result[row.AlbumID], artistDTOFromModel(row.Artist))
+	}
+	return result, nil
+}
+
+// --- Track lookups ---
+
+func (r *Repo) GetTracksByAlbumID(ctx context.Context, albumID string) ([]TrackDTO, error) {
+	rows, err := r.q.GetAlbumTracksByAlbumId(ctx, albumID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]TrackDTO, len(rows))
+	for i, row := range rows {
+		out[i] = trackDTOFromModel(row.Track)
+	}
+	return out, nil
+}
+
+// GetTracksByAlbumIDs returns tracks grouped by album ID.
+func (r *Repo) GetTracksByAlbumIDs(ctx context.Context, albumIDs []string) (map[string][]TrackDTO, error) {
+	rows, err := r.q.GetAlbumTracksByAlbumIds(ctx, albumIDs)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string][]TrackDTO, len(albumIDs))
+	for _, row := range rows {
+		result[row.AlbumID] = append(result[row.AlbumID], trackDTOFromModel(row.Track))
+	}
+	return result, nil
+}
+
+// --- Release / user-release lookups ---
+
+// GetUserReleases returns all releases the user owns (not soft-deleted).
+func (r *Repo) GetUserReleases(ctx context.Context, userID string) ([]ReleaseDTO, error) {
+	rows, err := r.q.GetUserReleases(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]ReleaseDTO, len(rows))
+	for i, row := range rows {
+		out[i] = releaseDTOFromModel(row.Release, &row.UserRelease)
+	}
+	return out, nil
+}
+
+// GetUserReleasesByAlbumID returns the user's owned releases for one album.
+func (r *Repo) GetUserReleasesByAlbumID(ctx context.Context, userID, albumID string) ([]ReleaseDTO, error) {
+	rows, err := r.q.GetUserReleasesByAlbumId(ctx, sqlc.GetUserReleasesByAlbumIdParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]ReleaseDTO, len(rows))
+	for i, row := range rows {
+		out[i] = releaseDTOFromModel(row.Release, &row.UserRelease)
+	}
+	return out, nil
+}
+
+// GetAlbumFormats returns the four-format AlbumFormatDTO list for an album,
+// merging all known releases with the user's ownership.
+func (r *Repo) GetAlbumFormats(ctx context.Context, userID, albumID string) ([]AlbumFormatDTO, error) {
+	allReleases, err := r.q.GetReleases(ctx, albumID)
+	if err != nil {
+		return nil, err
+	}
+	userReleases, err := r.q.GetUserReleasesByAlbumId(ctx, sqlc.GetUserReleasesByAlbumIdParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return buildAlbumFormats(allReleases, userReleases), nil
+}
+
+// --- Rating lookups (TODO: should be replaced with reviewService calls) ---
+
+// GetLatestUserAlbumRating returns the latest rating for one user/album, or
+// the underlying error (including sql.ErrNoRows) if no rating exists.
+//
+// TODO: should be replaced with reviewService.GetLatestRating call.
+func (r *Repo) GetLatestUserAlbumRating(ctx context.Context, userID, albumID string) (*review.AlbumRatingDTO, error) {
+	row, err := r.q.GetLatestUserAlbumRating(ctx, sqlc.GetLatestUserAlbumRatingParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return review.NewAlbumRatingDTOFromModel(row), nil
+}
+
+// GetLatestUserAlbumRatings returns latest ratings keyed by album ID.
+//
+// TODO: should be replaced with reviewService.GetLatestRatings call.
+func (r *Repo) GetLatestUserAlbumRatings(ctx context.Context, userID string) (map[string]review.AlbumRatingDTO, error) {
+	rows, err := r.q.GetLatestUserAlbumRatings(ctx, sqlc.GetLatestUserAlbumRatingsParams{
+		UserID:   userID,
+		UserID_2: userID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]review.AlbumRatingDTO, len(rows))
+	for _, row := range rows {
+		out[row.AlbumID] = *review.NewAlbumRatingDTOFromModel(row)
+	}
+	return out, nil
+}
+
+// GetUserAlbumRatingLog returns the historical rating log for one user/album.
+//
+// TODO: should be replaced with reviewService.GetRatingLog call.
+func (r *Repo) GetUserAlbumRatingLog(ctx context.Context, userID, albumID string) ([]*review.AlbumRatingDTO, error) {
+	rows, err := r.q.GetUserAlbumRatingLog(ctx, sqlc.GetUserAlbumRatingLogParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*review.AlbumRatingDTO, len(rows))
+	for i, row := range rows {
+		out[i] = review.NewAlbumRatingDTOFromModel(row)
+	}
+	return out, nil
+}
+
+// --- Summary / queue queries ---
+
+// GetRecentlyPlayedAlbums returns the recently-played album summaries.
+func (r *Repo) GetRecentlyPlayedAlbums(ctx context.Context, userID string) ([]AlbumSummaryDTO, error) {
+	rows, err := r.q.GetRecentlyPlayedAlbums(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]AlbumSummaryDTO, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, AlbumSummaryDTO{
+			ID:        row.ID,
+			SpotifyID: row.SpotifyID,
+			Title:     row.Title,
+			Artists:   fmt.Sprintf("%s", row.ArtistNames),
+			ImageURL:  row.ImageUrl.String,
+			InLibrary: row.InLibrary != 0,
+		})
+	}
+	return out, nil
+}
+
+// GetUnratedAlbums returns library albums with no rating yet.
+func (r *Repo) GetUnratedAlbums(ctx context.Context, userID string) ([]AlbumSummaryDTO, error) {
+	rows, err := r.q.GetUnratedAlbums(ctx, sqlc.GetUnratedAlbumsParams{
+		UserID:   userID,
+		UserID_2: userID,
+		UserID_3: userID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]AlbumSummaryDTO, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, AlbumSummaryDTO{
+			ID:        row.ID,
+			SpotifyID: row.SpotifyID,
+			Title:     row.Title,
+			Artists:   fmt.Sprintf("%s", row.ArtistNames),
+			ImageURL:  row.ImageUrl.String,
+			InLibrary: true,
+		})
+	}
+	return out, nil
+}
+
+// GetRerateQueue returns albums ready to be re-rated.
+func (r *Repo) GetRerateQueue(ctx context.Context, userID string) ([]RerateAlbumDTO, error) {
+	rows, err := r.q.GetRerateQueueAlbums(ctx, sqlc.GetRerateQueueAlbumsParams{
+		UserID:   userID,
+		UserID_2: userID,
+		UserID_3: userID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]RerateAlbumDTO, 0, len(rows))
+	for _, row := range rows {
+		dto := RerateAlbumDTO{
+			ID:          row.ID,
+			SpotifyID:   row.SpotifyID,
+			Title:       row.Title,
+			RatingState: review.RatingState(row.State),
+		}
+		if row.ImageUrl.Valid {
+			dto.ImageURL = row.ImageUrl.String
+		}
+		if names, ok := row.ArtistNames.(string); ok {
+			dto.Artists = names
+		}
+		// Rating is 0 for albums with no rating (LEFT JOIN returns 0 for NULLs).
+		// Only set it if there's actually a rating state with existing data.
+		if row.Rating != 0 {
+			rating := row.Rating
+			dto.Rating = &rating
+		}
+		out = append(out, dto)
+	}
+	return out, nil
+}
+
+// --- Mutations: collection upserts ---
+
+// AddAlbumToCollection runs the full upsert chain for one album: album,
+// tracks, album_tracks, artists, album_artists, releases, user_releases.
+// Returns the canonical AlbumDTO with sqlc-derived IDs and timestamps filled
+// in from the upsert results.
+func (r *Repo) AddAlbumToCollection(ctx context.Context, userID string, album AlbumDTO) (AlbumDTO, error) {
+	albumModel, err := r.q.GetOrCreateAlbum(ctx, sqlc.GetOrCreateAlbumParams{
+		ID:        album.ID,
+		SpotifyID: album.SpotifyID,
+		Title:     album.Title,
+		ImageUrl:  sql.NullString{String: album.ImageURL, Valid: album.ImageURL != ""},
+	})
+	if err != nil {
+		return album, err
+	}
+	album = albumDTOFromModel(albumModel, album.Artists, album.Tracks, album.Releases, album.Rating)
+
+	for i, track := range album.Tracks {
+		trackModel, err := r.q.GetOrCreateTrack(ctx, sqlc.GetOrCreateTrackParams{
+			ID:        track.ID,
+			SpotifyID: track.SpotifyID,
+			Title:     track.Title,
+		})
+		if err != nil {
+			return album, err
+		}
+
+		_, err = r.q.GetOrCreateAlbumTrack(ctx, sqlc.GetOrCreateAlbumTrackParams{
+			AlbumID: albumModel.ID,
+			TrackID: trackModel.ID,
+		})
+		if err != nil {
+			return album, err
+		}
+
+		album.Tracks[i] = trackDTOFromModel(trackModel)
+	}
+
+	for i, artist := range album.Artists {
+		artistModel, err := r.q.GetOrCreateArtist(ctx, sqlc.GetOrCreateArtistParams{
+			ID:        artist.ID,
+			SpotifyID: artist.SpotifyID,
+			Name:      artist.Name,
+		})
+		if err != nil {
+			return album, err
+		}
+
+		_, err = r.q.GetOrCreateAlbumArtist(ctx, sqlc.GetOrCreateAlbumArtistParams{
+			AlbumID:  albumModel.ID,
+			ArtistID: artistModel.ID,
+		})
+		if err != nil {
+			return album, err
+		}
+
+		album.Artists[i] = artistDTOFromModel(artistModel)
+	}
+
+	for i, release := range album.Releases {
+		releaseModel, err := r.q.GetOrCreateRelease(ctx, sqlc.GetOrCreateReleaseParams{
+			ID:      release.ID,
+			AlbumID: album.ID,
+			Format:  release.Format,
+		})
+		if err != nil {
+			return album, err
+		}
+
+		userRelease, err := r.q.UpsertUserRelease(ctx, sqlc.UpsertUserReleaseParams{
+			ID:        uuid.New().String(),
+			UserID:    userID,
+			ReleaseID: releaseModel.ID,
+			AddedAt:   *release.AddedAt,
+		})
+		if err != nil {
+			return album, err
+		}
+
+		album.Releases[i] = releaseDTOFromModel(releaseModel, &userRelease)
+	}
+
+	return album, nil
+}
+
+// AddOwnedRelease ensures a release exists for the given album/format and
+// records the user as owning it. Returns the release ID. If releaseID is
+// empty, a new release row is created (with a fresh UUID).
+func (r *Repo) AddOwnedRelease(ctx context.Context, userID, albumID string, format models.ReleaseFormat, releaseID string, addedAt time.Time) (string, error) {
+	if releaseID == "" {
+		rel, err := r.q.GetOrCreateRelease(ctx, sqlc.GetOrCreateReleaseParams{
+			ID:      uuid.New().String(),
+			AlbumID: albumID,
+			Format:  format,
+		})
+		if err != nil {
+			return "", err
+		}
+		releaseID = rel.ID
+	}
+	_, err := r.q.UpsertUserRelease(ctx, sqlc.UpsertUserReleaseParams{
+		ID:        uuid.New().String(),
+		UserID:    userID,
+		ReleaseID: releaseID,
+		AddedAt:   addedAt,
+	})
+	if err != nil {
+		return "", err
+	}
+	return releaseID, nil
+}
+
+// SoftDeleteUserRelease marks a single user-release as removed.
+func (r *Repo) SoftDeleteUserRelease(ctx context.Context, userID, releaseID string) error {
+	return r.q.SoftDeleteUserRelease(ctx, sqlc.SoftDeleteUserReleaseParams{
+		UserID:    userID,
+		ReleaseID: releaseID,
+	})
+}
+
+// SoftDeleteUserReleasesByAlbumID marks all of a user's releases for an album
+// as removed.
+func (r *Repo) SoftDeleteUserReleasesByAlbumID(ctx context.Context, userID, albumID string) error {
+	return r.q.SoftDeleteUserReleasesByAlbumId(ctx, sqlc.SoftDeleteUserReleasesByAlbumIdParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	})
+}
+
+// UpdateReleaseDiscogsInfo writes Discogs-derived metadata onto a release.
+// Pass empty string / nil time values to leave the column unset (sqlc params
+// use sql.NullString / sql.NullTime; an unset Valid field clears the value).
+func (r *Repo) UpdateReleaseDiscogsInfo(ctx context.Context, releaseID, discogsID, label string, releasedAt *time.Time) error {
+	var rel sql.NullTime
+	if releasedAt != nil {
+		rel = sql.NullTime{Time: *releasedAt, Valid: true}
+	}
+	return r.q.UpdateReleaseDiscogsInfo(ctx, sqlc.UpdateReleaseDiscogsInfoParams{
+		ID:         releaseID,
+		DiscogsID:  sql.NullString{String: discogsID, Valid: discogsID != ""},
+		Label:      sql.NullString{String: label, Valid: label != ""},
+		ReleasedAt: rel,
+	})
+}
+
+// ClearReleaseDiscogsInfo wipes the Discogs metadata on a release.
+func (r *Repo) ClearReleaseDiscogsInfo(ctx context.Context, releaseID string) error {
+	return r.q.UpdateReleaseDiscogsInfo(ctx, sqlc.UpdateReleaseDiscogsInfoParams{
+		ID: releaseID,
+	})
+}
