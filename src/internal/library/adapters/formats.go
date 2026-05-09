@@ -74,14 +74,8 @@ func (h *HttpHandler) PutFormats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	physicalFormats := []models.ReleaseFormat{
-		models.ReleaseFormatVinyl,
-		models.ReleaseFormatCD,
-		models.ReleaseFormatCassette,
-	}
-
-	inputs := make([]library.SaveFormatInput, 0, len(physicalFormats))
-	for _, format := range physicalFormats {
+	inputs := make([]library.SaveFormatInput, 0, len(library.PhysicalFormats))
+	for _, format := range library.PhysicalFormats {
 		owned := r.FormValue(string(format)+"_owned") == "true"
 		discogsID := r.FormValue(string(format) + "_discogs_id")
 		label := r.FormValue(string(format) + "_label")
@@ -126,12 +120,6 @@ func (h *HttpHandler) PutFormats(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-var physicalFormatSet = map[models.ReleaseFormat]bool{
-	models.ReleaseFormatVinyl:    true,
-	models.ReleaseFormatCD:       true,
-	models.ReleaseFormatCassette: true,
-}
-
 // discogsFormatName maps our internal format to the Discogs format search parameter.
 var discogsFormatName = map[models.ReleaseFormat]string{
 	models.ReleaseFormatVinyl:    "Vinyl",
@@ -150,7 +138,7 @@ func (h *HttpHandler) GetDiscogsSearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	format := models.ReleaseFormat(r.PathValue("format"))
-	if !physicalFormatSet[format] {
+	if !library.IsPhysicalFormat(format) {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("invalid format: %s", format)})
 		return
 	}
@@ -183,7 +171,7 @@ func (h *HttpHandler) GetDiscogsRelease(w http.ResponseWriter, r *http.Request) 
 	ctx := contextx.NewContextX(r.Context())
 
 	format := models.ReleaseFormat(r.PathValue("format"))
-	if !physicalFormatSet[format] {
+	if !library.IsPhysicalFormat(format) {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("invalid format: %s", format)})
 		return
 	}
@@ -207,21 +195,7 @@ func (h *HttpHandler) GetDiscogsRelease(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Prefer the most precise date available from the Release object.
-	// release.Released is "YYYY-MM-DD" when the full date is known, or just "YYYY".
-	// Ensure the result is always a valid YYYY-MM-DD so PutFormats can parse it.
-	releasedDate := year
-	if len(release.Released) >= 10 {
-		releasedDate = release.Released // full YYYY-MM-DD
-	} else if len(release.Released) >= 4 {
-		releasedDate = release.Released[:4] + "-01-01"
-	} else if release.Year > 0 {
-		releasedDate = strconv.Itoa(release.Year) + "-01-01"
-	}
-	// Bare 4-digit year from the search result fallback — expand to a full date.
-	if len(releasedDate) == 4 {
-		releasedDate += "-01-01"
-	}
+	releasedDate := library.NormalizeDiscogsReleasedDate(release, year)
 
 	item := discogs.SearchItem{
 		ID:    discogsID,

@@ -11,12 +11,14 @@ import (
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/db/sqlc"
 	"github.com/alecdray/wax/src/internal/core/utils"
+	"github.com/alecdray/wax/src/internal/discogs"
 	"github.com/alecdray/wax/src/internal/listeninghistory"
 	"github.com/alecdray/wax/src/internal/notes"
 	"github.com/alecdray/wax/src/internal/review"
 	"github.com/alecdray/wax/src/internal/spotify"
 	"github.com/alecdray/wax/src/internal/tags"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -982,6 +984,43 @@ func (s *Service) SaveAlbumFormats(ctx context.Context, userID, albumID string, 
 		}
 		return nil
 	})
+}
+
+// PhysicalFormats lists the physical release formats wax tracks for a library album.
+var PhysicalFormats = []models.ReleaseFormat{
+	models.ReleaseFormatVinyl,
+	models.ReleaseFormatCD,
+	models.ReleaseFormatCassette,
+}
+
+// IsPhysicalFormat reports whether the given format is one wax tracks as a physical release.
+func IsPhysicalFormat(f models.ReleaseFormat) bool {
+	for _, pf := range PhysicalFormats {
+		if pf == f {
+			return true
+		}
+	}
+	return false
+}
+
+// NormalizeDiscogsReleasedDate produces a YYYY-MM-DD date string from a Discogs Release plus
+// fallback values. Discogs's Release.Released can be "YYYY-MM-DD", "YYYY", or empty; this
+// function picks the most precise option and pads bare years to YYYY-01-01. release may be nil.
+func NormalizeDiscogsReleasedDate(release *discogs.Release, fallbackYear string) string {
+	releasedDate := fallbackYear
+	if release != nil {
+		if len(release.Released) >= 10 {
+			releasedDate = release.Released
+		} else if len(release.Released) >= 4 {
+			releasedDate = release.Released[:4] + "-01-01"
+		} else if release.Year > 0 {
+			releasedDate = strconv.Itoa(release.Year) + "-01-01"
+		}
+	}
+	if len(releasedDate) == 4 {
+		releasedDate += "-01-01"
+	}
+	return releasedDate
 }
 
 func (s *Service) GetUnratedAlbums(ctx context.Context, userID string) ([]AlbumSummaryDTO, error) {
