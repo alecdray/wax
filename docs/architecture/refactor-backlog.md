@@ -65,7 +65,7 @@ No archetype gaps. Already in shape per `src/internal/core/CLAUDE.md`. Structura
 - `formats.go` — release/format management (`GetAlbumFormats`, `SaveAlbumFormats`, `ReleaseDTO`, `AlbumFormatDTO`, `SaveFormatInput`); also the destination for the business logic currently in `adapters/formats.go`
 - `view.go` — `AlbumDTOs` sorting/filtering/pagination (`SortByX`, `Filter`, `Page`, `FilterParams`) — pure presentation logic on a slice
 
-Open boundary question: `library/adapters/sleeve_notes.templ` overlaps with the `notes` module's templates. Decide during refactor whether sleeve notes are part of the album view (template stays in library) or a notes concern (template moves to `notes/adapters/`).
+Sleeve notes UI moves entirely into `library/adapters/` (display + editor + handlers). Today's `notes/adapters/notes.templ` and `notes/adapters/http.go` both import `library/adapters` — a forbidden cross-adapter import. The album view is library's territory; sleeve notes are an inline part of it, so library renders them and calls `notes.Service` for persistence/markdown. Move `SleeveNotesEditor` into `library/adapters/sleeve_notes.templ`, move the three sleeve-note handlers into `library/adapters/http.go`, and re-prefix the routes (e.g. `/app/library/albums/{id}/sleeve-notes/{editor,view}` and PUT). See the `notes` entry for the corresponding cleanup.
 
 ---
 
@@ -87,9 +87,9 @@ Open boundary question: `library/adapters/sleeve_notes.templ` overlaps with the 
 
 ## notes (domain)
 
-**Compliance:** Has `service.go`, `service_test.go`, `adapters/http.go`, `adapters/notes.templ`. Missing `repo.go` (sqlc imported directly in `service.go`). Move route registration (`/app/notes/...`) from `server/server.go` into `notes/adapters/routes.go`.
+**Compliance:** Has `service.go`, `service_test.go`, `adapters/http.go`, `adapters/notes.templ`. Missing `repo.go` (sqlc imported directly in `service.go`). The current `adapters/` cross-imports `library/adapters` — a forbidden adapter-to-adapter import — and exists solely to render sleeve notes, which are part of library's album view.
 
-**Structural:** None.
+**Structural:** Drop `notes/adapters/` entirely. The sleeve-notes UI (display, editor, handlers) moves to `library/adapters/`; `notes` becomes a pure data + markdown-rendering service like `feed`/`listeninghistory`/`user` — `service.go`, `repo.go`, tests, no `adapters/`. Library's handlers depend on `notes.Service` for upsert/fetch and `notes.RenderMarkdown` for HTML rendering. Routes for sleeve notes get re-prefixed under `/app/library/...` since library owns the view. Naming aside: the persistence type is `AlbumNote` and the UI label is "sleeve note" — these refer to one concept; keep the persistence name and treat "sleeve note" as a UI string only.
 
 ---
 
