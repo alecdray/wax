@@ -13,25 +13,18 @@
 
 ## Architecture Patterns
 
-### Module Structure
-- Service layer: Business logic in `Service` struct
-- Adapters: HTTP handlers and templates in `adapters/` subdirectory
-- Domain models: Core types in module root
-- Check module README files for detailed documentation
+`src/internal/` is organized by archetype. Every directory under `src/internal/` has a `CLAUDE.md` declaring its archetype (or, for `server` and `core`, documenting singleton rules). When working in a module, the relevant rules will auto-load with that directory's `CLAUDE.md`.
 
-### Context
-- Use `contextx.ContextX` instead of `context.Context`
-- Extract user ID with `ctx.UserId()`
+Full rules: [`docs/architecture/`](../docs/architecture/).
 
-### Error Handling
-- Use `httpx.HandleErrorResponse()` for consistent error responses
-- Return HTML fragments for HTMX error display
+For agents adding new code:
+- New code under `src/internal/<module>/` must follow the rules of that module's archetype. Read the module's `CLAUDE.md` first.
+- New modules: pick an archetype before writing code. If unsure, see [`docs/architecture/README.md`](../docs/architecture/README.md).
 
-### HTMX
-- Forms use `hx-post`, `hx-put` for submissions
-- Responses are HTML fragments
-- Use `hx-swap` to control content replacement
-- Return error components for inline display
+### HTMX (frontend convention)
+- Forms use `hx-post`, `hx-put` for submissions; responses are HTML fragments.
+- Use `hx-swap` to control content replacement.
+- Return error components for inline display.
 
 ## Development
 
