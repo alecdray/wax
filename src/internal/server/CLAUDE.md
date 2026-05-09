@@ -2,8 +2,6 @@
 
 This directory is the **composition root** of the application. There is exactly one of it; it has no archetype because an archetype describes a category and there is only one server.
 
-*This is the target state. Server today still owns route registration inline in `Start`; see `docs/architecture/refactor-backlog.md` for the migration.*
-
 ## Responsibilities
 
 - Build all services in `NewServices(app, db)` (manual DI).
