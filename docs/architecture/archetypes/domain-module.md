@@ -14,7 +14,7 @@ A domain module owns a slice of the application's domain end-to-end: business lo
 src/internal/<module>/
 ├── service.go          # Service struct + business logic — required
 ├── repo.go             # ONLY file allowed to import core/db/sqlc — required
-├── <topic>.go          # pure-logic types/functions, split by topic — optional
+├── <package>.go        # domain types, view models, pure helpers — optional, default name matches the package (e.g. library/library.go)
 ├── task.go             # background tasks (core/task.Task) — optional
 ├── *_test.go           # tests live next to the file under test
 ├── README.md           # required
@@ -55,9 +55,25 @@ Required: `service.go`, `repo.go`, `README.md`, `CLAUDE.md`. Everything else is 
 
 ## Domain types
 
-- DTOs and value objects live in module-root files named by topic (e.g. `review/rating.go`, `review/state.go`).
-- Do not create a `models.go` file. Split domain types by topic — topic files keep related constants, types, and pure functions together.
+- **Default: one topic file named after the package** (e.g. `library/library.go`, `tags/tags.go`). It holds all DTOs, value objects, view models, and pure helpers — methods on those types belong in the same file as the type.
+- Do not create a `models.go` file.
 - Types that cross module boundaries (e.g. consumed by another module's `Service`) must be exported.
+
+### When to use multiple topic files
+
+Default to one. Split into multiple topic files **only when all** of these hold:
+
+- The two areas are **distinct concepts**, not two views of the same aggregate.
+- They **share no types** — neither references the other's types in its own definitions.
+- **No methods cross them** — there is no method that needs to reach across the split.
+
+If any of those fail, it's one topic, one file.
+
+Size is a *signal* that splitting might be worth investigating, not a *reason* to split. A 500-line topic file that meets the rules above stays one file.
+
+Canonical example of a justified split: `review/rating.go` (rating values, scoring questions, labels) and `review/state.go` (rating-state machine — snoozing, rerate timing). They are genuinely independent concepts: a rating is a value, a state is a workflow; they share no types and no methods cross them.
+
+Canonical example of a *wrong* split: separating `library` into `album.go` + `release.go` + `view.go`. Albums, releases, and the dashboard slice operations are all parts of one aggregate cluster — they share types (`AlbumDTO` carries `[]ReleaseDTO`; `AlbumDTOs` is a slice of `AlbumDTO`) and methods cross them (`AlbumDTOs.SortByDate` calls into `ReleaseDTOs.OldestAddedAtDate`). One `library.go` file is correct.
 
 ## Allowed imports
 
@@ -103,7 +119,7 @@ Required: `service.go`, `repo.go`, `README.md`, `CLAUDE.md`. Everything else is 
 |---|---|
 | New SQL query | `repo.go` (and add the `.sql` file under `db/queries/`, then `task build/sqlc`) |
 | New business-logic method | `service.go` |
-| New domain type / pure function | `<topic>.go` at module root |
+| New domain type / pure function | `<package>.go` at module root (or the existing topic file if there's a justified split) |
 | New HTTP handler | `adapters/http.go` |
 | New URL route | `adapters/routes.go` |
 | New templ component | `adapters/<name>.templ`, then `task build/templ` |
