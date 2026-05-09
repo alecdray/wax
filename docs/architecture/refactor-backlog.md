@@ -59,13 +59,7 @@ No archetype gaps. Already in shape per `src/internal/core/CLAUDE.md`. Structura
 
 **Compliance:** Done — `repo.go` extracted, routes in `library/adapters/routes.go`, business logic lifted out of `adapters/formats.go`, `README.md` added. Repo currently wraps rating-table queries (`GetLatestUserAlbumRating`, `GetUserAlbumRatingLog`, etc.) that belong in `review`; flagged with `// TODO` in `repo.go` for follow-up.
 
-**Structural:** `service.go` is still ~680 lines after compliance work. A topic-file split is open for review. Artists, tracks, and releases are aggregate data owned by the album — no external module consumes them independently of an `AlbumDTO`, so the spec's split rule ("reusable from a module that doesn't currently use this one") doesn't hold; module-level splits aren't justified. Within the module, three concerns are tangled and could split by topic:
-
-- user-collection aggregate (`GetLibrary`, `AddAlbumsToLibrary`, `RemoveAlbumFromLibrary`, `GetAlbumInLibrary`, `GetAlbumsInLibrary`, `GetReleasesInLibrary`, `GetRecentlyPlayedAlbums`, `GetUnratedAlbums`, `GetRerateQueue`)
-- release/format management (`GetAlbumFormats`, `SaveAlbumFormats`, `ReleaseDTO`, `AlbumFormatDTO`, `SaveFormatInput`)
-- presentation logic (`AlbumDTOs` `SortByX`, `Filter`, `Page`, `FilterParams`, `Library` aggregate)
-
-Open question: should the topic split move *Service methods* (more aggressive) or only *pure-logic types/helpers* (matches `review`'s `rating.go`/`state.go` example)? Decide before splitting.
+**Structural:** Topic-file split done — `service.go` (Service + methods only), `album.go`, `release.go`, `view.go`. The `Library` dashboard aggregate type was renamed to `Dashboard` to remove the package-name clash. Module-level splits (extracting `artists`/`tracks`) remain unjustified.
 
 Sleeve notes UI moves entirely into `library/adapters/` (display + editor + handlers). Today's `notes/adapters/notes.templ` and `notes/adapters/http.go` both import `library/adapters` — a forbidden cross-adapter import. The album view is library's territory; sleeve notes are an inline part of it, so library renders them and calls `notes.Service` for persistence/markdown. Move `SleeveNotesEditor` into `library/adapters/sleeve_notes.templ`, move the three sleeve-note handlers into `library/adapters/http.go`, and re-prefix the routes (e.g. `/app/library/albums/{id}/sleeve-notes/{editor,view}` and PUT). See the `notes` entry for the corresponding cleanup.
 
