@@ -177,17 +177,17 @@ func (albums AlbumDTOs) Filter(p FilterParams) AlbumDTOs {
 	return result
 }
 
-// Dashboard is the aggregate the library dashboard view binds to: a user's
+// Library is the aggregate the library dashboard view binds to: a user's
 // albums plus derived collections (unique artists and tracks across those albums).
-type Dashboard struct {
+type Library struct {
 	OwnerUserID string
 	Albums      AlbumDTOs
 	Artists     []ArtistDTO
 	Tracks      []TrackDTO
 }
 
-func NewDashboard(ownerUserID string, albums []AlbumDTO) *Dashboard {
-	d := &Dashboard{
+func NewLibrary(ownerUserID string, albums []AlbumDTO) *Library {
+	d := &Library{
 		OwnerUserID: ownerUserID,
 		Albums:      albums,
 	}
@@ -198,7 +198,7 @@ func NewDashboard(ownerUserID string, albums []AlbumDTO) *Dashboard {
 	return d
 }
 
-func (d *Dashboard) artists() []ArtistDTO {
+func (d *Library) artists() []ArtistDTO {
 	artistsSet := make(map[string]ArtistDTO)
 	for _, album := range d.Albums {
 		for _, artist := range album.Artists {
@@ -214,7 +214,7 @@ func (d *Dashboard) artists() []ArtistDTO {
 	return artists
 }
 
-func (d *Dashboard) tracks() []TrackDTO {
+func (d *Library) tracks() []TrackDTO {
 	tracksSet := make(map[string]TrackDTO)
 	for _, album := range d.Albums {
 		for _, track := range album.Tracks {

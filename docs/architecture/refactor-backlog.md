@@ -59,7 +59,7 @@ No archetype gaps. Already in shape per `src/internal/core/CLAUDE.md`. Structura
 
 **Compliance:** Done — `repo.go` extracted, routes in `library/adapters/routes.go`, business logic lifted out of `adapters/formats.go`, `README.md` added. Repo currently wraps rating-table queries (`GetLatestUserAlbumRating`, `GetUserAlbumRatingLog`, etc.) that belong in `review`; flagged with `// TODO` in `repo.go` for follow-up.
 
-**Structural:** Topic-file split done — `service.go` (Service + methods only), `album.go`, `release.go`, `view.go`. The `Library` dashboard aggregate type was renamed to `Dashboard` to remove the package-name clash. Module-level splits (extracting `artists`/`tracks`) remain unjustified.
+**Structural:** Topic-file split done — `service.go` (Service + methods only), `album.go`, `release.go`, `view.go`. Module-level splits (extracting `artists`/`tracks`) remain unjustified.
 
 Sleeve notes UI moves entirely into `library/adapters/` (display + editor + handlers). Today's `notes/adapters/notes.templ` and `notes/adapters/http.go` both import `library/adapters` — a forbidden cross-adapter import. The album view is library's territory; sleeve notes are an inline part of it, so library renders them and calls `notes.Service` for persistence/markdown. Move `SleeveNotesEditor` into `library/adapters/sleeve_notes.templ`, move the three sleeve-note handlers into `library/adapters/http.go`, and re-prefix the routes (e.g. `/app/library/albums/{id}/sleeve-notes/{editor,view}` and PUT). See the `notes` entry for the corresponding cleanup.
 

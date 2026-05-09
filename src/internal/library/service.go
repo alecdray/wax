@@ -122,12 +122,12 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 	return albumDTOs, nil
 }
 
-func (s *Service) GetLibrary(ctx context.Context, userId string) (*Dashboard, error) {
+func (s *Service) GetLibrary(ctx context.Context, userId string) (*Library, error) {
 	albums, err := s.GetAlbumsInLibrary(ctx, userId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user albums: %w", err)
 	}
-	return NewDashboard(userId, albums), nil
+	return NewLibrary(userId, albums), nil
 }
 
 func (s *Service) AddAlbumsToLibrary(ctx context.Context, userId string, albums []AlbumDTO) error {
