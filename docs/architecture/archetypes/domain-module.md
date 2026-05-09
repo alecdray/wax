@@ -6,6 +6,8 @@ A domain module owns a slice of the application's domain end-to-end: business lo
 
 *This is the target archetype. Existing modules are being migrated and may not yet conform — see `docs/architecture/refactor-backlog.md` for current gaps.*
 
+**When working in a non-compliant module:** create the missing target files (`repo.go`, `adapters/routes.go`) as part of your change rather than adding to the legacy locations. If you add a route to a module whose routes still live in `server/server.go`, create `adapters/routes.go`, register the new route there, and migrate the module's existing routes out of `server.go` in the same commit. Don't leave duplicates.
+
 ## File layout
 
 ```
