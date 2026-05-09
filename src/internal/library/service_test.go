@@ -390,12 +390,12 @@ func TestFilter_CombinedFormatAndRating(t *testing.T) {
 func TestNewReleaseDTOFromModel_MapsDiscogsFields(t *testing.T) {
 	now := time.Now()
 	release := sqlc.Release{
-		ID:        "r1",
-		AlbumID:   "a1",
-		Format:    models.ReleaseFormatVinyl,
-		CreatedAt: now,
-		DiscogsID: sql.NullString{String: "12345", Valid: true},
-		Label:     sql.NullString{String: "Warner Bros.", Valid: true},
+		ID:         "r1",
+		AlbumID:    "a1",
+		Format:     models.ReleaseFormatVinyl,
+		CreatedAt:  now,
+		DiscogsID:  sql.NullString{String: "12345", Valid: true},
+		Label:      sql.NullString{String: "Warner Bros.", Valid: true},
 		ReleasedAt: sql.NullTime{Time: now, Valid: true},
 	}
 	userRelease := &sqlc.UserRelease{AddedAt: now}
@@ -485,8 +485,8 @@ func TestBuildAlbumFormats(t *testing.T) {
 	t.Run("owned format is marked owned with Discogs data", func(t *testing.T) {
 		releases := []sqlc.Release{
 			{ID: "r-vinyl", AlbumID: "a1", Format: models.ReleaseFormatVinyl,
-				DiscogsID: sql.NullString{String: "42", Valid: true},
-				Label:     sql.NullString{String: "ECM", Valid: true},
+				DiscogsID:  sql.NullString{String: "42", Valid: true},
+				Label:      sql.NullString{String: "ECM", Valid: true},
 				ReleasedAt: sql.NullTime{Time: now, Valid: true},
 			},
 		}
