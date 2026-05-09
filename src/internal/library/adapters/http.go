@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/http"
+	"strconv"
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/httpx"
@@ -13,8 +15,6 @@ import (
 	"github.com/alecdray/wax/src/internal/library"
 	"github.com/alecdray/wax/src/internal/musicbrainz"
 	"github.com/alecdray/wax/src/internal/spotify"
-	"net/http"
-	"strconv"
 )
 
 type HttpHandler struct {

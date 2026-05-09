@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/db"
+	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/db/sqlc"
 	"github.com/alecdray/wax/src/internal/core/utils"
 	"github.com/alecdray/wax/src/internal/listeninghistory"
@@ -16,6 +16,7 @@ import (
 	"github.com/alecdray/wax/src/internal/review"
 	"github.com/alecdray/wax/src/internal/spotify"
 	"github.com/alecdray/wax/src/internal/tags"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,6 +29,92 @@ type AlbumSummaryDTO struct {
 	Artists   string
 	ImageURL  string
 	InLibrary bool
+}
+
+type ReleaseDTO struct {
+	ID         string
+	AlbumID    string
+	Format     models.ReleaseFormat
+	AddedAt    *time.Time
+	DiscogsID  string
+	Label      string
+	ReleasedAt *time.Time
+}
+
+func NewReleaseDTOFromModel(model sqlc.Release, userRelease *sqlc.UserRelease) ReleaseDTO {
+	dto := ReleaseDTO{
+		ID:        model.ID,
+		AlbumID:   model.AlbumID,
+		Format:    model.Format,
+		DiscogsID: model.DiscogsID.String,
+		Label:     model.Label.String,
+	}
+	if model.ReleasedAt.Valid {
+		dto.ReleasedAt = &model.ReleasedAt.Time
+	}
+	if userRelease != nil {
+		dto.AddedAt = &userRelease.AddedAt
+	}
+	return dto
+}
+
+type ReleaseDTOs []ReleaseDTO
+
+func (releases ReleaseDTOs) OldestAddedAtDate() *time.Time {
+	var oldest *time.Time
+	for _, r := range releases {
+		if r.AddedAt != nil {
+			if oldest == nil || r.AddedAt.Before(*oldest) {
+				oldest = r.AddedAt
+			}
+		}
+	}
+	return oldest
+}
+
+func (releases ReleaseDTOs) FindFormat(format models.ReleaseFormat) *ReleaseDTO {
+	for _, r := range releases {
+		if r.Format == format {
+			return &r
+		}
+	}
+	return nil
+}
+
+// AlbumFormatDTO represents one format row in the formats modal.
+// It exists for all 4 formats regardless of whether the user owns that format.
+type AlbumFormatDTO struct {
+	Format     models.ReleaseFormat
+	ReleaseID  string     // empty if this format has never been added for this album
+	Owned      bool
+	AddedAt    *time.Time
+	DiscogsID  string
+	Label      string
+	ReleasedAt *time.Time
+}
+
+var allFormats = []models.ReleaseFormat{
+	models.ReleaseFormatDigital,
+	models.ReleaseFormatVinyl,
+	models.ReleaseFormatCD,
+	models.ReleaseFormatCassette,
+}
+
+func albumFormatDTOFromRelease(r sqlc.Release, ur *sqlc.UserRelease) AlbumFormatDTO {
+	dto := AlbumFormatDTO{
+		Format:    r.Format,
+		ReleaseID: r.ID,
+		DiscogsID: r.DiscogsID.String,
+		Label:     r.Label.String,
+	}
+	if r.ReleasedAt.Valid {
+		dto.ReleasedAt = &r.ReleasedAt.Time
+	}
+	if ur != nil {
+		dto.Owned = true
+		dto.AddedAt = &ur.AddedAt
+	}
+	return dto
 }
 
 type TrackDTO struct {
@@ -101,6 +188,228 @@ func NewAlbumDTOFromModel(model sqlc.Album, artists []ArtistDTO, tracks []TrackD
 	}
 }
 
+const AlbumsPageSize = 20
+
+type AlbumDTOs []AlbumDTO
+
+func (albums AlbumDTOs) Page(offset int) AlbumDTOs {
+	if offset >= len(albums) {
+		return nil
+	}
+	end := offset + AlbumsPageSize
+	if end > len(albums) {
+		end = len(albums)
+	}
+	return albums[offset:end]
+}
+
+func (albums AlbumDTOs) SortByTitle(ascending bool) {
+	sort.Slice(albums, func(i, j int) bool {
+		if ascending {
+			return albums[i].Title < albums[j].Title
+		}
+		return albums[i].Title > albums[j].Title
+	})
+}
+
+func (albums AlbumDTOs) SortByArtist(ascending bool) {
+	sort.Slice(albums, func(i, j int) bool {
+		if len(albums[i].Artists) == 0 && len(albums[j].Artists) == 0 {
+			return false
+		}
+		if len(albums[i].Artists) == 0 {
+			return ascending
+		}
+		if len(albums[j].Artists) == 0 {
+			return !ascending
+		}
+		if ascending {
+			return albums[i].Artists[0].Name < albums[j].Artists[0].Name
+		}
+		return albums[i].Artists[0].Name > albums[j].Artists[0].Name
+	})
+}
+
+func (albums AlbumDTOs) SortByRating(ascending bool) {
+	sort.Slice(albums, func(i, j int) bool {
+		var ratingI, ratingJ *float64
+		if albums[i].Rating != nil {
+			ratingI = albums[i].Rating.Rating
+		}
+		if albums[j].Rating != nil {
+			ratingJ = albums[j].Rating.Rating
+		}
+		if ratingI == nil && ratingJ == nil {
+			return false
+		}
+		if ratingI == nil {
+			return ascending
+		}
+		if ratingJ == nil {
+			return !ascending
+		}
+		if ascending {
+			return *ratingI < *ratingJ
+		}
+		return *ratingI > *ratingJ
+	})
+}
+
+func (albums AlbumDTOs) SortByLastPlayed(ascending bool) {
+	sort.Slice(albums, func(i, j int) bool {
+		if albums[i].LastPlayedAt == nil && albums[j].LastPlayedAt == nil {
+			return false
+		}
+		if albums[i].LastPlayedAt == nil {
+			return ascending
+		}
+		if albums[j].LastPlayedAt == nil {
+			return !ascending
+		}
+		if ascending {
+			return albums[i].LastPlayedAt.Before(*albums[j].LastPlayedAt)
+		}
+		return albums[i].LastPlayedAt.After(*albums[j].LastPlayedAt)
+	})
+}
+
+func (albums AlbumDTOs) SortByDate(ascending bool) {
+	sort.Slice(albums, func(i, j int) bool {
+		dateI := albums[i].Releases.OldestAddedAtDate()
+		dateJ := albums[j].Releases.OldestAddedAtDate()
+		if dateI == nil && dateJ == nil {
+			return false
+		}
+		if dateI == nil {
+			return ascending
+		}
+		if dateJ == nil {
+			return !ascending
+		}
+		if ascending {
+			return dateI.Before(*dateJ)
+		}
+		return dateI.After(*dateJ)
+	})
+}
+
+type FilterParams struct {
+	MinRating *float64
+	MaxRating *float64
+	Rated     string // "only" | "unrated" | ""
+	Formats   []models.ReleaseFormat
+	ArtistIDs []string
+}
+
+func (albums AlbumDTOs) Filter(p FilterParams) AlbumDTOs {
+	if p.MinRating == nil && p.MaxRating == nil && p.Rated == "" && len(p.Formats) == 0 && len(p.ArtistIDs) == 0 {
+		return albums
+	}
+	result := make(AlbumDTOs, 0, len(albums))
+	for _, album := range albums {
+		if p.MinRating != nil {
+			if album.Rating == nil || album.Rating.Rating == nil || *album.Rating.Rating < *p.MinRating {
+				continue
+			}
+		}
+		if p.MaxRating != nil {
+			if album.Rating == nil || album.Rating.Rating == nil || *album.Rating.Rating > *p.MaxRating {
+				continue
+			}
+		}
+		switch p.Rated {
+		case "only":
+			if album.Rating == nil || album.Rating.Rating == nil {
+				continue
+			}
+		case "unrated":
+			if album.Rating != nil && album.Rating.Rating != nil {
+				continue
+			}
+		}
+		if len(p.Formats) > 0 {
+			hasFormat := false
+			for _, format := range p.Formats {
+				if release := album.Releases.FindFormat(format); release != nil && release.AddedAt != nil {
+					hasFormat = true
+					break
+				}
+			}
+			if !hasFormat {
+				continue
+			}
+		}
+		if len(p.ArtistIDs) > 0 {
+			hasArtist := false
+		outer:
+			for _, artistID := range p.ArtistIDs {
+				for _, artist := range album.Artists {
+					if artist.ID == artistID {
+						hasArtist = true
+						break outer
+					}
+				}
+			}
+			if !hasArtist {
+				continue
+			}
+		}
+		result = append(result, album)
+	}
+	return result
+}
+
+type Library struct {
+	OwnerUserID string
+	Albums      AlbumDTOs
+	Artists     []ArtistDTO
+	Tracks      []TrackDTO
+}
+
+func NewLibrary(ownerUserID string, albums []AlbumDTO) *Library {
+	lib := &Library{
+		OwnerUserID: ownerUserID,
+		Albums:      albums,
+	}
+
+	lib.Artists = lib.artists()
+	lib.Tracks = lib.tracks()
+
+	return lib
+}
+
+func (l *Library) artists() []ArtistDTO {
+	artistsSet := make(map[string]ArtistDTO)
+	for _, album := range l.Albums {
+		for _, artist := range album.Artists {
+			artistsSet[artist.ID] = artist
+		}
+	}
+
+	artists := make([]ArtistDTO, 0, len(artistsSet))
+	for _, artist := range artistsSet {
+		artists = append(artists, artist)
+	}
+
+	return artists
+}
+
+func (l *Library) tracks() []TrackDTO {
+	tracksSet := make(map[string]TrackDTO)
+	for _, album := range l.Albums {
+		for _, track := range album.Tracks {
+			tracksSet[track.ID] = track
+		}
+	}
+
+	tracks := make([]TrackDTO, 0, len(tracksSet))
+	for _, track := range tracksSet {
+		tracks = append(tracks, track)
+	}
+
+	return tracks
+}
+
 type Service struct {
 	db                      *db.DB
 	spotifyService          *spotify.Service
@@ -119,6 +428,21 @@ func NewService(db *db.DB, spotifyService *spotify.Service, listeningHistoryServ
 		notesService:            notesService,
 		reviewService:           reviewService,
 	}
+}
+
+func (s *Service) GetReleasesInLibrary(ctx context.Context, userId string) ([]ReleaseDTO, error) {
+	releases, err := s.db.Queries().GetUserReleases(ctx, userId)
+	if err != nil {
+		err = fmt.Errorf("failed to get user releases: %w", err)
+		return nil, err
+	}
+
+	var releaseDTOs []ReleaseDTO
+	for _, release := range releases {
+		releaseDTOs = append(releaseDTOs, NewReleaseDTOFromModel(release.Release, &release.UserRelease))
+	}
+
+	return releaseDTOs, nil
 }
 
 func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]AlbumDTO, error) {
@@ -518,6 +842,146 @@ func (s *Service) GetRerateQueue(ctx context.Context, userID string) ([]RerateAl
 		dtos = append(dtos, dto)
 	}
 	return dtos, nil
+}
+
+func buildAlbumFormats(releases []sqlc.Release, userReleases []sqlc.GetUserReleasesByAlbumIdRow) []AlbumFormatDTO {
+	releaseByFormat := make(map[models.ReleaseFormat]sqlc.Release, len(releases))
+	for _, r := range releases {
+		releaseByFormat[r.Format] = r
+	}
+
+	ownedByReleaseID := make(map[string]sqlc.UserRelease, len(userReleases))
+	for _, ur := range userReleases {
+		ownedByReleaseID[ur.Release.ID] = ur.UserRelease
+	}
+
+	result := make([]AlbumFormatDTO, len(allFormats))
+	for i, format := range allFormats {
+		if r, ok := releaseByFormat[format]; ok {
+			var ur *sqlc.UserRelease
+			if entry, owned := ownedByReleaseID[r.ID]; owned {
+				ur = &entry
+			}
+			result[i] = albumFormatDTOFromRelease(r, ur)
+		} else {
+			result[i] = AlbumFormatDTO{Format: format}
+		}
+	}
+
+	return result
+}
+
+func (s *Service) GetAlbumFormats(ctx context.Context, userID, albumID string) ([]AlbumFormatDTO, error) {
+	allReleases, err := s.db.Queries().GetReleases(ctx, albumID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get releases: %w", err)
+	}
+
+	userReleases, err := s.db.Queries().GetUserReleasesByAlbumId(ctx, sqlc.GetUserReleasesByAlbumIdParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user releases: %w", err)
+	}
+
+	return buildAlbumFormats(allReleases, userReleases), nil
+}
+
+type SaveFormatInput struct {
+	Format     models.ReleaseFormat
+	Owned      bool
+	DiscogsID  string
+	Label      string
+	ReleasedAt *time.Time
+}
+
+func (s *Service) SaveAlbumFormats(ctx context.Context, userID, albumID string, inputs []SaveFormatInput) error {
+	return s.db.WithTx(func(tx *db.DB) error {
+		allReleases, err := tx.Queries().GetReleases(ctx, albumID)
+		if err != nil {
+			return fmt.Errorf("failed to get releases: %w", err)
+		}
+		userReleases, err := tx.Queries().GetUserReleasesByAlbumId(ctx, sqlc.GetUserReleasesByAlbumIdParams{
+			UserID:  userID,
+			AlbumID: albumID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get user releases: %w", err)
+		}
+
+		currentFormats := buildAlbumFormats(allReleases, userReleases)
+		currentByFormat := make(map[models.ReleaseFormat]AlbumFormatDTO, len(currentFormats))
+		for _, f := range currentFormats {
+			currentByFormat[f.Format] = f
+		}
+
+		for _, input := range inputs {
+			if input.Format == models.ReleaseFormatDigital {
+				continue // digital is managed by Spotify, never modified here
+			}
+
+			current := currentByFormat[input.Format]
+			releaseID := current.ReleaseID
+
+			if input.Owned {
+				if !current.Owned {
+					if releaseID == "" {
+						r, err := tx.Queries().GetOrCreateRelease(ctx, sqlc.GetOrCreateReleaseParams{
+							ID:      uuid.New().String(),
+							AlbumID: albumID,
+							Format:  input.Format,
+						})
+						if err != nil {
+							return fmt.Errorf("failed to get/create release: %w", err)
+						}
+						releaseID = r.ID
+					}
+					_, err := tx.Queries().UpsertUserRelease(ctx, sqlc.UpsertUserReleaseParams{
+						ID:        uuid.New().String(),
+						UserID:    userID,
+						ReleaseID: releaseID,
+						AddedAt:   time.Now(),
+					})
+					if err != nil {
+						return fmt.Errorf("failed to upsert user release: %w", err)
+					}
+				}
+
+				if releaseID != "" && input.DiscogsID != "" {
+					var releasedAt sql.NullTime
+					if input.ReleasedAt != nil {
+						releasedAt = sql.NullTime{Time: *input.ReleasedAt, Valid: true}
+					}
+					err := tx.Queries().UpdateReleaseDiscogsInfo(ctx, sqlc.UpdateReleaseDiscogsInfoParams{
+						ID:         releaseID,
+						DiscogsID:  sql.NullString{String: input.DiscogsID, Valid: true},
+						Label:      sql.NullString{String: input.Label, Valid: input.Label != ""},
+						ReleasedAt: releasedAt,
+					})
+					if err != nil {
+						return fmt.Errorf("failed to update release discogs info: %w", err)
+					}
+				} else if releaseID != "" && input.DiscogsID == "" && current.DiscogsID != "" {
+					err := tx.Queries().UpdateReleaseDiscogsInfo(ctx, sqlc.UpdateReleaseDiscogsInfoParams{
+						ID: releaseID,
+					})
+					if err != nil {
+						return fmt.Errorf("failed to clear release discogs info: %w", err)
+					}
+				}
+			} else if current.Owned && releaseID != "" {
+				err := tx.Queries().SoftDeleteUserRelease(ctx, sqlc.SoftDeleteUserReleaseParams{
+					UserID:    userID,
+					ReleaseID: releaseID,
+				})
+				if err != nil {
+					return fmt.Errorf("failed to soft delete user release: %w", err)
+				}
+			}
+		}
+		return nil
+	})
 }
 
 func (s *Service) GetUnratedAlbums(ctx context.Context, userID string) ([]AlbumSummaryDTO, error) {
