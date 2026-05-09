@@ -6,342 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"sort"
-	"strconv"
 	"time"
 
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/db"
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/utils"
-	"github.com/alecdray/wax/src/internal/discogs"
 	"github.com/alecdray/wax/src/internal/listeninghistory"
 	"github.com/alecdray/wax/src/internal/notes"
 	"github.com/alecdray/wax/src/internal/review"
 	"github.com/alecdray/wax/src/internal/spotify"
 	"github.com/alecdray/wax/src/internal/tags"
 )
-
-type AlbumSummaryDTO struct {
-	ID        string
-	SpotifyID string
-	Title     string
-	Artists   string
-	ImageURL  string
-	InLibrary bool
-}
-
-type ReleaseDTO struct {
-	ID         string
-	AlbumID    string
-	Format     models.ReleaseFormat
-	AddedAt    *time.Time
-	DiscogsID  string
-	Label      string
-	ReleasedAt *time.Time
-}
-
-type ReleaseDTOs []ReleaseDTO
-
-func (releases ReleaseDTOs) OldestAddedAtDate() *time.Time {
-	var oldest *time.Time
-	for _, r := range releases {
-		if r.AddedAt != nil {
-			if oldest == nil || r.AddedAt.Before(*oldest) {
-				oldest = r.AddedAt
-			}
-		}
-	}
-	return oldest
-}
-
-func (releases ReleaseDTOs) FindFormat(format models.ReleaseFormat) *ReleaseDTO {
-	for _, r := range releases {
-		if r.Format == format {
-			return &r
-		}
-	}
-	return nil
-}
-
-// AlbumFormatDTO represents one format row in the formats modal.
-// It exists for all 4 formats regardless of whether the user owns that format.
-type AlbumFormatDTO struct {
-	Format     models.ReleaseFormat
-	ReleaseID  string // empty if this format has never been added for this album
-	Owned      bool
-	AddedAt    *time.Time
-	DiscogsID  string
-	Label      string
-	ReleasedAt *time.Time
-}
-
-var allFormats = []models.ReleaseFormat{
-	models.ReleaseFormatDigital,
-	models.ReleaseFormatVinyl,
-	models.ReleaseFormatCD,
-	models.ReleaseFormatCassette,
-}
-
-type TrackDTO struct {
-	ID        string
-	SpotifyID string
-	Title     string
-}
-
-type ArtistDTO struct {
-	ID        string
-	SpotifyID string
-	Name      string
-}
-
-type AlbumDTO struct {
-	ID           string
-	SpotifyID    string
-	Title        string
-	ImageURL     string
-	Artists      []ArtistDTO
-	Tracks       []TrackDTO
-	Releases     ReleaseDTOs
-	Rating       *review.AlbumRatingDTO
-	RatingLog    []*review.AlbumRatingDTO
-	Tags         []tags.TagDTO
-	SleeveNote   *notes.AlbumNoteDTO
-	LastPlayedAt *time.Time
-	RatingState  *review.RatingStateDTO
-}
-
-type RerateAlbumDTO struct {
-	ID          string
-	SpotifyID   string
-	Title       string
-	Artists     string
-	ImageURL    string
-	Rating      *float64
-	RatingState review.RatingState
-}
-
-const AlbumsPageSize = 20
-
-type AlbumDTOs []AlbumDTO
-
-func (albums AlbumDTOs) Page(offset int) AlbumDTOs {
-	if offset >= len(albums) {
-		return nil
-	}
-	end := offset + AlbumsPageSize
-	if end > len(albums) {
-		end = len(albums)
-	}
-	return albums[offset:end]
-}
-
-func (albums AlbumDTOs) SortByTitle(ascending bool) {
-	sort.Slice(albums, func(i, j int) bool {
-		if ascending {
-			return albums[i].Title < albums[j].Title
-		}
-		return albums[i].Title > albums[j].Title
-	})
-}
-
-func (albums AlbumDTOs) SortByArtist(ascending bool) {
-	sort.Slice(albums, func(i, j int) bool {
-		if len(albums[i].Artists) == 0 && len(albums[j].Artists) == 0 {
-			return false
-		}
-		if len(albums[i].Artists) == 0 {
-			return ascending
-		}
-		if len(albums[j].Artists) == 0 {
-			return !ascending
-		}
-		if ascending {
-			return albums[i].Artists[0].Name < albums[j].Artists[0].Name
-		}
-		return albums[i].Artists[0].Name > albums[j].Artists[0].Name
-	})
-}
-
-func (albums AlbumDTOs) SortByRating(ascending bool) {
-	sort.Slice(albums, func(i, j int) bool {
-		var ratingI, ratingJ *float64
-		if albums[i].Rating != nil {
-			ratingI = albums[i].Rating.Rating
-		}
-		if albums[j].Rating != nil {
-			ratingJ = albums[j].Rating.Rating
-		}
-		if ratingI == nil && ratingJ == nil {
-			return false
-		}
-		if ratingI == nil {
-			return ascending
-		}
-		if ratingJ == nil {
-			return !ascending
-		}
-		if ascending {
-			return *ratingI < *ratingJ
-		}
-		return *ratingI > *ratingJ
-	})
-}
-
-func (albums AlbumDTOs) SortByLastPlayed(ascending bool) {
-	sort.Slice(albums, func(i, j int) bool {
-		if albums[i].LastPlayedAt == nil && albums[j].LastPlayedAt == nil {
-			return false
-		}
-		if albums[i].LastPlayedAt == nil {
-			return ascending
-		}
-		if albums[j].LastPlayedAt == nil {
-			return !ascending
-		}
-		if ascending {
-			return albums[i].LastPlayedAt.Before(*albums[j].LastPlayedAt)
-		}
-		return albums[i].LastPlayedAt.After(*albums[j].LastPlayedAt)
-	})
-}
-
-func (albums AlbumDTOs) SortByDate(ascending bool) {
-	sort.Slice(albums, func(i, j int) bool {
-		dateI := albums[i].Releases.OldestAddedAtDate()
-		dateJ := albums[j].Releases.OldestAddedAtDate()
-		if dateI == nil && dateJ == nil {
-			return false
-		}
-		if dateI == nil {
-			return ascending
-		}
-		if dateJ == nil {
-			return !ascending
-		}
-		if ascending {
-			return dateI.Before(*dateJ)
-		}
-		return dateI.After(*dateJ)
-	})
-}
-
-type FilterParams struct {
-	MinRating *float64
-	MaxRating *float64
-	Rated     string // "only" | "unrated" | ""
-	Formats   []models.ReleaseFormat
-	ArtistIDs []string
-}
-
-func (albums AlbumDTOs) Filter(p FilterParams) AlbumDTOs {
-	if p.MinRating == nil && p.MaxRating == nil && p.Rated == "" && len(p.Formats) == 0 && len(p.ArtistIDs) == 0 {
-		return albums
-	}
-	result := make(AlbumDTOs, 0, len(albums))
-	for _, album := range albums {
-		if p.MinRating != nil {
-			if album.Rating == nil || album.Rating.Rating == nil || *album.Rating.Rating < *p.MinRating {
-				continue
-			}
-		}
-		if p.MaxRating != nil {
-			if album.Rating == nil || album.Rating.Rating == nil || *album.Rating.Rating > *p.MaxRating {
-				continue
-			}
-		}
-		switch p.Rated {
-		case "only":
-			if album.Rating == nil || album.Rating.Rating == nil {
-				continue
-			}
-		case "unrated":
-			if album.Rating != nil && album.Rating.Rating != nil {
-				continue
-			}
-		}
-		if len(p.Formats) > 0 {
-			hasFormat := false
-			for _, format := range p.Formats {
-				if release := album.Releases.FindFormat(format); release != nil && release.AddedAt != nil {
-					hasFormat = true
-					break
-				}
-			}
-			if !hasFormat {
-				continue
-			}
-		}
-		if len(p.ArtistIDs) > 0 {
-			hasArtist := false
-		outer:
-			for _, artistID := range p.ArtistIDs {
-				for _, artist := range album.Artists {
-					if artist.ID == artistID {
-						hasArtist = true
-						break outer
-					}
-				}
-			}
-			if !hasArtist {
-				continue
-			}
-		}
-		result = append(result, album)
-	}
-	return result
-}
-
-type Library struct {
-	OwnerUserID string
-	Albums      AlbumDTOs
-	Artists     []ArtistDTO
-	Tracks      []TrackDTO
-}
-
-func NewLibrary(ownerUserID string, albums []AlbumDTO) *Library {
-	lib := &Library{
-		OwnerUserID: ownerUserID,
-		Albums:      albums,
-	}
-
-	lib.Artists = lib.artists()
-	lib.Tracks = lib.tracks()
-
-	return lib
-}
-
-func (l *Library) artists() []ArtistDTO {
-	artistsSet := make(map[string]ArtistDTO)
-	for _, album := range l.Albums {
-		for _, artist := range album.Artists {
-			artistsSet[artist.ID] = artist
-		}
-	}
-
-	artists := make([]ArtistDTO, 0, len(artistsSet))
-	for _, artist := range artistsSet {
-		artists = append(artists, artist)
-	}
-
-	return artists
-}
-
-func (l *Library) tracks() []TrackDTO {
-	tracksSet := make(map[string]TrackDTO)
-	for _, album := range l.Albums {
-		for _, track := range album.Tracks {
-			tracksSet[track.ID] = track
-		}
-	}
-
-	tracks := make([]TrackDTO, 0, len(tracksSet))
-	for _, track := range tracksSet {
-		tracks = append(tracks, track)
-	}
-
-	return tracks
-}
 
 type Service struct {
 	db                      *db.DB
@@ -446,12 +122,12 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 	return albumDTOs, nil
 }
 
-func (s *Service) GetLibrary(ctx context.Context, userId string) (*Library, error) {
+func (s *Service) GetLibrary(ctx context.Context, userId string) (*Dashboard, error) {
 	albums, err := s.GetAlbumsInLibrary(ctx, userId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user albums: %w", err)
 	}
-	return NewLibrary(userId, albums), nil
+	return NewDashboard(userId, albums), nil
 }
 
 func (s *Service) AddAlbumsToLibrary(ctx context.Context, userId string, albums []AlbumDTO) error {
@@ -579,14 +255,6 @@ func (s *Service) GetAlbumFormats(ctx context.Context, userID, albumID string) (
 	return formats, nil
 }
 
-type SaveFormatInput struct {
-	Format     models.ReleaseFormat
-	Owned      bool
-	DiscogsID  string
-	Label      string
-	ReleasedAt *time.Time
-}
-
 func (s *Service) SaveAlbumFormats(ctx context.Context, userID, albumID string, inputs []SaveFormatInput) error {
 	return s.db.WithTx(func(tx *db.DB) error {
 		txRepo := NewRepo(tx.Queries())
@@ -634,43 +302,6 @@ func (s *Service) SaveAlbumFormats(ctx context.Context, userID, albumID string, 
 		}
 		return nil
 	})
-}
-
-// PhysicalFormats lists the physical release formats wax tracks for a library album.
-var PhysicalFormats = []models.ReleaseFormat{
-	models.ReleaseFormatVinyl,
-	models.ReleaseFormatCD,
-	models.ReleaseFormatCassette,
-}
-
-// IsPhysicalFormat reports whether the given format is one wax tracks as a physical release.
-func IsPhysicalFormat(f models.ReleaseFormat) bool {
-	for _, pf := range PhysicalFormats {
-		if pf == f {
-			return true
-		}
-	}
-	return false
-}
-
-// NormalizeDiscogsReleasedDate produces a YYYY-MM-DD date string from a Discogs Release plus
-// fallback values. Discogs's Release.Released can be "YYYY-MM-DD", "YYYY", or empty; this
-// function picks the most precise option and pads bare years to YYYY-01-01. release may be nil.
-func NormalizeDiscogsReleasedDate(release *discogs.Release, fallbackYear string) string {
-	releasedDate := fallbackYear
-	if release != nil {
-		if len(release.Released) >= 10 {
-			releasedDate = release.Released
-		} else if len(release.Released) >= 4 {
-			releasedDate = release.Released[:4] + "-01-01"
-		} else if release.Year > 0 {
-			releasedDate = strconv.Itoa(release.Year) + "-01-01"
-		}
-	}
-	if len(releasedDate) == 4 {
-		releasedDate += "-01-01"
-	}
-	return releasedDate
 }
 
 func (s *Service) GetUnratedAlbums(ctx context.Context, userID string) ([]AlbumSummaryDTO, error) {

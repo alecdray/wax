@@ -122,7 +122,7 @@ type CarouselSectionProps struct {
 
 type DashboardPageProps struct {
 	Feeds           []feed.FeedDTO
-	Library         *library.Library
+	Library         *library.Dashboard
 	RecentAlbums    []library.AlbumSummaryDTO
 	FirstPageAlbums []library.AlbumDTO
 	Artists         []library.ArtistDTO
@@ -884,7 +884,7 @@ templ AlbumsList(albums []library.AlbumDTO, sortBy string, sortDir string, fp li
 	</div>
 }
 
-templ LibraryStats(lib *library.Library) {
+templ LibraryStats(lib *library.Dashboard) {
 	if lib != nil {
 		<div
 			id="library-stats"
