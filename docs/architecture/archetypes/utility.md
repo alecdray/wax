@@ -2,9 +2,9 @@
 
 ## Purpose
 
-A utility module provides stateless, domain-shaped helpers: pure functions and/or embedded data. It has no `Service` struct, no database access, and no mutable state. The `genres` module — a genre DAG built from embedded Wikidata JSON — is the canonical example.
+A utility module provides stateless, domain-shaped helpers: pure functions and/or embedded data. It has no `Service` struct, no database access, and no mutable state.
 
-*This is the target archetype. `genres` already conforms — no divergence to flag. See `docs/architecture/refactor-backlog.md` for the status of all modules.*
+*This is the target archetype. Existing modules may not yet conform — see `docs/architecture/refactor-backlog.md` for current gaps.*
 
 ## File layout
 
@@ -20,14 +20,14 @@ No `service.go`. No `repo.go`. No `adapters/`. README is optional — a package 
 
 ## Allowed imports
 
-- `github.com/alecdray/wax/src/internal/core/*` (any sub-package: `utils`, `timex`, `cryptox`, etc.).
+- `core/*` sub-packages.
 - Stdlib.
-- Small, focused third-party libraries (e.g. `github.com/lithammer/fuzzysearch/fuzzy` for fuzzy matching, `encoding/json` for embedded data).
+- Small, focused third-party libraries.
 
 ## Forbidden imports
 
-- Domain modules (`library`, `review`, `user`, `tags`, `notes`, `labels`, `feed`, `listeninghistory`, `auth`). Utility modules are leaves in the dependency graph — they produce, they do not consume.
-- External client modules (`spotify`, `musicbrainz`, `discogs`). Utility modules must not pull in network-facing code.
+- Any domain module. Utility modules are leaves in the dependency graph — they produce, they do not consume.
+- Any external client module. Utility modules must not pull in network-facing code.
 - `core/db/sqlc` — utility modules own no tables and must not touch the database.
 
 ## When to use this archetype vs. core
@@ -36,7 +36,7 @@ Use **utility** when the code is domain-shaped but stateless: it encodes knowled
 
 Use **core** instead when the code is framework-level (HTTP primitives, database handles, context extensions, time/crypto helpers) and carries no domain concepts. Core sub-packages are allowed to carry state and lifecycle responsibility; utility modules are not.
 
-A practical rule: if the package name would mean something to a music listener (`genres`, `ratings`), it belongs in `src/internal/` as a utility. If the package name is structural plumbing (`httpx`, `db`, `contextx`), it belongs in `core/`.
+A practical rule: if the package name would mean something to a domain user (e.g. a music listener for wax), it belongs in `src/internal/` as a utility. If the package name is structural plumbing, it belongs in `core/`.
 
 ## Where new code goes
 

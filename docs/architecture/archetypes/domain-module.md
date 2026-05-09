@@ -77,7 +77,7 @@ Canonical example of a *wrong* split: separating `library` into `album.go` + `re
 
 ## Allowed imports
 
-- `github.com/alecdray/wax/src/internal/core/*` (any sub-package: `contextx`, `httpx`, `db`, `task`, `templates`, `app`, `cryptox`, `sqlx`, `timex`, `utils`).
+- `core/*` sub-packages.
 - Other domain modules' **exported** `Service` types and DTO / value-object types, injected via the constructor.
 - Stdlib and small focused third-party libraries (e.g. `github.com/google/uuid`).
 

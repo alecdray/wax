@@ -4,11 +4,13 @@ This directory documents the architectural rules for `src/internal/`. Most direc
 
 ## Archetypes
 
-| Archetype | Doc | Examples |
+| Archetype | Doc | What it owns |
 |---|---|---|
-| Domain module | [archetypes/domain-module.md](archetypes/domain-module.md) | `library`, `review`, `tags`, `notes`, `auth`, ... |
-| External client | [archetypes/external-client.md](archetypes/external-client.md) | `spotify`, `musicbrainz`, `discogs` |
-| Utility | [archetypes/utility.md](archetypes/utility.md) | `genres` |
+| Domain module | [archetypes/domain-module.md](archetypes/domain-module.md) | A slice of business logic + persistence + (optionally) HTTP, end to end |
+| External client | [archetypes/external-client.md](archetypes/external-client.md) | A wrapped third-party API; no domain concepts, no DB |
+| Utility | [archetypes/utility.md](archetypes/utility.md) | Stateless, domain-shaped helpers; pure functions and/or embedded data |
+
+See *Listing archetypes at a glance* below to find each existing module's classification.
 
 ## Singletons
 

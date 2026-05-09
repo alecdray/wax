@@ -4,7 +4,7 @@
 
 An external client module wraps a third-party API. It has no own domain concepts, no persistence, and no HTTP entrypoints. It exists only to expose a clean, internal-facing interface over a remote service. Consumer domain modules depend on client modules — never the reverse.
 
-*This is the target archetype. The `spotify` module diverges from the canonical shape (two non-standard files, an `AuthService` split, and a forbidden import of `user.Service`) and is tracked in `docs/architecture/refactor-backlog.md`.*
+*This is the target archetype. Existing modules may not yet conform — see `docs/architecture/refactor-backlog.md` for current gaps.*
 
 ## File layout
 
@@ -27,13 +27,13 @@ No `adapters/`. No `repo.go`. README is optional — a package doc comment in `c
 
 ## Allowed imports
 
-- `github.com/alecdray/wax/src/internal/core/*` (any sub-package: `contextx`, `app`, `cryptox`, `timex`, `utils`, etc.).
-- Vendor SDKs for the wrapped API (e.g. `github.com/zmb3/spotify/v2`, `github.com/lithammer/fuzzysearch/fuzzy`).
+- `core/*` sub-packages.
+- Vendor SDKs for the wrapped API.
 - Stdlib.
 
 ## Forbidden imports
 
-- Domain modules (`library`, `review`, `user`, `tags`, `notes`, `labels`, `feed`, `listeninghistory`, `auth`). Client modules are leaves in the dependency graph. Domain modules depend on clients; clients must never depend on domain modules.
+- Any domain module. Client modules are leaves in the dependency graph: domain modules depend on clients, never the reverse.
 - Other external client modules.
 - `core/db/sqlc` — clients own no tables and must not touch the database.
 
