@@ -27,5 +27,4 @@ None. Library is read/write through HTTP and the `feed` task; it does not run it
 ## See also
 
 - Architecture rules: [`../../../docs/architecture/archetypes/domain-module.md`](../../../docs/architecture/archetypes/domain-module.md)
-- Refactor backlog: [`../../../docs/architecture/refactor-backlog.md`](../../../docs/architecture/refactor-backlog.md)
 - Module-specific notes: [`./CLAUDE.md`](./CLAUDE.md)

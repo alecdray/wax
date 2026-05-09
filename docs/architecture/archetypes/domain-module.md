@@ -4,16 +4,12 @@
 
 A domain module owns a slice of the application's domain end-to-end: business logic, persistence, and (optionally) HTTP entrypoints. Most modules under `src/internal/` are domain modules. Each one is the single home for the rules and data that belong to its slice — peer modules consume it only through its exported `Service` and DTO types.
 
-*This is the target archetype. Existing modules are being migrated and may not yet conform — see `docs/architecture/refactor-backlog.md` for current gaps.*
-
-**When working in a non-compliant module:** create the missing target files (`repo.go`, `adapters/routes.go`) as part of your change rather than adding to the legacy locations. If you add a route to a module whose routes still live in `server/server.go`, create `adapters/routes.go`, register the new route there, and migrate the module's existing routes out of `server.go` in the same commit. Don't leave duplicates.
-
 ## File layout
 
 ```
 src/internal/<module>/
 ├── service.go          # Service struct + business logic — required
-├── repo.go             # ONLY file allowed to import core/db/sqlc — required
+├── repo.go             # ONLY file allowed to import core/db/sqlc — required if the module owns persistence
 ├── <package>.go        # domain types, view models, pure helpers — optional, default name matches the package (e.g. library/library.go)
 ├── task.go             # background tasks (core/task.Task) — optional
 ├── *_test.go           # tests live next to the file under test
@@ -26,7 +22,7 @@ src/internal/<module>/
     └── *_templ.go      # generated; do not edit by hand
 ```
 
-Required: `service.go`, `repo.go`, `README.md`, `CLAUDE.md`. Everything else is optional. `adapters/` exists if and only if the module exposes HTTP routes.
+Required: `service.go`, `README.md`, `CLAUDE.md`. `repo.go` is required if the module owns persistence (the common case); a module that delegates all persistence to peer services can omit it. Everything else is optional. `adapters/` exists if and only if the module exposes HTTP routes.
 
 ## Service layer
 

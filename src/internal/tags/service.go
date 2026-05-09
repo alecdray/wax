@@ -2,13 +2,11 @@ package tags
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/alecdray/wax/src/internal/core/db"
-	"github.com/alecdray/wax/src/internal/core/db/sqlc"
 
 	"github.com/google/uuid"
 )
@@ -21,52 +19,16 @@ func normalizeTag(name string) string {
 	return strings.TrimSpace(name)
 }
 
-const (
-	TagGroupSound = "Sound"
-	TagGroupMood  = "Mood"
-)
-
-type TagGroupDTO struct {
-	ID   string
-	Name string
-}
-
-type TagDTO struct {
-	ID    string
-	Name  string
-	Group *TagGroupDTO
-}
-
-type TagInput struct {
-	Name    string
-	GroupID string // empty = ungrouped
-}
-
 type Service struct {
-	db *db.DB
+	db   *db.DB
+	repo *Repo
 }
 
-func NewService(db *db.DB) *Service {
-	return &Service{db: db}
-}
-
-func newTagGroupDTO(id, name string) *TagGroupDTO {
-	if id == "" {
-		return nil
+func NewService(d *db.DB) *Service {
+	return &Service{
+		db:   d,
+		repo: NewRepo(d.Queries()),
 	}
-	return &TagGroupDTO{ID: id, Name: name}
-}
-
-// newTagDTOFromRow constructs a TagDTO from query rows that use COALESCE for group fields.
-func newTagDTOFromRow(tag sqlc.Tag, groupIDValue, groupName string) TagDTO {
-	dto := TagDTO{
-		ID:   tag.ID,
-		Name: tag.Name,
-	}
-	if tag.GroupID.Valid && groupIDValue != "" {
-		dto.Group = newTagGroupDTO(groupIDValue, groupName)
-	}
-	return dto
 }
 
 // GetOrCreateDefaultGroups ensures "Sound" and "Mood" tag groups exist for the user.
@@ -74,41 +36,29 @@ func (s *Service) GetOrCreateDefaultGroups(ctx context.Context, userId string) (
 	groupNames := []string{TagGroupSound, TagGroupMood}
 	groups := make([]*TagGroupDTO, 0, len(groupNames))
 	for _, name := range groupNames {
-		model, err := s.db.Queries().GetOrCreateTagGroup(ctx, sqlc.GetOrCreateTagGroupParams{
-			ID:     uuid.NewString(),
-			UserID: userId,
-			Name:   name,
-		})
+		group, err := s.repo.GetOrCreateTagGroup(ctx, uuid.NewString(), userId, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get or create tag group %q: %w", name, err)
 		}
-		groups = append(groups, &TagGroupDTO{ID: model.ID, Name: model.Name})
+		groups = append(groups, group)
 	}
 	return groups, nil
 }
 
 // GetUserTagGroups returns all tag groups owned by the user.
 func (s *Service) GetUserTagGroups(ctx context.Context, userId string) ([]*TagGroupDTO, error) {
-	models, err := s.db.Queries().GetTagGroupsByUserId(ctx, userId)
+	groups, err := s.repo.GetTagGroupsByUserID(ctx, userId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tag groups: %w", err)
 	}
-	dtos := make([]*TagGroupDTO, 0, len(models))
-	for _, m := range models {
-		dtos = append(dtos, &TagGroupDTO{ID: m.ID, Name: m.Name})
-	}
-	return dtos, nil
+	return groups, nil
 }
 
 // GetUserTags returns all tags owned by the user (for autocomplete).
 func (s *Service) GetUserTags(ctx context.Context, userId string) ([]TagDTO, error) {
-	rows, err := s.db.Queries().GetTagsByUserId(ctx, userId)
+	dtos, err := s.repo.GetTagsByUserID(ctx, userId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user tags: %w", err)
-	}
-	dtos := make([]TagDTO, 0, len(rows))
-	for _, row := range rows {
-		dtos = append(dtos, newTagDTOFromRow(row.Tag, row.GroupIDValue, row.GroupName))
 	}
 	return dtos, nil
 }
@@ -118,32 +68,18 @@ func (s *Service) GetAlbumTagsByAlbumIds(ctx context.Context, userId string, alb
 	if len(albumIds) == 0 {
 		return map[string][]TagDTO{}, nil
 	}
-	rows, err := s.db.Queries().GetAlbumTagsByAlbumIds(ctx, sqlc.GetAlbumTagsByAlbumIdsParams{
-		UserID:   userId,
-		AlbumIds: albumIds,
-	})
+	result, err := s.repo.GetAlbumTagsByAlbumIDs(ctx, userId, albumIds)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get album tags: %w", err)
-	}
-	result := make(map[string][]TagDTO, len(albumIds))
-	for _, row := range rows {
-		result[row.AlbumID] = append(result[row.AlbumID], newTagDTOFromRow(row.Tag, row.GroupIDValue, row.GroupName))
 	}
 	return result, nil
 }
 
 // GetAlbumTags returns the tags for a single album.
 func (s *Service) GetAlbumTags(ctx context.Context, userId, albumId string) ([]TagDTO, error) {
-	rows, err := s.db.Queries().GetAlbumTagsByAlbumId(ctx, sqlc.GetAlbumTagsByAlbumIdParams{
-		UserID:  userId,
-		AlbumID: albumId,
-	})
+	dtos, err := s.repo.GetAlbumTagsByAlbumID(ctx, userId, albumId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get album tags: %w", err)
-	}
-	dtos := make([]TagDTO, 0, len(rows))
-	for _, row := range rows {
-		dtos = append(dtos, newTagDTOFromRow(row.Tag, row.GroupIDValue, row.GroupName))
 	}
 	return dtos, nil
 }
@@ -154,11 +90,32 @@ func (s *Service) SetAlbumTags(ctx context.Context, userId, albumId string, inpu
 	var result []TagDTO
 
 	err := s.db.WithTx(func(tx *db.DB) error {
-		if err := tx.Queries().DeleteAlbumTagsByAlbumId(ctx, sqlc.DeleteAlbumTagsByAlbumIdParams{
-			UserID:  userId,
-			AlbumID: albumId,
-		}); err != nil {
+		txRepo := NewRepo(tx.Queries())
+
+		if err := txRepo.DeleteAlbumTagsByAlbumID(ctx, userId, albumId); err != nil {
 			return fmt.Errorf("failed to clear album tags: %w", err)
+		}
+
+		// Cache groups so we resolve group names without re-querying per tag.
+		var groupsCache []*TagGroupDTO
+		groupsLoaded := false
+		groupNameByID := func(id string) string {
+			if id == "" {
+				return ""
+			}
+			if !groupsLoaded {
+				groups, err := txRepo.GetTagGroupsByUserID(ctx, userId)
+				if err == nil {
+					groupsCache = groups
+				}
+				groupsLoaded = true
+			}
+			for _, g := range groupsCache {
+				if g.ID == id {
+					return g.Name
+				}
+			}
+			return ""
 		}
 
 		for _, input := range inputs {
@@ -167,49 +124,21 @@ func (s *Service) SetAlbumTags(ctx context.Context, userId, albumId string, inpu
 				continue
 			}
 
-			groupID := sql.NullString{}
-			if input.GroupID != "" {
-				groupID = sql.NullString{String: input.GroupID, Valid: true}
-			}
-
-			tag, err := tx.Queries().GetOrCreateTag(ctx, sqlc.GetOrCreateTagParams{
-				ID:      uuid.NewString(),
-				UserID:  userId,
-				Name:    input.Name,
-				GroupID: groupID,
-			})
+			tag, err := txRepo.GetOrCreateTag(ctx, uuid.NewString(), userId, input.Name, input.GroupID)
 			if err != nil {
 				return fmt.Errorf("failed to get or create tag %q: %w", input.Name, err)
 			}
 
-			_, err = tx.Queries().CreateAlbumTag(ctx, sqlc.CreateAlbumTagParams{
-				ID:      uuid.NewString(),
-				UserID:  userId,
-				AlbumID: albumId,
-				TagID:   tag.ID,
-			})
-			if err != nil {
+			if err := txRepo.CreateAlbumTag(ctx, uuid.NewString(), userId, albumId, tag.ID); err != nil {
 				return fmt.Errorf("failed to create album tag: %w", err)
 			}
 
-			// Resolve group name for DTO from the tag's stored group_id
-			groupIDValue := ""
-			groupName := ""
-			if tag.GroupID.Valid {
-				groupIDValue = tag.GroupID.String
-				// Look up the group name
-				groups, err := tx.Queries().GetTagGroupsByUserId(ctx, userId)
-				if err == nil {
-					for _, g := range groups {
-						if g.ID == tag.GroupID.String {
-							groupName = g.Name
-							break
-						}
-					}
-				}
+			// Repo returns Group with ID only; resolve the name here.
+			if tag.Group != nil && tag.Group.Name == "" {
+				tag.Group.Name = groupNameByID(tag.Group.ID)
 			}
 
-			result = append(result, newTagDTOFromRow(tag, groupIDValue, groupName))
+			result = append(result, tag)
 		}
 
 		return nil

@@ -3,4 +3,4 @@
 Rules: ../../../docs/architecture/archetypes/domain-module.md
 
 Module-specific notes:
-- Pure-logic types split across `rating.go` (rating values, scoring questions, labels) and `state.go` (rating-state machine — snoozing, rerate timing). Two topic files because they're distinct concepts with no shared types and no methods crossing them.
+- Single topic file `review.go` holds the `RatingState` enum, `RatingStateDTO` (per-album state machine — snoozing, rerate timing), `AlbumRatingDTO` (rating log entry), the scoring questionnaire, and the rating labels. `RatingState` is shared between the state machine and the log entry, so they live together.

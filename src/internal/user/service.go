@@ -4,71 +4,30 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/cryptox"
 	"github.com/alecdray/wax/src/internal/core/db"
-	"github.com/alecdray/wax/src/internal/core/db/sqlc"
-	"github.com/alecdray/wax/src/internal/core/sqlx"
-
-	"github.com/google/uuid"
 )
 
-type UserDTO struct {
-	ID                  string
-	SpotifyID           string
-	spotifyRefreshToken *string
-}
-
-func NewUserDTOFromModel(model sqlc.User) *UserDTO {
-	user := &UserDTO{
-		ID:        model.ID,
-		SpotifyID: model.SpotifyID,
-	}
-
-	if model.SpotifyRefreshToken.Valid {
-		user.spotifyRefreshToken = &model.SpotifyRefreshToken.String
-	}
-
-	return user
-}
-
-func (u *UserDTO) SpotifyRefreshToken(secret string) *string {
-	if u.spotifyRefreshToken == nil {
-		return nil
-	}
-
-	decrypted, err := cryptox.SymmetricDecrypt(*u.spotifyRefreshToken, secret)
-	if err != nil {
-		return nil
-	}
-
-	return &decrypted
-}
-
 type Service struct {
-	db *db.DB
+	db   *db.DB
+	repo *Repo
 }
 
-func NewService(db *db.DB) *Service {
+func NewService(d *db.DB) *Service {
 	return &Service{
-		db: db,
+		db:   d,
+		repo: NewRepo(d.Queries()),
 	}
 }
 
 func (s *Service) GetUserById(ctx context.Context, id string) (*UserDTO, error) {
-	user, err := s.db.Queries().GetUser(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return NewUserDTOFromModel(user), nil
+	return s.repo.GetUserByID(ctx, id)
 }
 
 func (s *Service) GetUserBySpotifyID(ctx context.Context, spotifyId string) (*UserDTO, error) {
-	user, err := s.db.Queries().GetUserBySpotifyId(ctx, spotifyId)
-	if err != nil {
-		return nil, err
-	}
-	return NewUserDTOFromModel(user), nil
+	return s.repo.GetUserBySpotifyID(ctx, spotifyId)
 }
 
 func (s *Service) UpsertSpotifyUser(ctx contextx.ContextX, spotifyId string, spotifyRefreshToken string) (*UserDTO, error) {
@@ -84,15 +43,7 @@ func (s *Service) UpsertSpotifyUser(ctx contextx.ContextX, spotifyId string, spo
 		return nil, err
 	}
 
-	user, err := s.db.Queries().UpsertSpotifyUser(ctx, sqlc.UpsertSpotifyUserParams{
-		ID:                  uuid.New().String(),
-		SpotifyID:           spotifyId,
-		SpotifyRefreshToken: sqlx.NewNullString(encryptedSpotifyRefreshToken),
-	})
-	if err != nil {
-		return nil, err
-	}
-	return NewUserDTOFromModel(user), nil
+	return s.repo.UpsertSpotifyUser(ctx, spotifyId, encryptedSpotifyRefreshToken)
 }
 
 func (s *Service) GetUserFromCtx(ctx contextx.ContextX) (*UserDTO, error) {

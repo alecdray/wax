@@ -20,4 +20,7 @@ func RegisterRoutes(mux *httpx.Mux, h *HttpHandler) {
 	mux.Handle("PUT /app/library/albums/{albumId}/formats", httpx.HandlerFunc(h.PutFormats))
 	mux.Handle("GET /app/library/albums/{albumId}/formats/{format}/discogs/search", httpx.HandlerFunc(h.GetDiscogsSearch))
 	mux.Handle("GET /app/library/albums/{albumId}/formats/{format}/discogs/releases/{discogsId}", httpx.HandlerFunc(h.GetDiscogsRelease))
+	mux.Handle("GET /app/library/albums/{albumId}/sleeve-notes/editor", httpx.HandlerFunc(h.GetSleeveNotesEditor))
+	mux.Handle("GET /app/library/albums/{albumId}/sleeve-notes/view", httpx.HandlerFunc(h.GetSleeveNotesView))
+	mux.Handle("PUT /app/library/albums/{albumId}/sleeve-notes", httpx.HandlerFunc(h.SaveSleeveNote))
 }

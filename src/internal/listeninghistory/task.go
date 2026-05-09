@@ -20,21 +20,21 @@ func NewSyncListeningHistoryTask(service *Service) task.Task {
 }
 
 func (t SyncListeningHistoryTask) Run(ctx contextx.ContextX) error {
-	users, err := t.service.db.Queries().GetUsersWithSpotifyToken(ctx)
+	userIDs, err := t.service.GetUserIDsWithSpotifyToken(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get users with spotify token: %w", err)
 	}
 
-	for _, user := range users {
-		if err := t.service.SyncUser(ctx, user.ID); err != nil {
+	for _, userID := range userIDs {
+		if err := t.service.SyncUser(ctx, userID); err != nil {
 			if errors.Is(err, spotify.ErrFailedToGetToken) {
-				slog.Warn("skipping listening history sync: token error", "userId", user.ID, "error", err)
+				slog.Warn("skipping listening history sync: token error", "userId", userID, "error", err)
 				continue
 			}
-			slog.Error("failed to sync listening history", "userId", user.ID, "error", err)
+			slog.Error("failed to sync listening history", "userId", userID, "error", err)
 			continue
 		}
-		slog.Debug("synced listening history", "userId", user.ID)
+		slog.Debug("synced listening history", "userId", userID)
 	}
 
 	return nil

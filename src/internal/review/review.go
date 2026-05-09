@@ -1,10 +1,83 @@
 package review
 
 import (
+	"errors"
 	"math"
+	"time"
 
 	"github.com/alecdray/wax/src/internal/core/utils"
 )
+
+var ErrRatingStateNotFound = errors.New("rating state not found")
+
+// RatingState is the value of a rating's lifecycle: provisional (initial),
+// finalized (committed), or stalled (max snoozes reached). It's tagged onto
+// each rating log entry and carried by the per-album rating state machine.
+type RatingState string
+
+const (
+	RatingStateProvisional RatingState = "provisional"
+	RatingStateFinalized   RatingState = "finalized"
+	RatingStateStalled     RatingState = "stalled"
+)
+
+// RatingStateDTO is the per-album rating state machine: snooze count and
+// next-rerate timing.
+type RatingStateDTO struct {
+	ID           string
+	AlbumID      string
+	UserID       string
+	State        RatingState
+	SnoozeCount  int
+	LastRatedAt  time.Time
+	NextRerateAt *time.Time
+}
+
+const (
+	MaxSnoozeCount      = 3
+	SnoozeDuration      = 7 * 24 * time.Hour
+	RerateCycleDuration = 30 * 24 * time.Hour
+)
+
+func (s RatingStateDTO) IsRerateDue() bool {
+	if s.NextRerateAt == nil {
+		return false
+	}
+	return s.NextRerateAt.Before(time.Now())
+}
+
+// NextRerateTime returns the time at which a rerate should next be prompted.
+// snoozeCount is the number of snoozes already applied (before this call).
+// Returns nil when the album is stalled (snoozeCount >= MaxSnoozeCount).
+func NextRerateTime(snoozeCount int) *time.Time {
+	if snoozeCount >= MaxSnoozeCount {
+		return nil
+	}
+	t := time.Now().Add(RerateCycleDuration)
+	return &t
+}
+
+// StateAfterSnooze returns the RatingState that results from applying one snooze.
+// current.SnoozeCount is expected to be less than MaxSnoozeCount (i.e. snoozing is still allowed).
+func StateAfterSnooze(current RatingStateDTO) RatingState {
+	if current.SnoozeCount+1 >= MaxSnoozeCount {
+		return RatingStateStalled
+	}
+	return current.State
+}
+
+// AlbumRatingDTO is one entry in a user's rating log for an album. The State
+// field — when non-nil — captures whether the rating was made provisionally,
+// finalized, or while stalled at the time of the log entry.
+type AlbumRatingDTO struct {
+	ID        string
+	UserID    string
+	AlbumID   string
+	Rating    *float64
+	Note      *string
+	State     *RatingState
+	CreatedAt time.Time
+}
 
 // RatingMode controls which questions are active and whether the provisional cap applies.
 type RatingMode string

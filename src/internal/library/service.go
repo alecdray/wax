@@ -77,7 +77,7 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 		return nil, fmt.Errorf("failed to get album tracks: %w", err)
 	}
 
-	ratingsByAlbumId, err := s.repo.GetLatestUserAlbumRatings(ctx, userId)
+	ratingsByAlbumId, err := s.reviewService.GetLatestRatings(ctx, userId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ratings: %w", err)
 	}
@@ -167,14 +167,14 @@ func (s *Service) GetAlbumInLibrary(ctx context.Context, userId string, albumId 
 		return nil, fmt.Errorf("failed to get album tracks: %w", err)
 	}
 
-	ratingDTO, err := s.repo.GetLatestUserAlbumRating(ctx, userId, album.ID)
+	ratingDTO, err := s.reviewService.GetLatestRating(ctx, userId, album.ID)
 	if errors.Is(err, sql.ErrNoRows) {
 		ratingDTO = nil
 	} else if err != nil {
 		return nil, fmt.Errorf("failed to get rating: %w", err)
 	}
 
-	ratingLog, err := s.repo.GetUserAlbumRatingLog(ctx, userId, album.ID)
+	ratingLog, err := s.reviewService.GetRatingLog(ctx, userId, album.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get rating log: %w", err)
 	}

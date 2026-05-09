@@ -32,7 +32,7 @@ templ sleeveNotesDisplay(album library.AlbumDTO) {
 		<button
 			data-testid="sleeve-notes-edit"
 			class="btn btn-ghost btn-xs text-base-content/40"
-			hx-get={ fmt.Sprintf("/app/notes/album?albumId=%s", album.ID) }
+			hx-get={ fmt.Sprintf("/app/library/albums/%s/sleeve-notes/editor", album.ID) }
 			hx-trigger="click"
 			hx-target={ "#" + GetSleeveNotesSectionID(album.ID) }
 			hx-swap="innerHTML"
@@ -51,7 +51,7 @@ templ sleeveNotesEmpty(album library.AlbumDTO) {
 		<button
 			data-testid="sleeve-notes-edit"
 			class="btn btn-ghost btn-xs text-base-content/40"
-			hx-get={ fmt.Sprintf("/app/notes/album?albumId=%s", album.ID) }
+			hx-get={ fmt.Sprintf("/app/library/albums/%s/sleeve-notes/editor", album.ID) }
 			hx-trigger="click"
 			hx-target={ "#" + GetSleeveNotesSectionID(album.ID) }
 			hx-swap="innerHTML"
@@ -60,4 +60,40 @@ templ sleeveNotesEmpty(album library.AlbumDTO) {
 		</button>
 	</div>
 	<span class="text-xs text-base-content/30">No notes yet</span>
+}
+
+templ SleeveNotesEditor(album library.AlbumDTO, errMsg string) {
+	<div class="flex items-center justify-start gap-2">
+		<span class="text-xs font-semibold uppercase tracking-wider text-base-content/40">Sleeve Notes</span>
+	</div>
+	if errMsg != "" {
+		<p class="text-xs text-error" data-testid="sleeve-notes-error">{ errMsg }</p>
+	}
+	<form
+		hx-put={ fmt.Sprintf("/app/library/albums/%s/sleeve-notes", album.ID) }
+		hx-target={ "#" + GetSleeveNotesSectionID(album.ID) }
+		hx-swap="outerHTML"
+	>
+		<textarea
+			name="content"
+			class="textarea textarea-bordered w-full text-sm font-mono"
+			rows="10"
+			placeholder="Write your sleeve notes in Markdown..."
+			data-testid="sleeve-notes-textarea"
+		>
+			if album.SleeveNote != nil {
+				{ album.SleeveNote.Content }
+			}
+		</textarea>
+		<div class="flex gap-2 mt-2">
+			<button type="submit" class="btn btn-sm btn-primary" data-testid="sleeve-notes-save">Save</button>
+			<button
+				type="button"
+				class="btn btn-sm btn-ghost"
+				hx-get={ fmt.Sprintf("/app/library/albums/%s/sleeve-notes/view", album.ID) }
+				hx-target={ "#" + GetSleeveNotesSectionID(album.ID) }
+				hx-swap="outerHTML"
+			>Cancel</button>
+		</div>
+	</form>
 }

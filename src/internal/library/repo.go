@@ -258,59 +258,6 @@ func (r *Repo) GetAlbumFormats(ctx context.Context, userID, albumID string) ([]A
 	return buildAlbumFormats(allReleases, userReleases), nil
 }
 
-// --- Rating lookups (TODO: should be replaced with reviewService calls) ---
-
-// GetLatestUserAlbumRating returns the latest rating for one user/album, or
-// the underlying error (including sql.ErrNoRows) if no rating exists.
-//
-// TODO: should be replaced with reviewService.GetLatestRating call.
-func (r *Repo) GetLatestUserAlbumRating(ctx context.Context, userID, albumID string) (*review.AlbumRatingDTO, error) {
-	row, err := r.q.GetLatestUserAlbumRating(ctx, sqlc.GetLatestUserAlbumRatingParams{
-		UserID:  userID,
-		AlbumID: albumID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return review.NewAlbumRatingDTOFromModel(row), nil
-}
-
-// GetLatestUserAlbumRatings returns latest ratings keyed by album ID.
-//
-// TODO: should be replaced with reviewService.GetLatestRatings call.
-func (r *Repo) GetLatestUserAlbumRatings(ctx context.Context, userID string) (map[string]review.AlbumRatingDTO, error) {
-	rows, err := r.q.GetLatestUserAlbumRatings(ctx, sqlc.GetLatestUserAlbumRatingsParams{
-		UserID:   userID,
-		UserID_2: userID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	out := make(map[string]review.AlbumRatingDTO, len(rows))
-	for _, row := range rows {
-		out[row.AlbumID] = *review.NewAlbumRatingDTOFromModel(row)
-	}
-	return out, nil
-}
-
-// GetUserAlbumRatingLog returns the historical rating log for one user/album.
-//
-// TODO: should be replaced with reviewService.GetRatingLog call.
-func (r *Repo) GetUserAlbumRatingLog(ctx context.Context, userID, albumID string) ([]*review.AlbumRatingDTO, error) {
-	rows, err := r.q.GetUserAlbumRatingLog(ctx, sqlc.GetUserAlbumRatingLogParams{
-		UserID:  userID,
-		AlbumID: albumID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	out := make([]*review.AlbumRatingDTO, len(rows))
-	for i, row := range rows {
-		out[i] = review.NewAlbumRatingDTOFromModel(row)
-	}
-	return out, nil
-}
-
 // --- Summary / queue queries ---
 
 // GetRecentlyPlayedAlbums returns the recently-played album summaries.

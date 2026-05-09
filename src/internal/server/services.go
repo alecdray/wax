@@ -1,0 +1,105 @@
+package server
+
+import (
+	"fmt"
+	"log/slog"
+	"os"
+
+	"github.com/alecdray/wax/src/internal/auth"
+	"github.com/alecdray/wax/src/internal/core/app"
+	"github.com/alecdray/wax/src/internal/core/db"
+	"github.com/alecdray/wax/src/internal/core/task"
+	"github.com/alecdray/wax/src/internal/discogs"
+	"github.com/alecdray/wax/src/internal/feed"
+	"github.com/alecdray/wax/src/internal/genres"
+	"github.com/alecdray/wax/src/internal/library"
+	"github.com/alecdray/wax/src/internal/listeninghistory"
+	"github.com/alecdray/wax/src/internal/musicbrainz"
+	"github.com/alecdray/wax/src/internal/notes"
+	"github.com/alecdray/wax/src/internal/review"
+	"github.com/alecdray/wax/src/internal/spotify"
+	"github.com/alecdray/wax/src/internal/tags"
+	"github.com/alecdray/wax/src/internal/user"
+
+	spotifyauth "github.com/zmb3/spotify/v2/auth"
+)
+
+type services struct {
+	taskManager      *task.TaskManager
+	user             *user.Service
+	musicbrainz      *musicbrainz.Service
+	discogs          *discogs.Service
+	spotifyAuth      *spotify.AuthService
+	spotify          *spotify.Service
+	library          *library.Service
+	feed             *feed.Service
+	review           *review.Service
+	listeningHistory *listeninghistory.Service
+	tags             *tags.Service
+	notes            *notes.Service
+	auth             *auth.Service
+}
+
+func NewServices(app app.App, db *db.DB) *services {
+	s := &services{}
+
+	s.taskManager = task.NewTaskManager(db, slog.Default())
+
+	mbClient, err := musicbrainz.NewClient(
+		app.Config().AppName,
+		app.Config().AppVersion,
+		musicbrainz.WithContactEmail(app.Config().ContactEmail),
+	)
+	if err != nil {
+		slog.Error("Failed to create MusicBrainz client", "error", err)
+		os.Exit(1)
+	}
+
+	s.user = user.NewService(db)
+
+	s.musicbrainz = musicbrainz.NewService(mbClient)
+
+	discogsClient, err := discogs.NewClient(app.Config().DiscogsKey, app.Config().DiscogsSecret, app.Config().AppName)
+	if err != nil {
+		slog.Error("Failed to create Discogs client", "error", err)
+		os.Exit(1)
+	}
+	genreDAG, err := genres.Load()
+	if err != nil {
+		slog.Warn("Failed to load genre DAG; tag suggestions will be unavailable", "error", err)
+	}
+	s.discogs = discogs.NewService(discogsClient, genreDAG)
+
+	s.spotifyAuth = spotify.NewAuthService(
+		app.Config().SpotifyClientId,
+		app.Config().SpotifyClientSecret,
+		fmt.Sprintf("%s/spotify/callback", app.Config().Host),
+		spotifyauth.ScopeUserLibraryRead,
+		spotifyauth.ScopeUserLibraryModify,
+		spotifyauth.ScopeUserReadRecentlyPlayed,
+	)
+
+	s.spotify = spotify.NewService(s.user, s.spotifyAuth)
+
+	s.listeningHistory = listeninghistory.NewService(db, s.spotify)
+	s.taskManager.RegisterCronTask(
+		listeninghistory.NewSyncListeningHistoryTask(s.listeningHistory),
+	)
+
+	s.tags = tags.NewService(db)
+
+	s.notes = notes.NewService(db)
+
+	s.review = review.NewService(db)
+
+	s.library = library.NewService(db, s.spotify, s.listeningHistory, s.tags, s.notes, s.review)
+
+	s.feed = feed.NewService(db, s.spotify, s.library)
+	s.taskManager.RegisterCronTask(
+		feed.NewSyncStaleSpotifyFeedsTask(s.feed),
+	)
+
+	s.auth = auth.NewService(s.spotifyAuth, s.user, s.feed)
+
+	return s
+}

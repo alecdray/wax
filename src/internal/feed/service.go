@@ -9,134 +9,42 @@ import (
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/db"
 	"github.com/alecdray/wax/src/internal/core/db/models"
-	"github.com/alecdray/wax/src/internal/core/db/sqlc"
-	"github.com/alecdray/wax/src/internal/core/sqlx"
-	"github.com/alecdray/wax/src/internal/core/utils"
 	"github.com/alecdray/wax/src/internal/library"
 	"github.com/alecdray/wax/src/internal/spotify"
 
 	"github.com/google/uuid"
 )
 
-const (
-	MinStaleDuration = 1 * time.Hour
-)
-
-type FeedDTO struct {
-	ID                  string
-	UserID              string
-	Kind                models.FeedKind
-	LastSyncStatus      models.FeedSyncStatus
-	LastSyncCompletedAt *time.Time
-	LastSyncStartedAt   *time.Time
-}
-
-func NewFeedDTOFromModel(model sqlc.Feed) *FeedDTO {
-	dto := &FeedDTO{
-		ID:             model.ID,
-		UserID:         model.UserID,
-		Kind:           model.Kind,
-		LastSyncStatus: model.LastSyncStatus,
-	}
-
-	if model.LastSyncStartedAt.Valid {
-		dto.LastSyncStartedAt = &model.LastSyncStartedAt.Time
-	}
-
-	if model.LastSyncCompletedAt.Valid {
-		dto.LastSyncCompletedAt = &model.LastSyncCompletedAt.Time
-	}
-
-	return dto
-}
-
-func (f FeedDTO) IsSyncStale() bool {
-	if f.LastSyncStatus.IsUnsyned() {
-		return false
-	}
-	if f.LastSyncCompletedAt == nil {
-		return true
-	}
-	minStaleTime := time.Now().Add(-MinStaleDuration)
-	return f.LastSyncCompletedAt.Before(minStaleTime)
-}
-
-func (f *FeedDTO) SetSyncFailed() {
-	f.LastSyncStatus = models.FeedSyncStatusFailure
-}
-
-func (f *FeedDTO) SetSyncSuccess() {
-	f.LastSyncStatus = models.FeedSyncStatusSuccess
-	f.LastSyncCompletedAt = utils.NewPointer(time.Now())
-}
-
-func (f *FeedDTO) SetSyncing() {
-	f.LastSyncStatus = models.FeedSyncStatusPending
-	f.LastSyncStartedAt = utils.NewPointer(time.Now())
-}
-
 type Service struct {
 	db             *db.DB
+	repo           *Repo
 	spotifyService *spotify.Service
 	libraryService *library.Service
 }
 
-func NewService(db *db.DB, spotifyService *spotify.Service, libraryService *library.Service) *Service {
+func NewService(d *db.DB, spotifyService *spotify.Service, libraryService *library.Service) *Service {
 	return &Service{
-		db:             db,
+		db:             d,
+		repo:           NewRepo(d.Queries()),
 		spotifyService: spotifyService,
 		libraryService: libraryService,
 	}
 }
 
 func (s *Service) UpsertFeed(ctx context.Context, userID string, kind models.FeedKind) (*FeedDTO, error) {
-	feed, err := s.db.Queries().UpsertFeed(ctx, sqlc.UpsertFeedParams{
-		ID:     uuid.New().String(),
-		UserID: userID,
-		Kind:   kind,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return NewFeedDTOFromModel(feed), nil
+	return s.repo.UpsertFeed(ctx, userID, kind)
 }
 
 func (s *Service) GetFeedByID(ctx context.Context, feedID, userID string) (*FeedDTO, error) {
-	feed, err := s.db.Queries().GetFeedByID(ctx, sqlc.GetFeedByIDParams{
-		ID:     feedID,
-		UserID: userID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return NewFeedDTOFromModel(feed), nil
+	return s.repo.GetFeedByID(ctx, feedID, userID)
 }
 
 func (s *Service) GetUsersFeeds(ctx context.Context, userID string) ([]FeedDTO, error) {
-	feeds, err := s.db.Queries().GetFeedsByUserId(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	var feedDTOs []FeedDTO
-	for _, feed := range feeds {
-		feedDTOs = append(feedDTOs, *NewFeedDTOFromModel(feed))
-	}
-
-	return feedDTOs, nil
+	return s.repo.GetFeedsByUserID(ctx, userID)
 }
 
 func (s *Service) UpdateFeed(ctx context.Context, feed FeedDTO) (*FeedDTO, error) {
-	feedModel, err := s.db.Queries().UpdateFeed(ctx, sqlc.UpdateFeedParams{
-		ID:                  feed.ID,
-		LastSyncStatus:      feed.LastSyncStatus,
-		LastSyncStartedAt:   sqlx.NewNullTime(feed.LastSyncStartedAt),
-		LastSyncCompletedAt: sqlx.NewNullTime(feed.LastSyncCompletedAt),
-	})
-	if err != nil {
-		return nil, err
-	}
-	return NewFeedDTOFromModel(feedModel), nil
+	return s.repo.UpdateFeed(ctx, feed)
 }
 
 func (s *Service) syncAlbumsToLibrary(ctx contextx.ContextX, feed FeedDTO, syncWindow *time.Duration) error {
@@ -260,19 +168,15 @@ func (s *Service) SyncSpotifyFeed(ctx contextx.ContextX, feed FeedDTO) (*FeedDTO
 }
 
 func (s *Service) GetStaleSpotifyFeeds(ctx context.Context) ([]FeedDTO, error) {
-	feeds, err := s.db.Queries().GetStaleFeedsBatch(ctx, sqlc.GetStaleFeedsBatchParams{
-		Datetime: sqlx.DurationToSQLiteDatetime(MinStaleDuration),
-		Kind:     models.FeedKindSpotify,
-	})
+	feeds, err := s.repo.GetStaleFeedsBatch(ctx, models.FeedKindSpotify, MinStaleDuration)
 	if err != nil {
 		return nil, err
 	}
 
 	staleFeeds := make([]FeedDTO, 0, len(feeds))
 	for _, f := range feeds {
-		feed := NewFeedDTOFromModel(f)
-		if feed.Kind == models.FeedKindSpotify && feed.IsSyncStale() {
-			staleFeeds = append(staleFeeds, *feed)
+		if f.Kind == models.FeedKindSpotify && f.IsSyncStale() {
+			staleFeeds = append(staleFeeds, f)
 		}
 	}
 
