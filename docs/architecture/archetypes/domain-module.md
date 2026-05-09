@@ -4,6 +4,8 @@
 
 A domain module owns a slice of the application's domain end-to-end: business logic, persistence, and (optionally) HTTP entrypoints. Most modules under `src/internal/` are domain modules. Each one is the single home for the rules and data that belong to its slice — peer modules consume it only through its exported `Service` and DTO types.
 
+*This is the target archetype. Existing modules are being migrated and may not yet conform — see `docs/architecture/refactor-backlog.md` for current gaps.*
+
 ## File layout
 
 ```
@@ -52,7 +54,7 @@ Required: `service.go`, `repo.go`, `README.md`, `CLAUDE.md`. Everything else is 
 ## Domain types
 
 - DTOs and value objects live in module-root files named by topic (e.g. `review/rating.go`, `review/state.go`).
-- Avoid a catch-all `models.go`. Topic files keep related constants, types, and pure functions together.
+- Do not create a `models.go` file. Split domain types by topic — topic files keep related constants, types, and pure functions together.
 - Types that cross module boundaries (e.g. consumed by another module's `Service`) must be exported.
 
 ## Allowed imports
@@ -87,7 +89,11 @@ Required: `service.go`, `repo.go`, `README.md`, `CLAUDE.md`. Everything else is 
 
 ## Background tasks
 
-- Background tasks live in `task.go` at the module root and implement the `core/task.Task` interface (`Run`, `Schedule`, `Name`). Constructors named `NewXxxTask(service *Service, ...) task.Task`. Tasks call into the module's own `*Service`, never directly into the repo. Canonical examples: `feed/task.go`, `listeninghistory/task.go`.
+- Background tasks live in `task.go` at the module root.
+- They implement the `core/task.Task` interface (`Run`, `Schedule`, `Name`).
+- Constructors are named `NewXxxTask(service *Service, ...) task.Task`.
+- Tasks call into the module's own `*Service`, never directly into the repo.
+- Canonical examples: `feed/task.go`, `listeninghistory/task.go`.
 
 ## Where new code goes
 
