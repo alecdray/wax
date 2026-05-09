@@ -38,7 +38,3 @@ grep -h "^# " src/internal/*/CLAUDE.md
 ```
 
 (There is no separate module registry — that would duplicate what each `CLAUDE.md` already declares and would drift the same way the wiki did.)
-
-## Refactor backlog
-
-[`refactor-backlog.md`](refactor-backlog.md) lists, per directory, the compliance gaps and structural notes needed to bring the code into line with these rules. The refactor itself is downstream work, not part of this documentation effort.

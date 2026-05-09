@@ -4,8 +4,6 @@
 
 An external client module wraps a third-party API. It has no own domain concepts, no persistence, and no HTTP entrypoints. It exists only to expose a clean, internal-facing interface over a remote service. Consumer domain modules depend on client modules — never the reverse.
 
-*This is the target archetype. Existing modules may not yet conform — see `docs/architecture/refactor-backlog.md` for current gaps.*
-
 ## File layout
 
 ```

@@ -4,8 +4,6 @@
 
 A utility module provides stateless, domain-shaped helpers: pure functions and/or embedded data. It has no `Service` struct, no database access, and no mutable state.
 
-*This is the target archetype. Existing modules may not yet conform — see `docs/architecture/refactor-backlog.md` for current gaps.*
-
 ## File layout
 
 ```

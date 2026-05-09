@@ -31,6 +31,6 @@ Architecture docs describe the **why** and the **what**: what an archetype is, w
 
 That said, a small amount of concrete grounding (single example file names, sample function signatures) is fine where it makes a rule unambiguous. The line is: don't make agents reach for these docs to look up *names*, make them reach to understand *intent*.
 
-## Rule: framing notes that name current state will rot
+## Rule: archetype docs stay neutral about current divergence
 
-The italicized framing line at the top of each archetype doc says *"existing modules may not yet conform — see `docs/architecture/refactor-backlog.md`"*. Do not replace that with anything specific to current divergent modules (e.g. *"`spotify` diverges because of X"*) — that becomes false the moment that module is fixed. The backlog is the right place for current-state details; the archetype doc stays neutral.
+If a module is currently out of compliance (a transitional gap), don't name it in the archetype doc (e.g. *"`spotify` diverges because of X"*). That becomes false the moment that module is fixed. Module-specific compliance gaps belong either in the module's own `CLAUDE.md` (briefly, while transitional) or in commit history — the archetype doc describes the target, not the current population.
