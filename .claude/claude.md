@@ -51,7 +51,8 @@ For agents adding new code:
 
 - After editing or adding significant logic to a module, review and update the module's README if needed
 - Keep README focused on high-level concepts, architecture, and workflows
-- After editing a module, review its `CLAUDE.md` and update the module-specific notes if anything changed (compliance status, key dependencies, idiosyncrasies an agent would otherwise miss). Don't add new files there casually — it's auto-loaded into context, so keep it tight.
+- After editing a module, review its `CLAUDE.md` and update the module-specific notes if anything changed. Keep it tight — it's auto-loaded into context.
+- A module's `CLAUDE.md` describes **current state only**. No historical context, no transitional "not yet compliant" notes, no forward-looking "should eventually" plans, no comparative claims about other modules. Compliance gaps and future work live in `docs/architecture/refactor-backlog.md`; history lives in commit messages.
 - Avoid exhaustive lists or overly specific descriptions of package contents that will become outdated as code evolves
 - Only add inline code comments when they provide context not evident from the code itself
 - Avoid comments that simply restate what the code does
