@@ -37,7 +37,7 @@ Required: `service.go`, `repo.go`, `README.md`, `CLAUDE.md`. Everything else is 
 
 ## Repository layer
 
-- `repo.go` is the **only** file in the module allowed to import `github.com/alecdray/wax/src/internal/core/db/sqlc`.
+- `repo.go` is the **only** file in the module allowed to import `core/db/sqlc`.
 - Methods are named for domain operations (e.g. `GetUserAlbumRatings`, `InsertReview`) and return DTOs / domain types — never `sqlc.*` types. SQLC types do not appear in any signature outside `repo.go`.
 - `Repo` is a concrete struct. Its constructor takes a `*sqlc.Queries` so it can be bound either to the global handle or to a transaction (see *Transactions* below).
 
@@ -83,10 +83,10 @@ Canonical example of a *wrong* split: separating `library` into `album.go` + `re
 
 ## Forbidden imports
 
-- `github.com/alecdray/wax/src/internal/core/db/sqlc` from any file other than `repo.go`.
+- `core/db/sqlc` from any file other than `repo.go`.
 - Other domain modules' `adapters/` packages (e.g. `library/adapters` may not be imported by `review`).
 - Other domain modules' unexported types or non-`Service` internal helpers.
-- External-client modules (`spotify`, `musicbrainz`, `discogs`) imported anywhere outside the modules that explicitly own those integrations — and even then, only via constructor injection of the client's `*Service`.
+- External-client modules from anywhere — and even where allowed (in domain modules that explicitly own those integrations), only via constructor injection of the client's `*Service`.
 
 ## Adapters
 
@@ -111,7 +111,7 @@ Canonical example of a *wrong* split: separating `library` into `album.go` + `re
 - They implement the `core/task.Task` interface (`Run`, `Schedule`, `Name`).
 - Constructors are named `NewXxxTask(service *Service, ...) task.Task`.
 - Tasks call into the module's own `*Service`, never directly into the repo.
-- Canonical examples: `feed/task.go`, `listeninghistory/task.go`.
+- For working examples, look at existing `task.go` files in `src/internal/`.
 
 ## Where new code goes
 
