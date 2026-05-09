@@ -59,7 +59,13 @@ No archetype gaps. Already in shape per `src/internal/core/CLAUDE.md`. Structura
 
 **Compliance:** Extract `repo.go` so the `sqlc` import disappears from `service.go`; `adapters/formats.go` also imports `sqlc` indirectly via `db/models` and contains business logic that should live in the service, not an adapter. Move route registration (the dozen `/app/library/...` routes) from `server/server.go` into `library/adapters/routes.go`. Missing `README.md`.
 
-**Structural:** `service.go` is 1009 lines and currently owns albums, artists, tracks, releases, formats, and user-collection state. Artists and tracks are independently meaningful concepts that other modules could plausibly reference directly. Propose extracting `artists` and `tracks` as separate domain modules; `library` keeps the user-collection aggregate (the user's relationship to albums, releases, formats). Note that `library/adapters/sleeve_notes.templ` exists alongside the `notes` module's own templates — clarify the boundary.
+**Structural:** `service.go` is 1009 lines but the right fix is **topic files within the module**, not a split into multiple modules. Artists, tracks, and releases are aggregate data owned by the album — no external module consumes them independently of an `AlbumDTO`, so the spec's split rule ("reusable from a module that doesn't currently use this one") doesn't hold. Three concerns are tangled in `service.go` and should split by topic:
+
+- `library.go` — the user-collection aggregate (`GetLibrary`, `AddAlbumsToLibrary`, `RemoveAlbumFromLibrary`, `GetAlbumInLibrary`, `GetAlbumsInLibrary`, `GetReleasesInLibrary`, `GetRecentlyPlayedAlbums`, `GetUnratedAlbums`, `GetRerateQueue`)
+- `formats.go` — release/format management (`GetAlbumFormats`, `SaveAlbumFormats`, `ReleaseDTO`, `AlbumFormatDTO`, `SaveFormatInput`); also the destination for the business logic currently in `adapters/formats.go`
+- `view.go` — `AlbumDTOs` sorting/filtering/pagination (`SortByX`, `Filter`, `Page`, `FilterParams`) — pure presentation logic on a slice
+
+Open boundary question: `library/adapters/sleeve_notes.templ` overlaps with the `notes` module's templates. Decide during refactor whether sleeve notes are part of the album view (template stays in library) or a notes concern (template moves to `notes/adapters/`).
 
 ---
 
