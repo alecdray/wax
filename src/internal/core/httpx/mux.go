@@ -24,21 +24,21 @@ func WrapHandler(handler http.Handler, middlewares ...Middleware) HandlerFunc {
 	}, middlewares...)
 }
 
-type mux struct {
+type Mux struct {
 	mux        *http.ServeMux
 	app        app.App
 	middleware []Middleware
 }
 
-func NewMux(app app.App, middlewares ...Middleware) *mux {
-	return &mux{
+func NewMux(app app.App, middlewares ...Middleware) *Mux {
+	return &Mux{
 		mux:        http.NewServeMux(),
 		app:        app,
 		middleware: middlewares,
 	}
 }
 
-func (wm *mux) wrapHandler(handler Handler) http.HandlerFunc {
+func (wm *Mux) wrapHandler(handler Handler) http.HandlerFunc {
 	handlerFunc := ApplyMiddleware(handler.ServeHTTP, wm.middleware...)
 	return func(w http.ResponseWriter, r *http.Request) {
 		requestId := uuid.New().String()
@@ -51,20 +51,20 @@ func (wm *mux) wrapHandler(handler Handler) http.HandlerFunc {
 	}
 }
 
-func (wm *mux) HandleFunc(pattern string, handler Handler, middlewares ...Middleware) {
+func (wm *Mux) HandleFunc(pattern string, handler Handler, middlewares ...Middleware) {
 	handler = ApplyMiddleware(handler.ServeHTTP, middlewares...)
 	wm.mux.HandleFunc(pattern, wm.wrapHandler(handler))
 }
 
-func (wm *mux) Handle(pattern string, handler Handler, middlewares ...Middleware) {
+func (wm *Mux) Handle(pattern string, handler Handler, middlewares ...Middleware) {
 	handler = ApplyMiddleware(handler.ServeHTTP, middlewares...)
 	wm.mux.Handle(pattern, wm.wrapHandler(handler))
 }
 
-func (wm *mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (wm *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	wm.mux.ServeHTTP(w, r)
 }
 
-func (wm *mux) Use(pattern string, mux *mux) {
+func (wm *Mux) Use(pattern string, mux *Mux) {
 	wm.Handle(pattern, mux)
 }

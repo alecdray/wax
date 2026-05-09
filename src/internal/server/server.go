@@ -144,19 +144,7 @@ func Start(ctx context.Context, app app.App) {
 		services.taskManager,
 		services.discogs,
 	)
-	appMux.Handle("/app/library/dashboard", httpx.HandlerFunc(libraryHandler.GetDashboardPage))
-	appMux.Handle("/app/library/dashboard/feeds-dropdown-content", httpx.HandlerFunc(libraryHandler.GetFeedsDropdown))
-	appMux.Handle("GET /app/library/dashboard/stats", httpx.HandlerFunc(libraryHandler.GetLibraryStats))
-	appMux.Handle("POST /app/library/dashboard/feeds/sync", httpx.HandlerFunc(libraryHandler.TriggerFeedSync))
-	appMux.Handle("/app/library/dashboard/albums-table", httpx.HandlerFunc(libraryHandler.GetAlbumsTable))
-	appMux.Handle("GET /app/library/dashboard/albums-page", httpx.HandlerFunc(libraryHandler.GetAlbumsPage))
-	appMux.Handle("GET /app/library/dashboard/carousel", httpx.HandlerFunc(libraryHandler.GetCarousel))
-	appMux.Handle("GET /app/library/albums/{albumId}", httpx.HandlerFunc(libraryHandler.GetAlbumDetailPage))
-	appMux.Handle("DELETE /app/library/albums/{albumId}", httpx.HandlerFunc(libraryHandler.DeleteAlbum))
-	appMux.Handle("GET /app/library/albums/{albumId}/formats", httpx.HandlerFunc(libraryHandler.GetFormatsModal))
-	appMux.Handle("PUT /app/library/albums/{albumId}/formats", httpx.HandlerFunc(libraryHandler.PutFormats))
-	appMux.Handle("GET /app/library/albums/{albumId}/formats/{format}/discogs/search", httpx.HandlerFunc(libraryHandler.GetDiscogsSearch))
-	appMux.Handle("GET /app/library/albums/{albumId}/formats/{format}/discogs/releases/{discogsId}", httpx.HandlerFunc(libraryHandler.GetDiscogsRelease))
+	libraryAdapters.RegisterRoutes(appMux, libraryHandler)
 
 	tagsHandler := tagsAdapters.NewHttpHandler(services.library, services.tags, services.discogs)
 	appMux.Handle("GET /app/tags/album", httpx.HandlerFunc(tagsHandler.GetTagsModal))
