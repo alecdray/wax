@@ -976,41 +976,40 @@ templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 		<div class="carousel carousel-end gap-3 px-4 py-2 w-full overscroll-x-none">
 			for _, album := range albums {
 				<div class="carousel-item">
-					<a
-						if album.InLibrary {
+					if album.InLibrary {
+						<a
 							href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) }
-						} else {
-							href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", album.SpotifyID)) }
-							target="_blank"
-							rel="noopener noreferrer"
-						}
-						class="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity w-26"
-					>
-						if album.ImageURL != "" {
-							<div class="relative">
-								<div class="avatar">
-									<div class="mask mask-squircle h-24 w-24 flex-shrink-0">
-										<img src={ album.ImageURL } alt={ album.Title }/>
-									</div>
-								</div>
-								if !album.InLibrary {
-									<div class="absolute -bottom-1 -right-1 tooltip tooltip-left" data-tip="Open in Spotify">
-										<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" class="text-base-content/50">
-											<path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5"></path>
-											<path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"></path>
-										</svg>
-									</div>
-								}
-							</div>
-						}
-						<span class="text-xs text-nowrap truncate w-full text-left">{ album.Title }</span>
-						if album.Artists != "" {
-							<span class="text-xs text-nowrap truncate w-full text-left text-base-content/40">{ album.Artists }</span>
-						}
-					</a>
+							class="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity w-26"
+						>
+							@carouselCardInner(album)
+						</a>
+					} else {
+						<button
+							type="button"
+							hx-get={ fmt.Sprintf("/app/library/discover/album-menu?spotifyId=%s", album.SpotifyID) }
+							hx-swap="none"
+							class="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity w-26 cursor-pointer"
+						>
+							@carouselCardInner(album)
+						</button>
+					}
 				</div>
 			}
 		</div>
+	}
+}
+
+templ carouselCardInner(album library.AlbumSummaryDTO) {
+	if album.ImageURL != "" {
+		<div class="avatar">
+			<div class="mask mask-squircle h-24 w-24 flex-shrink-0">
+				<img src={ album.ImageURL } alt={ album.Title }/>
+			</div>
+		</div>
+	}
+	<span class="text-xs text-nowrap truncate w-full text-left">{ album.Title }</span>
+	if album.Artists != "" {
+		<span class="text-xs text-nowrap truncate w-full text-left text-base-content/40">{ album.Artists }</span>
 	}
 }
 
