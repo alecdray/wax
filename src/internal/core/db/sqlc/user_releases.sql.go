@@ -188,6 +188,29 @@ func (q *Queries) GetWishlistReleases(ctx context.Context, userID string) ([]Get
 	return items, nil
 }
 
+const hasAnyUserReleaseForAlbum = `-- name: HasAnyUserReleaseForAlbum :one
+SELECT EXISTS (
+    SELECT 1 FROM user_releases ur
+    JOIN releases r ON r.id = ur.release_id
+    WHERE ur.user_id = ? AND r.album_id = ?
+) AS has_release
+`
+
+type HasAnyUserReleaseForAlbumParams struct {
+	UserID  string
+	AlbumID string
+}
+
+// Reports whether the user has any user_release row for the album, regardless
+// of status. Used to gate radar adds: radar is strictly pre-decision, so any
+// existing decision (owned, wishlist, removed) disqualifies the album.
+func (q *Queries) HasAnyUserReleaseForAlbum(ctx context.Context, arg HasAnyUserReleaseForAlbumParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, hasAnyUserReleaseForAlbum, arg.UserID, arg.AlbumID)
+	var has_release int64
+	err := row.Scan(&has_release)
+	return has_release, err
+}
+
 const markReleaseRemoved = `-- name: MarkReleaseRemoved :exec
 UPDATE user_releases
    SET status = 'removed', status_updated_at = current_timestamp

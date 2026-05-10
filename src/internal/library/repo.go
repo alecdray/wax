@@ -246,6 +246,19 @@ func (r *Repo) GetUserReleasesByAlbumID(ctx context.Context, userID, albumID str
 	return out, nil
 }
 
+// HasAnyUserReleaseForAlbum reports whether the user has any user_release row
+// for the album, regardless of status (owned, wishlist, removed).
+func (r *Repo) HasAnyUserReleaseForAlbum(ctx context.Context, userID, albumID string) (bool, error) {
+	hasRelease, err := r.q.HasAnyUserReleaseForAlbum(ctx, sqlc.HasAnyUserReleaseForAlbumParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	})
+	if err != nil {
+		return false, err
+	}
+	return hasRelease != 0, nil
+}
+
 // GetAlbumFormats returns the four-format AlbumFormatDTO list for an album,
 // merging all known releases with the user's ownership.
 func (r *Repo) GetAlbumFormats(ctx context.Context, userID, albumID string) ([]AlbumFormatDTO, error) {
@@ -350,9 +363,6 @@ func (r *Repo) GetRerateQueue(ctx context.Context, userID string) ([]RerateAlbum
 // tracks, album_tracks, artists, album_artists, releases, user_releases.
 // Returns the canonical AlbumDTO with sqlc-derived IDs and timestamps filled
 // in from the upsert results.
-//
-// Touches multiple tables; callers must invoke this inside a db.WithTx so the
-// release write and radar wipe land atomically.
 func (r *Repo) AddAlbumToCollection(ctx context.Context, userID string, album AlbumDTO) (AlbumDTO, error) {
 	albumModel, err := r.q.GetOrCreateAlbum(ctx, sqlc.GetOrCreateAlbumParams{
 		ID:        album.ID,
@@ -432,14 +442,6 @@ func (r *Repo) AddAlbumToCollection(ctx context.Context, userID string, album Al
 		album.Releases[i] = releaseDTOFromModel(releaseModel, &userRelease)
 	}
 
-	// Adding any release to the collection clears the album from the user's radar.
-	if err := r.q.RemoveAlbumFromRadar(ctx, sqlc.RemoveAlbumFromRadarParams{
-		UserID:  userID,
-		AlbumID: album.ID,
-	}); err != nil {
-		return album, fmt.Errorf("failed to clear radar: %w", err)
-	}
-
 	return album, nil
 }
 
@@ -466,12 +468,6 @@ func (r *Repo) AddOwnedRelease(ctx context.Context, userID, albumID string, form
 		StatusUpdatedAt: addedAt,
 	}); err != nil {
 		return "", err
-	}
-	if err := r.q.RemoveAlbumFromRadar(ctx, sqlc.RemoveAlbumFromRadarParams{
-		UserID:  userID,
-		AlbumID: albumID,
-	}); err != nil {
-		return "", fmt.Errorf("failed to clear radar: %w", err)
 	}
 	return releaseID, nil
 }
@@ -518,7 +514,6 @@ func (r *Repo) ClearReleaseDiscogsInfo(ctx context.Context, releaseID string) er
 // --- Radar (album-level "want to listen") ---
 
 // AddAlbumToRadar inserts a radar row, idempotent on (user_id, album_id).
-// Service-level rule: callers should refuse this if the album already has any user_releases row.
 func (r *Repo) AddAlbumToRadar(ctx context.Context, userID, albumID string) error {
 	_, err := r.q.AddAlbumToRadar(ctx, sqlc.AddAlbumToRadarParams{
 		ID:      uuid.New().String(),
@@ -571,7 +566,6 @@ func (r *Repo) IsAlbumOnRadar(ctx context.Context, userID, albumID string) (bool
 
 // AddReleaseToWishlist upserts a user_release in the 'wishlist' state.
 // If a release row doesn't yet exist for (album, format), one is created.
-// Always clears the album's radar entry inside the same transactional path the caller is on.
 func (r *Repo) AddReleaseToWishlist(ctx context.Context, userID, albumID string, format models.ReleaseFormat, releaseID string) (string, error) {
 	if releaseID == "" {
 		rel, err := r.q.GetOrCreateRelease(ctx, sqlc.GetOrCreateReleaseParams{
@@ -593,12 +587,6 @@ func (r *Repo) AddReleaseToWishlist(ctx context.Context, userID, albumID string,
 		StatusUpdatedAt: now,
 	}); err != nil {
 		return "", err
-	}
-	if err := r.q.RemoveAlbumFromRadar(ctx, sqlc.RemoveAlbumFromRadarParams{
-		UserID:  userID,
-		AlbumID: albumID,
-	}); err != nil {
-		return "", fmt.Errorf("failed to clear radar: %w", err)
 	}
 	return releaseID, nil
 }
@@ -625,13 +613,13 @@ func (r *Repo) GetWishlistReleases(ctx context.Context, userID string) ([]Releas
 	return out, nil
 }
 
-// MarkReleaseOwned transitions any user_release row (wishlist or removed) to 'owned'
-// and clears the album's radar entry. Used by the wishlist acquire flow and any
-// "re-acquire a removed release" path that doesn't need to create a new release row.
+// MarkReleaseOwned transitions any user_release row (wishlist or removed) to 'owned'.
+// Used by the wishlist acquire flow and any "re-acquire a removed release" path
+// that doesn't need to create a new release row.
 //
 // CreatedAt is only used when no row exists yet (fresh insert). On conflict, the
 // upsert preserves the existing row's created_at — passing time.Now() here is harmless.
-func (r *Repo) MarkReleaseOwned(ctx context.Context, userID, albumID, releaseID string) error {
+func (r *Repo) MarkReleaseOwned(ctx context.Context, userID, releaseID string) error {
 	now := time.Now()
 	if _, err := r.q.UpsertOwnedRelease(ctx, sqlc.UpsertOwnedReleaseParams{
 		ID:              uuid.New().String(),
@@ -641,12 +629,6 @@ func (r *Repo) MarkReleaseOwned(ctx context.Context, userID, albumID, releaseID 
 		StatusUpdatedAt: now,
 	}); err != nil {
 		return err
-	}
-	if err := r.q.RemoveAlbumFromRadar(ctx, sqlc.RemoveAlbumFromRadarParams{
-		UserID:  userID,
-		AlbumID: albumID,
-	}); err != nil {
-		return fmt.Errorf("failed to clear radar: %w", err)
 	}
 	return nil
 }

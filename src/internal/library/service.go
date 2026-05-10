@@ -137,6 +137,9 @@ func (s *Service) AddAlbumsToLibrary(ctx context.Context, userId string, albums 
 			if _, err := txRepo.AddAlbumToCollection(ctx, userId, album); err != nil {
 				return fmt.Errorf("failed to add album to collection: %w", err)
 			}
+			if err := txRepo.RemoveAlbumFromRadar(ctx, userId, album.ID); err != nil {
+				return fmt.Errorf("failed to clear radar: %w", err)
+			}
 		}
 		return nil
 	})
@@ -283,6 +286,9 @@ func (s *Service) SaveAlbumFormats(ctx context.Context, userID, albumID string, 
 						return fmt.Errorf("failed to add owned release: %w", err)
 					}
 					releaseID = newReleaseID
+					if err := txRepo.RemoveAlbumFromRadar(ctx, userID, albumID); err != nil {
+						return fmt.Errorf("failed to clear radar: %w", err)
+					}
 				}
 
 				if releaseID != "" && input.DiscogsID != "" {
@@ -312,12 +318,60 @@ func (s *Service) GetUnratedAlbums(ctx context.Context, userID string) ([]AlbumS
 	return dtos, nil
 }
 
-// AcquireFromWishlist transitions a user's wishlist release to 'owned' in a single tx.
+// AcquireFromWishlist transitions a user's wishlist release to 'owned' and clears
+// the album from the user's radar in a single tx.
 func (s *Service) AcquireFromWishlist(ctx context.Context, userID, albumID, releaseID string) error {
 	return s.db.WithTx(func(tx *db.DB) error {
 		txRepo := NewRepo(tx.Queries())
-		if err := txRepo.MarkReleaseOwned(ctx, userID, albumID, releaseID); err != nil {
+		if err := txRepo.MarkReleaseOwned(ctx, userID, releaseID); err != nil {
 			return fmt.Errorf("failed to acquire from wishlist: %w", err)
+		}
+		if err := txRepo.RemoveAlbumFromRadar(ctx, userID, albumID); err != nil {
+			return fmt.Errorf("failed to clear radar: %w", err)
+		}
+		return nil
+	})
+}
+
+// AddReleaseToWishlist upserts a wishlist release for the user and clears the
+// album from the user's radar in a single tx. If releaseID is empty, a new
+// release row is created for (album, format).
+func (s *Service) AddReleaseToWishlist(ctx context.Context, userID, albumID string, format models.ReleaseFormat, releaseID string) (string, error) {
+	var resultID string
+	err := s.db.WithTx(func(tx *db.DB) error {
+		txRepo := NewRepo(tx.Queries())
+		newID, err := txRepo.AddReleaseToWishlist(ctx, userID, albumID, format, releaseID)
+		if err != nil {
+			return fmt.Errorf("failed to add release to wishlist: %w", err)
+		}
+		if err := txRepo.RemoveAlbumFromRadar(ctx, userID, albumID); err != nil {
+			return fmt.Errorf("failed to clear radar: %w", err)
+		}
+		resultID = newID
+		return nil
+	})
+	return resultID, err
+}
+
+// ErrAlbumAlreadyDecided is returned by AddAlbumToRadar when the user has any
+// user_release row (owned, wishlist, or removed) for the album. Radar is
+// strictly pre-decision, so any existing decision disqualifies the album.
+var ErrAlbumAlreadyDecided = errors.New("album already has a user release; cannot add to radar")
+
+// AddAlbumToRadar adds an album to the user's radar (pre-decision queue).
+// Refuses if the album already has any user_release row.
+func (s *Service) AddAlbumToRadar(ctx context.Context, userID, albumID string) error {
+	return s.db.WithTx(func(tx *db.DB) error {
+		txRepo := NewRepo(tx.Queries())
+		hasRelease, err := txRepo.HasAnyUserReleaseForAlbum(ctx, userID, albumID)
+		if err != nil {
+			return fmt.Errorf("failed to check user releases: %w", err)
+		}
+		if hasRelease {
+			return ErrAlbumAlreadyDecided
+		}
+		if err := txRepo.AddAlbumToRadar(ctx, userID, albumID); err != nil {
+			return fmt.Errorf("failed to add album to radar: %w", err)
 		}
 		return nil
 	})

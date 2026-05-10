@@ -49,6 +49,10 @@ Required: `service.go`, `README.md`, `CLAUDE.md`. `repo.go` is required if the m
 
 - Repo constructors take `*sqlc.Queries` (not `*db.DB`) so the same repo type works against the global handle or a transaction.
 
+- A repo method does **one** persistence operation. If correctness depends on multiple writes landing atomically — including cross-domain side effects on other modules' tables — that orchestration belongs at the service layer, not bundled in a repo method. The service composes single-purpose repo calls inside `WithTx`; each repo method stays callable on its own.
+
+- **Exception:** if a repo method genuinely must run inside a transaction, encode that in its signature with a type that callers can only obtain from a tx context (e.g. a `*db.Tx` argument). Invariants on repo methods are enforced by the type system, not by comments telling callers what to do.
+
 ## Domain types
 
 - **Default: one topic file named after the package** (e.g. `library/library.go`, `tags/tags.go`). It holds all DTOs, value objects, view models, and pure helpers — methods on those types belong in the same file as the type.
