@@ -1,0 +1,224 @@
+package adapters
+
+import (
+    "fmt"
+    "github.com/alecdray/wax/src/internal/core/templates"
+    "github.com/alecdray/wax/src/internal/library"
+)
+
+type DiscoverPageProps struct {
+    RadarAlbums  []library.AlbumDTO
+    Query        string
+    SearchResults []library.DiscoverResultDTO
+}
+
+templ DiscoverPage(props DiscoverPageProps) {
+    @templates.RootComponent(templates.RootProps{
+        Title: templates.CreatePageTitle("Discover"),
+    }) {
+        <div class="w-full flex flex-col" hx-history="false">
+            @LibraryHeaderBar(HeaderBarProps{Active: "discover"})
+            <div class="flex flex-col py-4 gap-6 items-center max-w-3xl mx-auto w-full px-4">
+                <div class="w-full flex flex-col gap-1">
+                    <span class="text-xs font-semibold uppercase tracking-widest text-base-content/40 px-1">On Radar</span>
+                    @RadarCarousel(props.RadarAlbums, false)
+                </div>
+                <div class="w-full flex flex-col gap-3">
+                    <input
+                        id="discover-search-input"
+                        name="q"
+                        type="search"
+                        class="input input-bordered w-full"
+                        placeholder="Search Spotify for albums..."
+                        value={ props.Query }
+                        autocomplete="off"
+                        hx-get="/app/library/discover/search"
+                        hx-trigger="keyup changed delay:300ms, search"
+                        hx-target="#discover-results"
+                        hx-swap="innerHTML"
+                        data-testid="discover-search-input"
+                    />
+                    <div id="discover-results" data-testid="discover-results">
+                        @DiscoverSearchResults(props.SearchResults, props.Query)
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+templ RadarCarousel(albums []library.AlbumDTO, isOobSwap bool) {
+    <div
+        id="radar-carousel"
+        class="w-full flex-shrink-0"
+        hx-get="/app/library/discover/radar"
+        hx-trigger="radarUpdated from:body"
+        hx-swap="outerHTML"
+        if isOobSwap {
+            hx-swap-oob="true"
+        }
+        data-testid="radar-carousel"
+    >
+        if len(albums) == 0 {
+            <div class="px-4 py-4 text-xs text-base-content/40" data-testid="radar-empty">
+                No albums on your radar yet — search below to find some.
+            </div>
+        } else {
+            <div class="carousel carousel-end gap-3 py-2 w-full overscroll-x-none">
+                for _, album := range albums {
+                    <div class="carousel-item" data-testid="radar-carousel-item" data-album-id={ album.ID }>
+                        @radarCarouselCard(album)
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+templ radarCarouselCard(album library.AlbumDTO) {
+    <div class="flex flex-col items-center gap-1 w-26 relative">
+        <a
+            href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", album.SpotifyID)) }
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hover:opacity-80 transition-opacity"
+            data-testid="radar-card-cover"
+        >
+            if album.ImageURL != "" {
+                <div class="avatar">
+                    <div class="mask mask-squircle h-24 w-24 flex-shrink-0">
+                        <img src={ album.ImageURL } alt={ album.Title }/>
+                    </div>
+                </div>
+            } else {
+                <div class="avatar avatar-placeholder">
+                    <div class="mask mask-squircle h-24 w-24 flex-shrink-0 bg-base-300"></div>
+                </div>
+            }
+        </a>
+        <span class="text-xs text-nowrap truncate w-full text-left">{ album.Title }</span>
+        if len(album.Artists) > 0 {
+            <span class="text-xs text-nowrap truncate w-full text-left text-base-content/40">
+                for i, artist := range album.Artists {
+                    if i > 0 {
+                        { ", " }
+                    }
+                    { artist.Name }
+                }
+            </span>
+        }
+        <div class="dropdown dropdown-end absolute top-1 right-1">
+            <div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle bg-base-100/80" data-testid="radar-card-menu">
+                @templates.EllipsisVerticalIcon(templates.IconProps{})
+            </div>
+            <ul tabindex="0" class="dropdown-content z-[1] menu menu-compact bg-base-100 rounded-box w-44 shadow-xl border border-base-300 mt-1">
+                <li>
+                    <button
+                        class="text-xs"
+                        hx-post={ fmt.Sprintf("/app/library/albums/%s/library", album.ID) }
+                        hx-swap="none"
+                        data-testid="radar-card-add-to-library"
+                    >Add to library</button>
+                </li>
+                <li>
+                    <button
+                        class="text-xs text-error"
+                        hx-delete={ fmt.Sprintf("/app/library/albums/%s/radar", album.ID) }
+                        hx-swap="none"
+                        data-testid="radar-card-remove"
+                    >Remove from radar</button>
+                </li>
+            </ul>
+        </div>
+    </div>
+}
+
+templ DiscoverSearchResults(results []library.DiscoverResultDTO, query string) {
+    if query == "" {
+        <div class="text-sm text-base-content/40 px-1 py-2" data-testid="discover-results-empty">
+            Start typing to search Spotify.
+        </div>
+    } else if len(results) == 0 {
+        <div class="text-sm text-base-content/40 px-1 py-2" data-testid="discover-results-no-hits">
+            No results.
+        </div>
+    } else {
+        <ul class="list flex flex-col gap-1">
+            for _, result := range results {
+                @discoverSearchResultRow(result)
+            }
+        </ul>
+    }
+}
+
+templ discoverSearchResultRow(result library.DiscoverResultDTO) {
+    <li
+        class="list-row items-center gap-3 px-2 py-2 rounded"
+        data-result
+        data-spotify-id={ result.SpotifyID }
+        data-testid="discover-result-row"
+    >
+        if result.ImageURL != "" {
+            <div class="avatar flex-shrink-0">
+                <div class="mask mask-squircle h-12 w-12">
+                    <img src={ result.ImageURL } alt={ result.Title }/>
+                </div>
+            </div>
+        } else {
+            <div class="avatar avatar-placeholder flex-shrink-0">
+                <div class="mask mask-squircle h-12 w-12 bg-base-300"></div>
+            </div>
+        }
+        <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium truncate" data-testid="discover-result-title">{ result.Title }</div>
+            if len(result.Artists) > 0 {
+                <div class="text-xs text-base-content/60 truncate">
+                    for i, a := range result.Artists {
+                        if i > 0 {
+                            { ", " }
+                        }
+                        { a.Name }
+                    }
+                </div>
+            }
+        </div>
+        <div class="flex-shrink-0">
+            @discoverResultAffordance(result)
+        </div>
+    </li>
+}
+
+templ discoverResultAffordance(result library.DiscoverResultDTO) {
+    switch result.State {
+        case library.DiscoverAlbumStateInLibrary:
+            <a
+                href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", result.AlbumID)) }
+                class="badge badge-soft badge-primary"
+                data-testid="discover-result-in-library"
+            >In library</a>
+        case library.DiscoverAlbumStateOnRadar:
+            <button
+                class="btn btn-xs btn-ghost text-error"
+                hx-delete={ fmt.Sprintf("/app/library/albums/%s/radar", result.AlbumID) }
+                hx-target="closest [data-result]"
+                hx-swap="outerHTML"
+                data-testid="discover-result-remove-radar"
+            >On radar — remove</button>
+        case library.DiscoverAlbumStateRemoved:
+            <button
+                class="btn btn-xs btn-primary"
+                hx-post={ fmt.Sprintf("/app/library/albums/%s/library", result.AlbumID) }
+                hx-target="closest [data-result]"
+                hx-swap="outerHTML"
+                data-testid="discover-result-reacquire"
+            >Re-acquire</button>
+        default:
+            <button
+                class="btn btn-xs btn-primary"
+                hx-post={ fmt.Sprintf("/app/library/discover/radar?spotifyId=%s", result.SpotifyID) }
+                hx-target="closest [data-result]"
+                hx-swap="outerHTML"
+                data-testid="discover-result-add-radar"
+            >+ Add to radar</button>
+    }
+}
