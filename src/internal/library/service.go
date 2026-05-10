@@ -17,6 +17,8 @@ import (
 	"github.com/alecdray/wax/src/internal/review"
 	"github.com/alecdray/wax/src/internal/spotify"
 	"github.com/alecdray/wax/src/internal/tags"
+	"github.com/google/uuid"
+	spotifylib "github.com/zmb3/spotify/v2"
 )
 
 type Service struct {
@@ -371,6 +373,253 @@ func (s *Service) AddAlbumToRadar(ctx context.Context, userID, albumID string) e
 			return ErrAlbumAlreadyDecided
 		}
 		if err := txRepo.AddAlbumToRadar(ctx, userID, albumID); err != nil {
+			return fmt.Errorf("failed to add album to radar: %w", err)
+		}
+		return nil
+	})
+}
+
+// GetRadarAlbums returns the caller's radar entries as fully-populated
+// AlbumDTOs (artists set; tracks/releases left empty — radar entries have no
+// release rows). Used by the discover page's radar carousel.
+func (s *Service) GetRadarAlbums(ctx context.Context, userID string) ([]AlbumDTO, error) {
+	_, albums, err := s.repo.GetRadarAlbums(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get radar albums: %w", err)
+	}
+	if len(albums) == 0 {
+		return nil, nil
+	}
+	albumIDs := make([]string, len(albums))
+	for i, a := range albums {
+		albumIDs[i] = a.ID
+	}
+	artistsByAlbumID, err := s.repo.GetArtistsByAlbumIDs(ctx, albumIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get artists for radar albums: %w", err)
+	}
+	for i := range albums {
+		albums[i].Artists = artistsByAlbumID[albums[i].ID]
+	}
+	return albums, nil
+}
+
+// RemoveAlbumFromRadar deletes the radar row. No-op if the user has no radar
+// row for the album.
+func (s *Service) RemoveAlbumFromRadar(ctx context.Context, userID, albumID string) error {
+	return s.repo.RemoveAlbumFromRadar(ctx, userID, albumID)
+}
+
+// PromoteRadarToLibrary transitions a radar album to an owned digital release
+// and pushes the album to the user's Spotify saved library. Spotify push is
+// best-effort; a failure is logged but does not roll back the local DB
+// (mirrors RemoveAlbumFromLibrary).
+func (s *Service) PromoteRadarToLibrary(ctx contextx.ContextX, userID, albumID string) error {
+	spotifyID, err := s.repo.GetAlbumSpotifyID(ctx, albumID)
+	if err != nil {
+		return fmt.Errorf("failed to get album spotify id: %w", err)
+	}
+
+	err = s.db.WithTx(func(tx *db.DB) error {
+		txRepo := NewRepo(tx.Queries())
+		if _, err := txRepo.AddOwnedRelease(ctx, userID, albumID, models.ReleaseFormatDigital, "", time.Now()); err != nil {
+			return fmt.Errorf("failed to add owned digital release: %w", err)
+		}
+		if err := txRepo.RemoveAlbumFromRadar(ctx, userID, albumID); err != nil {
+			return fmt.Errorf("failed to clear radar: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if err := s.spotifyService.AddAlbumToSavedLibrary(ctx, userID, spotifyID); err != nil {
+		slog.WarnContext(ctx, "failed to push album to spotify saved library after radar promotion", "error", err, "album_id", albumID, "spotify_id", spotifyID)
+	}
+	return nil
+}
+
+// spotifyAlbumToDTO converts a Spotify FullAlbum into an AlbumDTO ready for
+// EnsureAlbumWithMetadata. Releases is intentionally omitted — radar entries
+// are pre-decision; the feed sync that populates Releases lives in
+// feed/service.go and writes user_releases rows that radar must not create.
+func spotifyAlbumToDTO(album *spotifylib.FullAlbum) AlbumDTO {
+	var imageURL string
+	if len(album.Images) > 0 {
+		imageURL = album.Images[0].URL
+	}
+	dto := AlbumDTO{
+		ID:        uuid.NewString(),
+		SpotifyID: album.ID.String(),
+		Title:     album.Name,
+		ImageURL:  imageURL,
+	}
+	dto.Artists = make([]ArtistDTO, len(album.Artists))
+	for i, a := range album.Artists {
+		dto.Artists[i] = ArtistDTO{
+			ID:        uuid.NewString(),
+			SpotifyID: a.ID.String(),
+			Name:      a.Name,
+		}
+	}
+	dto.Tracks = make([]TrackDTO, 0, len(album.Tracks.Tracks))
+	for _, t := range album.Tracks.Tracks {
+		dto.Tracks = append(dto.Tracks, TrackDTO{
+			ID:        uuid.NewString(),
+			SpotifyID: t.ID.String(),
+			Title:     t.Name,
+		})
+	}
+	return dto
+}
+
+// mergeDiscoverState combines a slice of Spotify search results with the
+// caller's per-album state lookup, producing one DiscoverResultDTO per
+// Spotify result.
+func mergeDiscoverState(results []spotifylib.SimpleAlbum, states map[string]UserAlbumStateRow) []DiscoverResultDTO {
+	out := make([]DiscoverResultDTO, len(results))
+	for i, a := range results {
+		var imageURL string
+		if len(a.Images) > 0 {
+			imageURL = a.Images[0].URL
+		}
+		artists := make([]ArtistDTO, len(a.Artists))
+		for j, ar := range a.Artists {
+			artists[j] = ArtistDTO{
+				SpotifyID: ar.ID.String(),
+				Name:      ar.Name,
+			}
+		}
+		dto := DiscoverResultDTO{
+			SpotifyID: a.ID.String(),
+			Title:     a.Name,
+			Artists:   artists,
+			ImageURL:  imageURL,
+			State:     DiscoverAlbumStateNone,
+		}
+		if row, ok := states[a.ID.String()]; ok {
+			dto.State = row.State
+			dto.AlbumID = row.AlbumID
+		}
+		out[i] = dto
+	}
+	return out
+}
+
+// SearchAlbumsForDiscover queries Spotify and enriches each result with the
+// caller's wax state (in_library, on_radar, removed, or none). Returns an
+// empty slice (not nil) when the query is empty or yields no hits.
+func (s *Service) SearchAlbumsForDiscover(ctx contextx.ContextX, userID, query string, limit int) ([]DiscoverResultDTO, error) {
+	results, err := s.spotifyService.SearchAlbums(ctx, userID, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("spotify search failed: %w", err)
+	}
+	if len(results) == 0 {
+		return []DiscoverResultDTO{}, nil
+	}
+	spotifyIDs := make([]string, len(results))
+	for i, a := range results {
+		spotifyIDs[i] = a.ID.String()
+	}
+	states, err := s.repo.GetUserAlbumStateBySpotifyIDs(ctx, userID, spotifyIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to look up album states: %w", err)
+	}
+	return mergeDiscoverState(results, states), nil
+}
+
+// LookupDiscoverState exposes the per-Spotify-ID state lookup for adapters
+// that need it after a write (e.g., to re-render a row in its new state).
+func (s *Service) LookupDiscoverState(ctx contextx.ContextX, userID string, spotifyIDs []string) (map[string]UserAlbumStateRow, error) {
+	return s.repo.GetUserAlbumStateBySpotifyIDs(ctx, userID, spotifyIDs)
+}
+
+// GetAlbumSpotifyID returns the Spotify ID for a wax album. Thin wrapper over
+// the repo method (already used internally by RemoveAlbumFromLibrary); now
+// exposed so adapters can re-render search-result rows after a radar delete.
+func (s *Service) GetAlbumSpotifyID(ctx contextx.ContextX, albumID string) (string, error) {
+	return s.repo.GetAlbumSpotifyID(ctx, albumID)
+}
+
+// GetAlbumActionsResult resolves a Spotify ID into a DiscoverResultDTO with
+// state, AlbumID (when known to wax), title, image, and artists. Used to
+// render the album-actions modal opened from any discover surface.
+//
+// If the album exists in wax (any state), metadata is read from the local DB.
+// Otherwise (state=none), it falls back to fetching from Spotify.
+func (s *Service) GetAlbumActionsResult(ctx contextx.ContextX, userID, spotifyID string) (DiscoverResultDTO, error) {
+	states, err := s.repo.GetUserAlbumStateBySpotifyIDs(ctx, userID, []string{spotifyID})
+	if err != nil {
+		return DiscoverResultDTO{}, fmt.Errorf("failed to look up album state: %w", err)
+	}
+	if state, ok := states[spotifyID]; ok {
+		album, err := s.repo.GetAlbumByID(ctx, state.AlbumID)
+		if err != nil {
+			return DiscoverResultDTO{}, fmt.Errorf("failed to get album: %w", err)
+		}
+		artists, err := s.repo.GetArtistsByAlbumID(ctx, state.AlbumID)
+		if err != nil {
+			return DiscoverResultDTO{}, fmt.Errorf("failed to get artists: %w", err)
+		}
+		return DiscoverResultDTO{
+			SpotifyID: spotifyID,
+			AlbumID:   state.AlbumID,
+			Title:     album.Title,
+			ImageURL:  album.ImageURL,
+			Artists:   artists,
+			State:     state.State,
+		}, nil
+	}
+	// Album not yet in wax — fetch metadata from Spotify.
+	full, err := s.spotifyService.GetFullAlbum(ctx, userID, spotifyID)
+	if err != nil {
+		return DiscoverResultDTO{}, fmt.Errorf("failed to fetch spotify album: %w", err)
+	}
+	var imageURL string
+	if len(full.Images) > 0 {
+		imageURL = full.Images[0].URL
+	}
+	artists := make([]ArtistDTO, len(full.Artists))
+	for i, a := range full.Artists {
+		artists[i] = ArtistDTO{
+			SpotifyID: a.ID.String(),
+			Name:      a.Name,
+		}
+	}
+	return DiscoverResultDTO{
+		SpotifyID: spotifyID,
+		Title:     full.Name,
+		ImageURL:  imageURL,
+		Artists:   artists,
+		State:     DiscoverAlbumStateNone,
+	}, nil
+}
+
+// AddSpotifyAlbumToRadar imports a Spotify album's metadata (album, artists,
+// tracks) into wax and adds the album to the user's radar. Refuses with
+// ErrAlbumAlreadyDecided if the album already has any user_releases row.
+func (s *Service) AddSpotifyAlbumToRadar(ctx contextx.ContextX, userID, spotifyID string) error {
+	spotifyAlbum, err := s.spotifyService.GetFullAlbum(ctx, userID, spotifyID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch spotify album: %w", err)
+	}
+	dto := spotifyAlbumToDTO(spotifyAlbum)
+
+	return s.db.WithTx(func(tx *db.DB) error {
+		txRepo := NewRepo(tx.Queries())
+		imported, err := txRepo.EnsureAlbumWithMetadata(ctx, dto)
+		if err != nil {
+			return fmt.Errorf("failed to import album metadata: %w", err)
+		}
+		hasRelease, err := txRepo.HasAnyUserReleaseForAlbum(ctx, userID, imported.ID)
+		if err != nil {
+			return fmt.Errorf("failed to check user releases: %w", err)
+		}
+		if hasRelease {
+			return ErrAlbumAlreadyDecided
+		}
+		if err := txRepo.AddAlbumToRadar(ctx, userID, imported.ID); err != nil {
 			return fmt.Errorf("failed to add album to radar: %w", err)
 		}
 		return nil

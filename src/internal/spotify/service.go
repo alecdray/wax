@@ -149,6 +149,19 @@ func (s *Service) RemoveAlbumFromSavedLibrary(ctx contextx.ContextX, userId, spo
 	return s.client.RemoveAlbum(ctx, token.AccessToken, spotifyId)
 }
 
+// AddAlbumToSavedLibrary saves an album to the user's Spotify saved library.
+// Mirrors RemoveAlbumFromSavedLibrary; uses the SDK directly (no raw HTTP).
+func (s *Service) AddAlbumToSavedLibrary(ctx contextx.ContextX, userId, spotifyId string) error {
+	client, err := s.Client(ctx, userId)
+	if err != nil {
+		return fmt.Errorf("failed to get spotify client: %w", err)
+	}
+	if err := client.AddAlbumsToLibrary(ctx, spotify.ID(spotifyId)); err != nil {
+		return fmt.Errorf("failed to add album to spotify saved library: %w", err)
+	}
+	return nil
+}
+
 func (s *Service) GetUsersSavedTracks(ctx contextx.ContextX, userId string) ([]spotify.SavedTrack, error) {
 	client, err := s.Client(ctx, userId)
 	if err != nil {
@@ -173,4 +186,43 @@ func (s *Service) GetUsersSavedTracks(ctx contextx.ContextX, userId string) ([]s
 		offset += len(tracks.Tracks)
 	}
 	return collectedTracks, nil
+}
+
+// GetFullAlbum returns one Spotify album by ID, including artists and tracks.
+func (s *Service) GetFullAlbum(ctx contextx.ContextX, userId, spotifyId string) (*spotify.FullAlbum, error) {
+	client, err := s.Client(ctx, userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get spotify client: %w", err)
+	}
+	album, err := client.GetAlbum(ctx, spotify.ID(spotifyId))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get spotify album: %w", err)
+	}
+	return album, nil
+}
+
+// SearchAlbums runs a Spotify catalog search restricted to albums.
+// limit is clamped to the Spotify API max of 10 for the search endpoint.
+func (s *Service) SearchAlbums(ctx contextx.ContextX, userId, query string, limit int) ([]spotify.SimpleAlbum, error) {
+	if query == "" {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 10 {
+		limit = 10
+	}
+	client, err := s.Client(ctx, userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get spotify client: %w", err)
+	}
+	result, err := client.Search(ctx, query, spotify.SearchTypeAlbum, spotify.Limit(limit))
+	if err != nil {
+		return nil, fmt.Errorf("spotify album search failed: %w", err)
+	}
+	if result == nil || result.Albums == nil {
+		return nil, nil
+	}
+	return result.Albums.Albums, nil
 }

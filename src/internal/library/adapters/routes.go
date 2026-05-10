@@ -14,8 +14,17 @@ func RegisterRoutes(mux *httpx.Mux, h *HttpHandler) {
 	mux.Handle("/app/library/dashboard/albums-table", httpx.HandlerFunc(h.GetAlbumsTable))
 	mux.Handle("GET /app/library/dashboard/albums-page", httpx.HandlerFunc(h.GetAlbumsPage))
 	mux.Handle("GET /app/library/dashboard/carousel", httpx.HandlerFunc(h.GetCarousel))
+
+	mux.Handle("GET /app/library/discover", httpx.HandlerFunc(h.GetDiscoverPage))
+	mux.Handle("GET /app/library/discover/search", httpx.HandlerFunc(h.GetDiscoverSearch))
+	mux.Handle("GET /app/library/discover/radar", httpx.HandlerFunc(h.GetDiscoverRadar))
+	mux.Handle("POST /app/library/discover/radar", httpx.HandlerFunc(h.PostDiscoverRadar))
+	mux.Handle("GET /app/library/discover/album-menu", httpx.HandlerFunc(h.GetAlbumActionsModal))
+
 	mux.Handle("GET /app/library/albums/{albumId}", httpx.HandlerFunc(h.GetAlbumDetailPage))
 	mux.Handle("DELETE /app/library/albums/{albumId}", httpx.HandlerFunc(h.DeleteAlbum))
+	mux.Handle("DELETE /app/library/albums/{albumId}/radar", httpx.HandlerFunc(h.DeleteAlbumRadar))
+	mux.Handle("POST /app/library/albums/{albumId}/library", httpx.HandlerFunc(h.PostAlbumLibrary))
 	mux.Handle("GET /app/library/albums/{albumId}/formats", httpx.HandlerFunc(h.GetFormatsModal))
 	mux.Handle("PUT /app/library/albums/{albumId}/formats", httpx.HandlerFunc(h.PutFormats))
 	mux.Handle("GET /app/library/albums/{albumId}/formats/{format}/discogs/search", httpx.HandlerFunc(h.GetDiscogsSearch))

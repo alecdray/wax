@@ -96,7 +96,7 @@ test('Back navigation to the dashboard', async ({ context, page }) => {
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  await page.getByTestId('album-detail-back-link').click();
+  await page.getByTestId('header-library-icon').click();
 
   await expect(page).toHaveURL('/app/library/dashboard');
 });
