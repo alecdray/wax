@@ -182,10 +182,14 @@ templ discoverSearchResultRow(result library.DiscoverResultDTO) {
                 </div>
             }
         </div>
-        <div class="flex-shrink-0">
-            @discoverResultAffordance(result)
-        </div>
+        @discoverResultAffordanceCell(result)
     </li>
+}
+
+templ discoverResultAffordanceCell(result library.DiscoverResultDTO) {
+    <div class="flex-shrink-0" data-affordance>
+        @discoverResultAffordance(result)
+    </div>
 }
 
 templ discoverResultAffordance(result library.DiscoverResultDTO) {
@@ -200,7 +204,7 @@ templ discoverResultAffordance(result library.DiscoverResultDTO) {
             <button
                 class="btn btn-xs btn-ghost text-error"
                 hx-delete={ fmt.Sprintf("/app/library/albums/%s/radar", result.AlbumID) }
-                hx-target="closest [data-result]"
+                hx-target="closest [data-affordance]"
                 hx-swap="outerHTML"
                 data-testid="discover-result-remove-radar"
             >On radar — remove</button>
@@ -208,7 +212,7 @@ templ discoverResultAffordance(result library.DiscoverResultDTO) {
             <button
                 class="btn btn-xs btn-primary"
                 hx-post={ fmt.Sprintf("/app/library/albums/%s/library", result.AlbumID) }
-                hx-target="closest [data-result]"
+                hx-target="closest [data-affordance]"
                 hx-swap="outerHTML"
                 data-testid="discover-result-reacquire"
             >Re-acquire</button>
@@ -216,7 +220,7 @@ templ discoverResultAffordance(result library.DiscoverResultDTO) {
             <button
                 class="btn btn-xs btn-primary"
                 hx-post={ fmt.Sprintf("/app/library/discover/radar?spotifyId=%s", result.SpotifyID) }
-                hx-target="closest [data-result]"
+                hx-target="closest [data-affordance]"
                 hx-swap="outerHTML"
                 data-testid="discover-result-add-radar"
             >+ Add to radar</button>

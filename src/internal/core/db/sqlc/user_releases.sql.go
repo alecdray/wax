@@ -34,7 +34,7 @@ WITH target_albums AS (
 )
 SELECT ta.id        AS album_id,
        ta.spotify_id AS spotify_id,
-       'owned'      AS state
+       'in_library' AS state
 FROM target_albums ta
 JOIN user_releases ON user_releases.release_id IN (
     SELECT id FROM releases WHERE album_id = ta.id
@@ -85,7 +85,7 @@ type GetUserAlbumStateBySpotifyIdsRow struct {
 }
 
 // For each input Spotify ID, returns the album's wax ID plus the user's state
-// for that album: 'owned', 'removed', or 'on_radar'. An album may appear in
+// for that album: 'in_library', 'removed', or 'on_radar'. An album may appear in
 // more than one branch when invariants drift (e.g., a stray radar row alongside
 // a wishlist or removed user_release); the service collapses to one state per
 // album with precedence in_library > on_radar > removed.

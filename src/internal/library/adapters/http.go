@@ -652,6 +652,26 @@ func (h *HttpHandler) PostDiscoverRadar(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if err := h.libraryService.AddSpotifyAlbumToRadar(ctx, userId, spotifyID); err != nil {
+		if errors.Is(err, library.ErrAlbumAlreadyDecided) {
+			// Album already has a user_releases row — UI was stale. Re-render the
+			// affordance with the album's actual current state and signal a toast.
+			states, lookupErr := h.libraryService.LookupDiscoverState(ctx, userId, []string{spotifyID})
+			if lookupErr != nil {
+				httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+					Status: http.StatusInternalServerError,
+					Err:    fmt.Errorf("failed to look up album state: %w", lookupErr),
+				})
+				return
+			}
+			row := library.DiscoverResultDTO{SpotifyID: spotifyID}
+			if s, ok := states[spotifyID]; ok {
+				row.AlbumID = s.AlbumID
+				row.State = s.State
+			}
+			w.Header().Set("HX-Trigger", "radarUpdated")
+			discoverResultAffordanceCell(row).Render(r.Context(), w)
+			return
+		}
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
 			Err:    fmt.Errorf("failed to add album to radar: %w", err),
@@ -672,7 +692,7 @@ func (h *HttpHandler) PostDiscoverRadar(w http.ResponseWriter, r *http.Request) 
 		row.State = s.State
 	}
 	w.Header().Set("HX-Trigger", "radarUpdated")
-	discoverSearchResultRow(row).Render(r.Context(), w)
+	discoverResultAffordanceCell(row).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) DeleteAlbumRadar(w http.ResponseWriter, r *http.Request) {
@@ -702,7 +722,7 @@ func (h *HttpHandler) DeleteAlbumRadar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("HX-Trigger", "radarUpdated")
-	discoverSearchResultRow(library.DiscoverResultDTO{
+	discoverResultAffordanceCell(library.DiscoverResultDTO{
 		SpotifyID: spotifyID,
 		State:     library.DiscoverAlbumStateNone,
 	}).Render(r.Context(), w)
@@ -738,7 +758,7 @@ func (h *HttpHandler) PostAlbumLibrary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("HX-Trigger", "radarUpdated, libraryUpdated")
-	discoverSearchResultRow(library.DiscoverResultDTO{
+	discoverResultAffordanceCell(library.DiscoverResultDTO{
 		SpotifyID: spotifyID,
 		AlbumID:   albumID,
 		State:     library.DiscoverAlbumStateInLibrary,
