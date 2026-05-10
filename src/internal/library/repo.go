@@ -621,3 +621,26 @@ func (r *Repo) GetWishlistReleases(ctx context.Context, userID string) ([]Releas
 	}
 	return out, nil
 }
+
+// MarkReleaseOwned transitions any user_release row (wishlist or removed) to 'owned'
+// and clears the album's radar entry. Used by the wishlist acquire flow and any
+// "re-acquire a removed release" path that doesn't need to create a new release row.
+func (r *Repo) MarkReleaseOwned(ctx context.Context, userID, albumID, releaseID string) error {
+	now := time.Now()
+	if _, err := r.q.UpsertOwnedRelease(ctx, sqlc.UpsertOwnedReleaseParams{
+		ID:              uuid.New().String(),
+		UserID:          userID,
+		ReleaseID:       releaseID,
+		CreatedAt:       now,
+		StatusUpdatedAt: now,
+	}); err != nil {
+		return err
+	}
+	if err := r.q.RemoveAlbumFromRadar(ctx, sqlc.RemoveAlbumFromRadarParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	}); err != nil {
+		return fmt.Errorf("failed to clear radar: %w", err)
+	}
+	return nil
+}

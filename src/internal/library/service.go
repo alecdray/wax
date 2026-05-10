@@ -311,3 +311,14 @@ func (s *Service) GetUnratedAlbums(ctx context.Context, userID string) ([]AlbumS
 	}
 	return dtos, nil
 }
+
+// AcquireFromWishlist transitions a user's wishlist release to 'owned' in a single tx.
+func (s *Service) AcquireFromWishlist(ctx context.Context, userID, albumID, releaseID string) error {
+	return s.db.WithTx(func(tx *db.DB) error {
+		txRepo := NewRepo(tx.Queries())
+		if err := txRepo.MarkReleaseOwned(ctx, userID, albumID, releaseID); err != nil {
+			return fmt.Errorf("failed to acquire from wishlist: %w", err)
+		}
+		return nil
+	})
+}
