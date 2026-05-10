@@ -14,6 +14,14 @@ import (
 
 const AlbumsPageSize = 20
 
+type UserReleaseStatus string
+
+const (
+	UserReleaseStatusWishlist UserReleaseStatus = "wishlist"
+	UserReleaseStatusOwned    UserReleaseStatus = "owned"
+	UserReleaseStatusRemoved  UserReleaseStatus = "removed"
+)
+
 // ---------- Album aggregate types ----------
 
 type AlbumSummaryDTO struct {
@@ -66,13 +74,16 @@ type RerateAlbumDTO struct {
 // ---------- Releases & formats ----------
 
 type ReleaseDTO struct {
-	ID         string
-	AlbumID    string
-	Format     models.ReleaseFormat
-	AddedAt    *time.Time
-	DiscogsID  string
-	Label      string
-	ReleasedAt *time.Time
+	ID              string
+	AlbumID         string
+	Format          models.ReleaseFormat
+	Status          UserReleaseStatus
+	AddedAt         *time.Time   // alias of StatusUpdatedAt while Status == "owned"; kept for existing UI callers
+	CreatedAt       *time.Time
+	StatusUpdatedAt *time.Time
+	DiscogsID       string
+	Label           string
+	ReleasedAt      *time.Time
 }
 
 type ReleaseDTOs []ReleaseDTO
@@ -96,6 +107,11 @@ func (releases ReleaseDTOs) FindFormat(format models.ReleaseFormat) *ReleaseDTO 
 		}
 	}
 	return nil
+}
+
+type RadarDTO struct {
+	AlbumID   string
+	CreatedAt time.Time
 }
 
 // AlbumFormatDTO represents one format row in the formats modal.

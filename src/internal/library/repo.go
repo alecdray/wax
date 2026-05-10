@@ -41,7 +41,12 @@ func releaseDTOFromModel(model sqlc.Release, userRelease *sqlc.UserRelease) Rele
 		dto.ReleasedAt = &model.ReleasedAt.Time
 	}
 	if userRelease != nil {
-		dto.AddedAt = &userRelease.AddedAt
+		dto.Status = UserReleaseStatus(userRelease.Status)
+		dto.CreatedAt = &userRelease.CreatedAt
+		dto.StatusUpdatedAt = &userRelease.StatusUpdatedAt
+		if dto.Status == UserReleaseStatusOwned {
+			dto.AddedAt = &userRelease.StatusUpdatedAt
+		}
 	}
 	return dto
 }
@@ -56,9 +61,9 @@ func albumFormatDTOFromRelease(r sqlc.Release, ur *sqlc.UserRelease) AlbumFormat
 	if r.ReleasedAt.Valid {
 		dto.ReleasedAt = &r.ReleasedAt.Time
 	}
-	if ur != nil {
+	if ur != nil && ur.Status == string(UserReleaseStatusOwned) {
 		dto.Owned = true
-		dto.AddedAt = &ur.AddedAt
+		dto.AddedAt = &ur.StatusUpdatedAt
 	}
 	return dto
 }
@@ -409,17 +414,27 @@ func (r *Repo) AddAlbumToCollection(ctx context.Context, userID string, album Al
 			return album, err
 		}
 
-		userRelease, err := r.q.UpsertUserRelease(ctx, sqlc.UpsertUserReleaseParams{
-			ID:        uuid.New().String(),
-			UserID:    userID,
-			ReleaseID: releaseModel.ID,
-			AddedAt:   *release.AddedAt,
+		now := time.Now()
+		userRelease, err := r.q.UpsertOwnedRelease(ctx, sqlc.UpsertOwnedReleaseParams{
+			ID:              uuid.New().String(),
+			UserID:          userID,
+			ReleaseID:       releaseModel.ID,
+			CreatedAt:       now,
+			StatusUpdatedAt: now,
 		})
 		if err != nil {
 			return album, err
 		}
 
 		album.Releases[i] = releaseDTOFromModel(releaseModel, &userRelease)
+	}
+
+	// Adding any release to the collection clears the album from the user's radar.
+	if err := r.q.RemoveAlbumFromRadar(ctx, sqlc.RemoveAlbumFromRadarParams{
+		UserID:  userID,
+		AlbumID: album.ID,
+	}); err != nil {
+		return album, fmt.Errorf("failed to clear radar: %w", err)
 	}
 
 	return album, nil
@@ -440,30 +455,35 @@ func (r *Repo) AddOwnedRelease(ctx context.Context, userID, albumID string, form
 		}
 		releaseID = rel.ID
 	}
-	_, err := r.q.UpsertUserRelease(ctx, sqlc.UpsertUserReleaseParams{
-		ID:        uuid.New().String(),
-		UserID:    userID,
-		ReleaseID: releaseID,
-		AddedAt:   addedAt,
-	})
-	if err != nil {
+	if _, err := r.q.UpsertOwnedRelease(ctx, sqlc.UpsertOwnedReleaseParams{
+		ID:              uuid.New().String(),
+		UserID:          userID,
+		ReleaseID:       releaseID,
+		CreatedAt:       addedAt,
+		StatusUpdatedAt: addedAt,
+	}); err != nil {
 		return "", err
+	}
+	if err := r.q.RemoveAlbumFromRadar(ctx, sqlc.RemoveAlbumFromRadarParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	}); err != nil {
+		return "", fmt.Errorf("failed to clear radar: %w", err)
 	}
 	return releaseID, nil
 }
 
-// SoftDeleteUserRelease marks a single user-release as removed.
-func (r *Repo) SoftDeleteUserRelease(ctx context.Context, userID, releaseID string) error {
-	return r.q.SoftDeleteUserRelease(ctx, sqlc.SoftDeleteUserReleaseParams{
+// MarkReleaseRemoved transitions an owned user_release to status='removed'.
+func (r *Repo) MarkReleaseRemoved(ctx context.Context, userID, releaseID string) error {
+	return r.q.MarkReleaseRemoved(ctx, sqlc.MarkReleaseRemovedParams{
 		UserID:    userID,
 		ReleaseID: releaseID,
 	})
 }
 
-// SoftDeleteUserReleasesByAlbumID marks all of a user's releases for an album
-// as removed.
-func (r *Repo) SoftDeleteUserReleasesByAlbumID(ctx context.Context, userID, albumID string) error {
-	return r.q.SoftDeleteUserReleasesByAlbumId(ctx, sqlc.SoftDeleteUserReleasesByAlbumIdParams{
+// MarkReleasesRemovedByAlbumID transitions all of a user's owned releases for an album to 'removed'.
+func (r *Repo) MarkReleasesRemovedByAlbumID(ctx context.Context, userID, albumID string) error {
+	return r.q.MarkReleasesRemovedByAlbumId(ctx, sqlc.MarkReleasesRemovedByAlbumIdParams{
 		UserID:  userID,
 		AlbumID: albumID,
 	})
