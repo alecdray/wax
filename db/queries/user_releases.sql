@@ -1,31 +1,31 @@
 -- name: UpsertUserRelease :one
-INSERT INTO user_releases (id, user_id, release_id, added_at) VALUES (?, ?, ?, ?)
+INSERT INTO user_releases (id, user_id, release_id, status_updated_at) VALUES (?, ?, ?, ?)
 ON CONFLICT (user_id, release_id)
 DO UPDATE SET
-    added_at = EXCLUDED.added_at,
-    removed_at = NULL
+    status_updated_at = EXCLUDED.status_updated_at,
+    status = 'owned'
 RETURNING *;
 
 -- name: GetUserReleases :many
 SELECT sqlc.embed(user_releases), sqlc.embed(releases) FROM user_releases
 JOIN releases ON user_releases.release_id = releases.id
-WHERE user_id = ? AND removed_at IS NULL;
+WHERE user_id = ? AND status != 'removed';
 
 -- name: GetUserReleasesByAlbumId :many
 SELECT sqlc.embed(user_releases), sqlc.embed(releases) FROM user_releases
 JOIN releases ON user_releases.release_id = releases.id
 WHERE user_id = ?
 AND album_id = ?
-AND removed_at IS NULL;
+AND status != 'removed';
 
 -- name: SoftDeleteUserReleasesByAlbumId :exec
 UPDATE user_releases
-SET removed_at = current_timestamp
+SET status = 'removed', status_updated_at = current_timestamp
 WHERE user_id = ? AND release_id IN (
     SELECT id FROM releases WHERE album_id = ?
 );
 
 -- name: SoftDeleteUserRelease :exec
 UPDATE user_releases
-SET removed_at = current_timestamp
-WHERE user_id = ? AND release_id = ? AND removed_at IS NULL;
+SET status = 'removed', status_updated_at = current_timestamp
+WHERE user_id = ? AND release_id = ? AND status != 'removed';

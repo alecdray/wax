@@ -44,8 +44,9 @@ CREATE TABLE user_releases (
     id text primary key,
     user_id text not null references users(id) on delete cascade,
     release_id text not null references releases(id) on delete cascade,
-    added_at datetime not null default current_timestamp,
-    deleted_at datetime, removed_at datetime,
+    status_updated_at datetime not null default current_timestamp,
+    deleted_at datetime, status TEXT NOT NULL DEFAULT 'owned'
+    CHECK (status IN ('wishlist', 'owned', 'removed')), created_at DATETIME,
     unique(user_id, release_id)
 );
 CREATE TABLE user_tracks (
