@@ -376,3 +376,34 @@ func (s *Service) AddAlbumToRadar(ctx context.Context, userID, albumID string) e
 		return nil
 	})
 }
+
+// GetRadarAlbums returns the caller's radar entries as fully-populated
+// AlbumDTOs (artists set; tracks/releases left empty — radar entries have no
+// release rows). Used by the discover page's radar carousel.
+func (s *Service) GetRadarAlbums(ctx context.Context, userID string) ([]AlbumDTO, error) {
+	_, albums, err := s.repo.GetRadarAlbums(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get radar albums: %w", err)
+	}
+	if len(albums) == 0 {
+		return nil, nil
+	}
+	albumIDs := make([]string, len(albums))
+	for i, a := range albums {
+		albumIDs[i] = a.ID
+	}
+	artistsByAlbumID, err := s.repo.GetArtistsByAlbumIDs(ctx, albumIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get artists for radar albums: %w", err)
+	}
+	for i := range albums {
+		albums[i].Artists = artistsByAlbumID[albums[i].ID]
+	}
+	return albums, nil
+}
+
+// RemoveAlbumFromRadar deletes the radar row. No-op if the user has no radar
+// row for the album.
+func (s *Service) RemoveAlbumFromRadar(ctx context.Context, userID, albumID string) error {
+	return s.repo.RemoveAlbumFromRadar(ctx, userID, albumID)
+}
