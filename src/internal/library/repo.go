@@ -350,6 +350,9 @@ func (r *Repo) GetRerateQueue(ctx context.Context, userID string) ([]RerateAlbum
 // tracks, album_tracks, artists, album_artists, releases, user_releases.
 // Returns the canonical AlbumDTO with sqlc-derived IDs and timestamps filled
 // in from the upsert results.
+//
+// Touches multiple tables; callers must invoke this inside a db.WithTx so the
+// release write and radar wipe land atomically.
 func (r *Repo) AddAlbumToCollection(ctx context.Context, userID string, album AlbumDTO) (AlbumDTO, error) {
 	albumModel, err := r.q.GetOrCreateAlbum(ctx, sqlc.GetOrCreateAlbumParams{
 		ID:        album.ID,
@@ -625,6 +628,9 @@ func (r *Repo) GetWishlistReleases(ctx context.Context, userID string) ([]Releas
 // MarkReleaseOwned transitions any user_release row (wishlist or removed) to 'owned'
 // and clears the album's radar entry. Used by the wishlist acquire flow and any
 // "re-acquire a removed release" path that doesn't need to create a new release row.
+//
+// CreatedAt is only used when no row exists yet (fresh insert). On conflict, the
+// upsert preserves the existing row's created_at — passing time.Now() here is harmless.
 func (r *Repo) MarkReleaseOwned(ctx context.Context, userID, albumID, releaseID string) error {
 	now := time.Now()
 	if _, err := r.q.UpsertOwnedRelease(ctx, sqlc.UpsertOwnedReleaseParams{
