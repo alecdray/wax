@@ -444,6 +444,61 @@ func spotifyAlbumToDTO(album *spotifylib.FullAlbum) AlbumDTO {
 	return dto
 }
 
+// mergeDiscoverState combines a slice of Spotify search results with the
+// caller's per-album state lookup, producing one DiscoverResultDTO per
+// Spotify result.
+func mergeDiscoverState(results []spotifylib.SimpleAlbum, states map[string]UserAlbumStateRow) []DiscoverResultDTO {
+	out := make([]DiscoverResultDTO, len(results))
+	for i, a := range results {
+		var imageURL string
+		if len(a.Images) > 0 {
+			imageURL = a.Images[0].URL
+		}
+		artists := make([]ArtistDTO, len(a.Artists))
+		for j, ar := range a.Artists {
+			artists[j] = ArtistDTO{
+				SpotifyID: ar.ID.String(),
+				Name:      ar.Name,
+			}
+		}
+		dto := DiscoverResultDTO{
+			SpotifyID: a.ID.String(),
+			Title:     a.Name,
+			Artists:   artists,
+			ImageURL:  imageURL,
+			State:     DiscoverAlbumStateNone,
+		}
+		if row, ok := states[a.ID.String()]; ok {
+			dto.State = row.State
+			dto.AlbumID = row.AlbumID
+		}
+		out[i] = dto
+	}
+	return out
+}
+
+// SearchAlbumsForDiscover queries Spotify and enriches each result with the
+// caller's wax state (in_library, on_radar, removed, or none). Returns an
+// empty slice (not nil) when the query is empty or yields no hits.
+func (s *Service) SearchAlbumsForDiscover(ctx contextx.ContextX, userID, query string, limit int) ([]DiscoverResultDTO, error) {
+	results, err := s.spotifyService.SearchAlbums(ctx, userID, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("spotify search failed: %w", err)
+	}
+	if len(results) == 0 {
+		return []DiscoverResultDTO{}, nil
+	}
+	spotifyIDs := make([]string, len(results))
+	for i, a := range results {
+		spotifyIDs[i] = a.ID.String()
+	}
+	states, err := s.repo.GetUserAlbumStateBySpotifyIDs(ctx, userID, spotifyIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to look up album states: %w", err)
+	}
+	return mergeDiscoverState(results, states), nil
+}
+
 // AddSpotifyAlbumToRadar imports a Spotify album's metadata (album, artists,
 // tracks) into wax and adds the album to the user's radar. Refuses with
 // ErrAlbumAlreadyDecided if the album already has any user_releases row.

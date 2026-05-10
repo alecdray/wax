@@ -6,6 +6,7 @@ import (
 
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/review"
+	spotifylib "github.com/zmb3/spotify/v2"
 )
 
 // makeAlbumWithRelease creates an AlbumDTO with a single release format.
@@ -416,4 +417,97 @@ func TestSaveFormatInput_PhysicalFormats(t *testing.T) {
 			t.Errorf("expected empty DiscogsID, got %q", input.DiscogsID)
 		}
 	})
+}
+
+func TestMergeDiscoverState(t *testing.T) {
+	t.Run("marks unknown albums as 'none' with empty AlbumID", func(t *testing.T) {
+		results := []spotifylib.SimpleAlbum{
+			simpleAlbumStub("sp-1", "Unknown One", "art-a", "Artist A"),
+		}
+		out := mergeDiscoverState(results, map[string]UserAlbumStateRow{})
+		if len(out) != 1 {
+			t.Fatalf("got %d results, want 1", len(out))
+		}
+		if out[0].State != DiscoverAlbumStateNone {
+			t.Errorf("state = %q, want %q", out[0].State, DiscoverAlbumStateNone)
+		}
+		if out[0].AlbumID != "" {
+			t.Errorf("AlbumID = %q, want empty", out[0].AlbumID)
+		}
+	})
+
+	t.Run("attaches in_library state and AlbumID when known", func(t *testing.T) {
+		results := []spotifylib.SimpleAlbum{
+			simpleAlbumStub("sp-1", "Known", "art-a", "Artist A"),
+		}
+		states := map[string]UserAlbumStateRow{
+			"sp-1": {AlbumID: "wax-1", State: DiscoverAlbumStateInLibrary},
+		}
+		out := mergeDiscoverState(results, states)
+		if out[0].State != DiscoverAlbumStateInLibrary {
+			t.Errorf("state = %q, want in_library", out[0].State)
+		}
+		if out[0].AlbumID != "wax-1" {
+			t.Errorf("AlbumID = %q, want wax-1", out[0].AlbumID)
+		}
+	})
+
+	t.Run("preserves input order and enriches each result independently", func(t *testing.T) {
+		results := []spotifylib.SimpleAlbum{
+			simpleAlbumStub("sp-1", "First", "art-a", "Artist A"),
+			simpleAlbumStub("sp-2", "Second", "art-b", "Artist B"),
+		}
+		states := map[string]UserAlbumStateRow{
+			"sp-2": {AlbumID: "wax-2", State: DiscoverAlbumStateOnRadar},
+		}
+		out := mergeDiscoverState(results, states)
+		if out[0].SpotifyID != "sp-1" || out[1].SpotifyID != "sp-2" {
+			t.Fatalf("order broken: %v", out)
+		}
+		if out[0].State != DiscoverAlbumStateNone {
+			t.Errorf("first state = %q, want none", out[0].State)
+		}
+		if out[1].State != DiscoverAlbumStateOnRadar || out[1].AlbumID != "wax-2" {
+			t.Errorf("second result = %+v, want on_radar/wax-2", out[1])
+		}
+	})
+
+	t.Run("propagates artist metadata from Spotify result", func(t *testing.T) {
+		results := []spotifylib.SimpleAlbum{
+			simpleAlbumStub("sp-1", "Album", "art-a", "Artist A"),
+		}
+		out := mergeDiscoverState(results, map[string]UserAlbumStateRow{})
+		if len(out[0].Artists) != 1 {
+			t.Fatalf("got %d artists, want 1", len(out[0].Artists))
+		}
+		if out[0].Artists[0].SpotifyID != "art-a" {
+			t.Errorf("artist SpotifyID = %q, want art-a", out[0].Artists[0].SpotifyID)
+		}
+		if out[0].Artists[0].Name != "Artist A" {
+			t.Errorf("artist Name = %q, want Artist A", out[0].Artists[0].Name)
+		}
+	})
+
+	t.Run("uses first image URL when present", func(t *testing.T) {
+		stub := simpleAlbumStub("sp-1", "Album", "art-a", "Artist A")
+		stub.Images = []spotifylib.Image{
+			{URL: "https://example.test/cover.jpg"},
+			{URL: "https://example.test/cover-small.jpg"},
+		}
+		out := mergeDiscoverState([]spotifylib.SimpleAlbum{stub}, map[string]UserAlbumStateRow{})
+		if out[0].ImageURL != "https://example.test/cover.jpg" {
+			t.Errorf("ImageURL = %q, want first image URL", out[0].ImageURL)
+		}
+	})
+}
+
+// simpleAlbumStub builds a minimal spotify SimpleAlbum for tests.
+func simpleAlbumStub(id, name, artistID, artistName string) spotifylib.SimpleAlbum {
+	return spotifylib.SimpleAlbum{
+		ID:   spotifylib.ID(id),
+		Name: name,
+		Artists: []spotifylib.SimpleArtist{
+			{ID: spotifylib.ID(artistID), Name: artistName},
+		},
+	}
 }
