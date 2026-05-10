@@ -607,6 +607,32 @@ func (h *HttpHandler) GetDiscoverRadar(w http.ResponseWriter, r *http.Request) {
 	RadarCarousel(radar, false).Render(r.Context(), w)
 }
 
+func (h *HttpHandler) GetAlbumActionsModal(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+	userId, err := ctx.UserId()
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get user ID: %w", err),
+		})
+		return
+	}
+	spotifyID := r.URL.Query().Get("spotifyId")
+	if spotifyID == "" {
+		http.Error(w, "missing spotifyId", http.StatusBadRequest)
+		return
+	}
+	result, err := h.libraryService.GetAlbumActionsResult(ctx, userId, spotifyID)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to resolve album: %w", err),
+		})
+		return
+	}
+	AlbumActionsModal(result).Render(r.Context(), w)
+}
+
 func (h *HttpHandler) GetDiscoverSearch(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())
 	userId, err := ctx.UserId()
@@ -653,23 +679,10 @@ func (h *HttpHandler) PostDiscoverRadar(w http.ResponseWriter, r *http.Request) 
 	}
 	if err := h.libraryService.AddSpotifyAlbumToRadar(ctx, userId, spotifyID); err != nil {
 		if errors.Is(err, library.ErrAlbumAlreadyDecided) {
-			// Album already has a user_releases row — UI was stale. Re-render the
-			// affordance with the album's actual current state and signal a toast.
-			states, lookupErr := h.libraryService.LookupDiscoverState(ctx, userId, []string{spotifyID})
-			if lookupErr != nil {
-				httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-					Status: http.StatusInternalServerError,
-					Err:    fmt.Errorf("failed to look up album state: %w", lookupErr),
-				})
-				return
-			}
-			row := library.DiscoverResultDTO{SpotifyID: spotifyID}
-			if s, ok := states[spotifyID]; ok {
-				row.AlbumID = s.AlbumID
-				row.State = s.State
-			}
+			// Album already has a user_releases row — UI was stale. The search-list
+			// auto-refresh on radarUpdated will pull the actual current state.
 			w.Header().Set("HX-Trigger", "radarUpdated")
-			discoverResultAffordanceCell(row).Render(r.Context(), w)
+			w.WriteHeader(http.StatusOK)
 			return
 		}
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
@@ -678,21 +691,8 @@ func (h *HttpHandler) PostDiscoverRadar(w http.ResponseWriter, r *http.Request) 
 		})
 		return
 	}
-	states, err := h.libraryService.LookupDiscoverState(ctx, userId, []string{spotifyID})
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    fmt.Errorf("failed to look up new state: %w", err),
-		})
-		return
-	}
-	row := library.DiscoverResultDTO{SpotifyID: spotifyID, State: library.DiscoverAlbumStateOnRadar}
-	if s, ok := states[spotifyID]; ok {
-		row.AlbumID = s.AlbumID
-		row.State = s.State
-	}
 	w.Header().Set("HX-Trigger", "radarUpdated")
-	discoverResultAffordanceCell(row).Render(r.Context(), w)
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *HttpHandler) DeleteAlbumRadar(w http.ResponseWriter, r *http.Request) {
@@ -706,14 +706,6 @@ func (h *HttpHandler) DeleteAlbumRadar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	albumID := r.PathValue("albumId")
-	spotifyID, err := h.libraryService.GetAlbumSpotifyID(ctx, albumID)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    fmt.Errorf("failed to look up album: %w", err),
-		})
-		return
-	}
 	if err := h.libraryService.RemoveAlbumFromRadar(ctx, userId, albumID); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
@@ -722,10 +714,7 @@ func (h *HttpHandler) DeleteAlbumRadar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("HX-Trigger", "radarUpdated")
-	discoverResultAffordanceCell(library.DiscoverResultDTO{
-		SpotifyID: spotifyID,
-		State:     library.DiscoverAlbumStateNone,
-	}).Render(r.Context(), w)
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *HttpHandler) PostAlbumLibrary(w http.ResponseWriter, r *http.Request) {
@@ -739,17 +728,6 @@ func (h *HttpHandler) PostAlbumLibrary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	albumID := r.PathValue("albumId")
-	// Look up spotifyID before the promotion so we can re-render the search-results
-	// row in its new state (the radar-carousel caller uses hx-swap="none" and
-	// ignores the body).
-	spotifyID, err := h.libraryService.GetAlbumSpotifyID(ctx, albumID)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    fmt.Errorf("failed to look up album: %w", err),
-		})
-		return
-	}
 	if err := h.libraryService.PromoteRadarToLibrary(ctx, userId, albumID); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
@@ -758,9 +736,5 @@ func (h *HttpHandler) PostAlbumLibrary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("HX-Trigger", "radarUpdated, libraryUpdated")
-	discoverResultAffordanceCell(library.DiscoverResultDTO{
-		SpotifyID: spotifyID,
-		AlbumID:   albumID,
-		State:     library.DiscoverAlbumStateInLibrary,
-	}).Render(r.Context(), w)
+	w.WriteHeader(http.StatusOK)
 }

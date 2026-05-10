@@ -16,29 +16,38 @@ templ DiscoverPage(props DiscoverPageProps) {
     @templates.RootComponent(templates.RootProps{
         Title: templates.CreatePageTitle("Discover"),
     }) {
-        <div class="w-full flex flex-col" hx-history="false">
+        <div class="w-full h-dvh flex flex-col" hx-history="false">
             @LibraryHeaderBar(HeaderBarProps{Active: "discover"})
-            <div class="flex flex-col py-4 gap-6 items-center max-w-3xl mx-auto w-full px-4">
-                <div class="w-full flex flex-col gap-1">
-                    <span class="text-xs font-semibold uppercase tracking-widest text-base-content/40 px-1">On Radar</span>
+            <div class="flex flex-col py-4 gap-6 items-center w-full flex-1 min-h-0">
+                <div class="w-full flex flex-col gap-1 flex-shrink-0 px-4">
+                    <span class="text-xs font-semibold uppercase tracking-widest text-base-content px-1">On Radar</span>
                     @RadarCarousel(props.RadarAlbums, false)
                 </div>
-                <div class="w-full flex flex-col gap-3">
+                <div class="w-full max-w-3xl flex flex-col gap-3 flex-1 min-h-0 px-4">
                     <input
                         id="discover-search-input"
                         name="q"
                         type="search"
-                        class="input input-bordered w-full"
+                        class="input input-bordered w-full flex-shrink-0"
                         placeholder="Search Spotify for albums..."
                         value={ props.Query }
                         autocomplete="off"
                         hx-get="/app/library/discover/search"
                         hx-trigger="keyup changed delay:300ms, search"
                         hx-target="#discover-results"
-                        hx-swap="innerHTML"
+                        hx-swap="innerHTML scroll:#discover-results:top"
                         data-testid="discover-search-input"
                     />
-                    <div id="discover-results" data-testid="discover-results">
+                    <div
+                        id="discover-results"
+                        class="flex-1 min-h-0 overflow-y-auto"
+                        data-testid="discover-results"
+                        hx-get="/app/library/discover/search"
+                        hx-include="#discover-search-input"
+                        hx-trigger="radarUpdated from:body, libraryUpdated from:body"
+                        hx-target="this"
+                        hx-swap="innerHTML"
+                    >
                         @DiscoverSearchResults(props.SearchResults, props.Query)
                     </div>
                 </div>
@@ -60,8 +69,15 @@ templ RadarCarousel(albums []library.AlbumDTO, isOobSwap bool) {
         data-testid="radar-carousel"
     >
         if len(albums) == 0 {
-            <div class="px-4 py-4 text-xs text-base-content/40" data-testid="radar-empty">
-                No albums on your radar yet — search below to find some.
+            <div class="relative carousel carousel-end gap-3 py-2 w-full overscroll-x-none">
+                // Invisible placeholder card reserves the natural carousel height
+                // so the layout doesn't jitter when albums are added or removed.
+                <div class="carousel-item invisible" aria-hidden="true">
+                    @radarCarouselCard(library.AlbumDTO{Title: "·", Artists: []library.ArtistDTO{{Name: "·"}}})
+                </div>
+                <div class="absolute inset-0 flex items-center justify-center px-4 text-xs text-base-content/40" data-testid="radar-empty">
+                    No albums on your radar yet — search below to find some.
+                </div>
             </div>
         } else {
             <div class="carousel carousel-end gap-3 py-2 w-full overscroll-x-none">
@@ -76,26 +92,26 @@ templ RadarCarousel(albums []library.AlbumDTO, isOobSwap bool) {
 }
 
 templ radarCarouselCard(album library.AlbumDTO) {
-    <div class="flex flex-col items-center gap-1 w-26 relative">
-        <a
-            href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", album.SpotifyID)) }
-            target="_blank"
-            rel="noopener noreferrer"
-            class="hover:opacity-80 transition-opacity"
+    <div class="flex flex-col items-center gap-1 w-26">
+        <button
+            type="button"
+            class="hover:opacity-80 transition-opacity cursor-pointer"
+            hx-get={ fmt.Sprintf("/app/library/discover/album-menu?spotifyId=%s", album.SpotifyID) }
+            hx-swap="none"
             data-testid="radar-card-cover"
         >
             if album.ImageURL != "" {
                 <div class="avatar">
-                    <div class="mask mask-squircle h-24 w-24 flex-shrink-0">
+                    <div class="mask mask-squircle size-24 flex-shrink-0">
                         <img src={ album.ImageURL } alt={ album.Title }/>
                     </div>
                 </div>
             } else {
                 <div class="avatar avatar-placeholder">
-                    <div class="mask mask-squircle h-24 w-24 flex-shrink-0 bg-base-300"></div>
+                    <div class="mask mask-squircle size-24 flex-shrink-0 bg-base-300"></div>
                 </div>
             }
-        </a>
+        </button>
         <span class="text-xs text-nowrap truncate w-full text-left">{ album.Title }</span>
         if len(album.Artists) > 0 {
             <span class="text-xs text-nowrap truncate w-full text-left text-base-content/40">
@@ -107,28 +123,90 @@ templ radarCarouselCard(album library.AlbumDTO) {
                 }
             </span>
         }
-        <div class="dropdown dropdown-end absolute top-1 right-1">
-            <div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle bg-base-100/80" data-testid="radar-card-menu">
-                @templates.EllipsisVerticalIcon(templates.IconProps{})
+    </div>
+}
+
+const AlbumActionsModalId = "album-actions-modal"
+
+templ AlbumActionsModal(result library.DiscoverResultDTO) {
+    @templates.Modal(AlbumActionsModalId, templates.ModalProps{
+        ModalContent: albumActionsModalContent(result),
+    })
+}
+
+templ albumActionsModalContent(result library.DiscoverResultDTO) {
+    <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-3 min-w-0">
+            if result.ImageURL != "" {
+                <div class="avatar">
+                    <div class="mask mask-squircle size-16 flex-shrink-0">
+                        <img src={ result.ImageURL } alt={ result.Title }/>
+                    </div>
+                </div>
+            } else {
+                <div class="avatar avatar-placeholder">
+                    <div class="mask mask-squircle size-16 flex-shrink-0 bg-base-300"></div>
+                </div>
+            }
+            <div class="min-w-0">
+                <h3 class="font-semibold text-lg truncate">{ result.Title }</h3>
+                if len(result.Artists) > 0 {
+                    <div class="text-sm text-base-content/60 truncate">
+                        for i, artist := range result.Artists {
+                            if i > 0 {
+                                <span>, </span>
+                            }
+                            { artist.Name }
+                        }
+                    </div>
+                }
             </div>
-            <ul tabindex="0" class="dropdown-content z-[1] menu menu-compact bg-base-100 rounded-box w-44 shadow-xl border border-base-300 mt-1">
-                <li>
+        </div>
+        <div class="flex flex-col gap-2">
+            <a
+                href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", result.SpotifyID)) }
+                target="_blank"
+                rel="noopener noreferrer"
+                class="btn btn-sm btn-outline"
+                data-testid="album-modal-open-spotify"
+            >Open in Spotify</a>
+            switch result.State {
+                case library.DiscoverAlbumStateOnRadar:
                     <button
-                        class="text-xs"
-                        hx-post={ fmt.Sprintf("/app/library/albums/%s/library", album.ID) }
+                        type="button"
+                        class="btn btn-sm btn-primary"
+                        hx-post={ fmt.Sprintf("/app/library/albums/%s/library", result.AlbumID) }
                         hx-swap="none"
-                        data-testid="radar-card-add-to-library"
+                        hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
+                        data-testid="album-modal-add-to-library"
                     >Add to library</button>
-                </li>
-                <li>
                     <button
-                        class="text-xs text-error"
-                        hx-delete={ fmt.Sprintf("/app/library/albums/%s/radar", album.ID) }
+                        type="button"
+                        class="btn btn-sm btn-ghost text-error"
+                        hx-delete={ fmt.Sprintf("/app/library/albums/%s/radar", result.AlbumID) }
                         hx-swap="none"
-                        data-testid="radar-card-remove"
+                        hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
+                        data-testid="album-modal-remove-radar"
                     >Remove from radar</button>
-                </li>
-            </ul>
+                case library.DiscoverAlbumStateRemoved:
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-primary"
+                        hx-post={ fmt.Sprintf("/app/library/albums/%s/library", result.AlbumID) }
+                        hx-swap="none"
+                        hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
+                        data-testid="album-modal-reacquire"
+                    >Re-acquire</button>
+                default:
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-primary"
+                        hx-post={ fmt.Sprintf("/app/library/discover/radar?spotifyId=%s", result.SpotifyID) }
+                        hx-swap="none"
+                        hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
+                        data-testid="album-modal-add-radar"
+                    >Add to radar</button>
+            }
         </div>
     </div>
 }
@@ -143,7 +221,7 @@ templ DiscoverSearchResults(results []library.DiscoverResultDTO, query string) {
             No results.
         </div>
     } else {
-        <ul class="list flex flex-col gap-1">
+        <ul class="list">
             for _, result := range results {
                 @discoverSearchResultRow(result)
             }
@@ -153,76 +231,68 @@ templ DiscoverSearchResults(results []library.DiscoverResultDTO, query string) {
 
 templ discoverSearchResultRow(result library.DiscoverResultDTO) {
     <li
-        class="list-row items-center gap-3 px-2 py-2 rounded"
-        data-result
+        class="list-row items-center relative cursor-pointer hover:bg-base-200/50 transition-colors"
         data-spotify-id={ result.SpotifyID }
         data-testid="discover-result-row"
     >
         if result.ImageURL != "" {
-            <div class="avatar flex-shrink-0">
-                <div class="mask mask-squircle h-12 w-12">
+            <div class="avatar">
+                <div class="mask mask-squircle size-24 flex-shrink-0">
                     <img src={ result.ImageURL } alt={ result.Title }/>
                 </div>
             </div>
         } else {
-            <div class="avatar avatar-placeholder flex-shrink-0">
-                <div class="mask mask-squircle h-12 w-12 bg-base-300"></div>
+            <div class="avatar avatar-placeholder">
+                <div class="mask mask-squircle size-24 flex-shrink-0 bg-base-300"></div>
             </div>
         }
-        <div class="flex-1 min-w-0">
-            <div class="text-sm font-medium truncate" data-testid="discover-result-title">{ result.Title }</div>
+        <div class="list-col-grow flex flex-col justify-center min-w-0 gap-1">
+            <div class="font-medium truncate" data-testid="discover-result-title">{ result.Title }</div>
             if len(result.Artists) > 0 {
-                <div class="text-xs text-base-content/60 truncate">
+                <div class="text-sm text-base-content/60 truncate">
                     for i, a := range result.Artists {
                         if i > 0 {
-                            { ", " }
+                            <span>, </span>
                         }
                         { a.Name }
                     }
                 </div>
             }
         </div>
-        @discoverResultAffordanceCell(result)
+        <div class="flex-shrink-0 self-center">
+            @discoverResultStateBadge(result.State)
+        </div>
+        // Stretched click target — overlays the entire row.
+        if result.State == library.DiscoverAlbumStateInLibrary {
+            <a
+                href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", result.AlbumID)) }
+                class="absolute inset-0 cursor-pointer"
+                aria-label={ result.Title }
+                hx-boost="false"
+                data-testid="discover-result-link"
+            ></a>
+        } else {
+            <button
+                type="button"
+                class="absolute inset-0 cursor-pointer"
+                aria-label={ result.Title }
+                hx-get={ fmt.Sprintf("/app/library/discover/album-menu?spotifyId=%s", result.SpotifyID) }
+                hx-swap="none"
+                data-testid="discover-result-trigger"
+            ></button>
+        }
     </li>
 }
 
-templ discoverResultAffordanceCell(result library.DiscoverResultDTO) {
-    <div class="flex-shrink-0" data-affordance>
-        @discoverResultAffordance(result)
-    </div>
-}
-
-templ discoverResultAffordance(result library.DiscoverResultDTO) {
-    switch result.State {
+templ discoverResultStateBadge(state library.DiscoverAlbumState) {
+    switch state {
         case library.DiscoverAlbumStateInLibrary:
-            <a
-                href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", result.AlbumID)) }
-                class="badge badge-soft badge-primary"
-                data-testid="discover-result-in-library"
-            >In library</a>
+            <span class="badge badge-soft badge-primary" data-testid="discover-badge-in-library">In library</span>
         case library.DiscoverAlbumStateOnRadar:
-            <button
-                class="btn btn-xs btn-ghost text-error"
-                hx-delete={ fmt.Sprintf("/app/library/albums/%s/radar", result.AlbumID) }
-                hx-target="closest [data-affordance]"
-                hx-swap="outerHTML"
-                data-testid="discover-result-remove-radar"
-            >On radar — remove</button>
+            <span class="badge badge-soft badge-accent" data-testid="discover-badge-on-radar">On radar</span>
         case library.DiscoverAlbumStateRemoved:
-            <button
-                class="btn btn-xs btn-primary"
-                hx-post={ fmt.Sprintf("/app/library/albums/%s/library", result.AlbumID) }
-                hx-target="closest [data-affordance]"
-                hx-swap="outerHTML"
-                data-testid="discover-result-reacquire"
-            >Re-acquire</button>
+            <span class="badge badge-soft badge-error" data-testid="discover-badge-removed">Removed</span>
         default:
-            <button
-                class="btn btn-xs btn-primary"
-                hx-post={ fmt.Sprintf("/app/library/discover/radar?spotifyId=%s", result.SpotifyID) }
-                hx-target="closest [data-affordance]"
-                hx-swap="outerHTML"
-                data-testid="discover-result-add-radar"
-            >+ Add to radar</button>
+            <span class="badge badge-soft" data-testid="discover-badge-new">New</span>
     }
 }

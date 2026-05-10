@@ -542,6 +542,60 @@ func (s *Service) GetAlbumSpotifyID(ctx contextx.ContextX, albumID string) (stri
 	return s.repo.GetAlbumSpotifyID(ctx, albumID)
 }
 
+// GetAlbumActionsResult resolves a Spotify ID into a DiscoverResultDTO with
+// state, AlbumID (when known to wax), title, image, and artists. Used to
+// render the album-actions modal opened from any discover surface.
+//
+// If the album exists in wax (any state), metadata is read from the local DB.
+// Otherwise (state=none), it falls back to fetching from Spotify.
+func (s *Service) GetAlbumActionsResult(ctx contextx.ContextX, userID, spotifyID string) (DiscoverResultDTO, error) {
+	states, err := s.repo.GetUserAlbumStateBySpotifyIDs(ctx, userID, []string{spotifyID})
+	if err != nil {
+		return DiscoverResultDTO{}, fmt.Errorf("failed to look up album state: %w", err)
+	}
+	if state, ok := states[spotifyID]; ok {
+		album, err := s.repo.GetAlbumByID(ctx, state.AlbumID)
+		if err != nil {
+			return DiscoverResultDTO{}, fmt.Errorf("failed to get album: %w", err)
+		}
+		artists, err := s.repo.GetArtistsByAlbumID(ctx, state.AlbumID)
+		if err != nil {
+			return DiscoverResultDTO{}, fmt.Errorf("failed to get artists: %w", err)
+		}
+		return DiscoverResultDTO{
+			SpotifyID: spotifyID,
+			AlbumID:   state.AlbumID,
+			Title:     album.Title,
+			ImageURL:  album.ImageURL,
+			Artists:   artists,
+			State:     state.State,
+		}, nil
+	}
+	// Album not yet in wax — fetch metadata from Spotify.
+	full, err := s.spotifyService.GetFullAlbum(ctx, userID, spotifyID)
+	if err != nil {
+		return DiscoverResultDTO{}, fmt.Errorf("failed to fetch spotify album: %w", err)
+	}
+	var imageURL string
+	if len(full.Images) > 0 {
+		imageURL = full.Images[0].URL
+	}
+	artists := make([]ArtistDTO, len(full.Artists))
+	for i, a := range full.Artists {
+		artists[i] = ArtistDTO{
+			SpotifyID: a.ID.String(),
+			Name:      a.Name,
+		}
+	}
+	return DiscoverResultDTO{
+		SpotifyID: spotifyID,
+		Title:     full.Name,
+		ImageURL:  imageURL,
+		Artists:   artists,
+		State:     DiscoverAlbumStateNone,
+	}, nil
+}
+
 // AddSpotifyAlbumToRadar imports a Spotify album's metadata (album, artists,
 // tracks) into wax and adds the album to the user's radar. Refuses with
 // ErrAlbumAlreadyDecided if the album already has any user_releases row.

@@ -202,16 +202,16 @@ func (s *Service) GetFullAlbum(ctx contextx.ContextX, userId, spotifyId string) 
 }
 
 // SearchAlbums runs a Spotify catalog search restricted to albums.
-// limit is clamped to the Spotify API max of 50.
+// limit is clamped to the Spotify API max of 10 for the search endpoint.
 func (s *Service) SearchAlbums(ctx contextx.ContextX, userId, query string, limit int) ([]spotify.SimpleAlbum, error) {
 	if query == "" {
 		return nil, nil
 	}
 	if limit <= 0 {
-		limit = 20
+		limit = 10
 	}
-	if limit > 50 {
-		limit = 50
+	if limit > 10 {
+		limit = 10
 	}
 	client, err := s.Client(ctx, userId)
 	if err != nil {
