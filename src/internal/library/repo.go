@@ -632,3 +632,45 @@ func (r *Repo) MarkReleaseOwned(ctx context.Context, userID, releaseID string) e
 	}
 	return nil
 }
+
+// GetUserAlbumStateBySpotifyIDs returns the caller's wax state for each
+// Spotify ID. Missing keys mean the user has no row for that album. When an
+// album would qualify for multiple states (defensive — invariants forbid it),
+// in_library wins, then on_radar, then removed.
+func (r *Repo) GetUserAlbumStateBySpotifyIDs(ctx context.Context, userID string, spotifyIDs []string) (map[string]UserAlbumStateRow, error) {
+	if len(spotifyIDs) == 0 {
+		return map[string]UserAlbumStateRow{}, nil
+	}
+	rows, err := r.q.GetUserAlbumStateBySpotifyIds(ctx, sqlc.GetUserAlbumStateBySpotifyIdsParams{
+		UserID:     userID,
+		UserID_2:   userID,
+		UserID_3:   userID,
+		SpotifyIds: spotifyIDs,
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]UserAlbumStateRow, len(rows))
+	rank := func(s DiscoverAlbumState) int {
+		switch s {
+		case DiscoverAlbumStateInLibrary:
+			return 3
+		case DiscoverAlbumStateOnRadar:
+			return 2
+		case DiscoverAlbumStateRemoved:
+			return 1
+		default:
+			return 0
+		}
+	}
+	for _, row := range rows {
+		next := UserAlbumStateRow{
+			AlbumID: row.AlbumID,
+			State:   DiscoverAlbumState(row.State),
+		}
+		if cur, ok := out[row.SpotifyID]; !ok || rank(next.State) > rank(cur.State) {
+			out[row.SpotifyID] = next
+		}
+	}
+	return out, nil
+}
