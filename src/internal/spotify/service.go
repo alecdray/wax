@@ -187,3 +187,29 @@ func (s *Service) GetUsersSavedTracks(ctx contextx.ContextX, userId string) ([]s
 	}
 	return collectedTracks, nil
 }
+
+// SearchAlbums runs a Spotify catalog search restricted to albums.
+// limit is clamped to the Spotify API max of 50.
+func (s *Service) SearchAlbums(ctx contextx.ContextX, userId, query string, limit int) ([]spotify.SimpleAlbum, error) {
+	if query == "" {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 50 {
+		limit = 50
+	}
+	client, err := s.Client(ctx, userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get spotify client: %w", err)
+	}
+	result, err := client.Search(ctx, query, spotify.SearchTypeAlbum, spotify.Limit(limit))
+	if err != nil {
+		return nil, fmt.Errorf("spotify album search failed: %w", err)
+	}
+	if result == nil || result.Albums == nil {
+		return nil, nil
+	}
+	return result.Albums.Albums, nil
+}
