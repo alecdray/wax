@@ -410,6 +410,36 @@ func (s *Service) RemoveAlbumFromRadar(ctx context.Context, userID, albumID stri
 	return s.repo.RemoveAlbumFromRadar(ctx, userID, albumID)
 }
 
+// PromoteRadarToLibrary transitions a radar album to an owned digital release
+// and pushes the album to the user's Spotify saved library. Spotify push is
+// best-effort; a failure is logged but does not roll back the local DB
+// (mirrors RemoveAlbumFromLibrary).
+func (s *Service) PromoteRadarToLibrary(ctx contextx.ContextX, userID, albumID string) error {
+	spotifyID, err := s.repo.GetAlbumSpotifyID(ctx, albumID)
+	if err != nil {
+		return fmt.Errorf("failed to get album spotify id: %w", err)
+	}
+
+	err = s.db.WithTx(func(tx *db.DB) error {
+		txRepo := NewRepo(tx.Queries())
+		if _, err := txRepo.AddOwnedRelease(ctx, userID, albumID, models.ReleaseFormatDigital, "", time.Now()); err != nil {
+			return fmt.Errorf("failed to add owned digital release: %w", err)
+		}
+		if err := txRepo.RemoveAlbumFromRadar(ctx, userID, albumID); err != nil {
+			return fmt.Errorf("failed to clear radar: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if err := s.spotifyService.AddAlbumToSavedLibrary(ctx, userID, spotifyID); err != nil {
+		slog.WarnContext(ctx, "failed to push album to spotify saved library after radar promotion", "error", err, "album_id", albumID, "spotify_id", spotifyID)
+	}
+	return nil
+}
+
 // spotifyAlbumToDTO converts a Spotify FullAlbum into an AlbumDTO ready for
 // EnsureAlbumWithMetadata. Releases is intentionally omitted — radar entries
 // are pre-decision; the feed sync that populates Releases lives in
