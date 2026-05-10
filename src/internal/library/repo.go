@@ -563,3 +563,61 @@ func (r *Repo) IsAlbumOnRadar(ctx context.Context, userID, albumID string) (bool
 	}
 	return onRadar != 0, nil
 }
+
+// --- Wishlist (release-level pre-acquisition) ---
+
+// AddReleaseToWishlist upserts a user_release in the 'wishlist' state.
+// If a release row doesn't yet exist for (album, format), one is created.
+// Always clears the album's radar entry inside the same transactional path the caller is on.
+func (r *Repo) AddReleaseToWishlist(ctx context.Context, userID, albumID string, format models.ReleaseFormat, releaseID string) (string, error) {
+	if releaseID == "" {
+		rel, err := r.q.GetOrCreateRelease(ctx, sqlc.GetOrCreateReleaseParams{
+			ID:      uuid.New().String(),
+			AlbumID: albumID,
+			Format:  format,
+		})
+		if err != nil {
+			return "", err
+		}
+		releaseID = rel.ID
+	}
+	now := time.Now()
+	if _, err := r.q.UpsertWishlistRelease(ctx, sqlc.UpsertWishlistReleaseParams{
+		ID:              uuid.New().String(),
+		UserID:          userID,
+		ReleaseID:       releaseID,
+		CreatedAt:       now,
+		StatusUpdatedAt: now,
+	}); err != nil {
+		return "", err
+	}
+	if err := r.q.RemoveAlbumFromRadar(ctx, sqlc.RemoveAlbumFromRadarParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	}); err != nil {
+		return "", fmt.Errorf("failed to clear radar: %w", err)
+	}
+	return releaseID, nil
+}
+
+// RemoveReleaseFromWishlist hard-deletes the wishlist row.
+// Owned and removed rows are untouched (the WHERE clause filters on status='wishlist').
+func (r *Repo) RemoveReleaseFromWishlist(ctx context.Context, userID, releaseID string) error {
+	return r.q.DeleteWishlistRelease(ctx, sqlc.DeleteWishlistReleaseParams{
+		UserID:    userID,
+		ReleaseID: releaseID,
+	})
+}
+
+// GetWishlistReleases returns the user's wishlist releases.
+func (r *Repo) GetWishlistReleases(ctx context.Context, userID string) ([]ReleaseDTO, error) {
+	rows, err := r.q.GetWishlistReleases(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]ReleaseDTO, len(rows))
+	for i, row := range rows {
+		out[i] = releaseDTOFromModel(row.Release, &row.UserRelease)
+	}
+	return out, nil
+}
