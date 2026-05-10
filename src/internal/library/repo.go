@@ -293,6 +293,7 @@ func (r *Repo) GetRecentlyPlayedAlbums(ctx context.Context, userID string) ([]Al
 			Artists:   fmt.Sprintf("%s", row.ArtistNames),
 			ImageURL:  row.ImageUrl.String,
 			InLibrary: row.InLibrary != 0,
+			OnRadar:   row.OnRadar != 0,
 		})
 	}
 	return out, nil
