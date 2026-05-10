@@ -51,7 +51,7 @@ LEFT JOIN (
 LEFT JOIN track_plays ON track_plays.album_id = albums.id AND track_plays.user_id = user_releases.user_id
 WHERE user_releases.user_id = ?
   AND latest_rating.album_id IS NULL
-  AND user_releases.removed_at IS NULL
+  AND user_releases.status = 'owned'
 GROUP BY albums.id
-ORDER BY MAX(track_plays.played_at) DESC NULLS LAST, MAX(user_releases.added_at) DESC
+ORDER BY MAX(track_plays.played_at) DESC NULLS LAST, MAX(user_releases.status_updated_at) DESC
 LIMIT 20;
