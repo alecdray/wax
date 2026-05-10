@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/httpx"
@@ -556,4 +557,190 @@ func (h *HttpHandler) SaveSleeveNote(w http.ResponseWriter, r *http.Request) {
 			Err:    err,
 		})
 	}
+}
+
+// --- Discover page ---
+
+func (h *HttpHandler) GetDiscoverPage(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+	userId, err := ctx.UserId()
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get user ID: %w", err),
+		})
+		return
+	}
+	radar, err := h.libraryService.GetRadarAlbums(ctx, userId)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to get radar albums: %w", err),
+		})
+		return
+	}
+	DiscoverPage(DiscoverPageProps{
+		RadarAlbums:   radar,
+		Query:         "",
+		SearchResults: nil,
+	}).Render(r.Context(), w)
+}
+
+func (h *HttpHandler) GetDiscoverRadar(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+	userId, err := ctx.UserId()
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get user ID: %w", err),
+		})
+		return
+	}
+	radar, err := h.libraryService.GetRadarAlbums(ctx, userId)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to get radar albums: %w", err),
+		})
+		return
+	}
+	RadarCarousel(radar, false).Render(r.Context(), w)
+}
+
+func (h *HttpHandler) GetDiscoverSearch(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+	userId, err := ctx.UserId()
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get user ID: %w", err),
+		})
+		return
+	}
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if query == "" {
+		DiscoverSearchResults(nil, "").Render(r.Context(), w)
+		return
+	}
+	results, err := h.libraryService.SearchAlbumsForDiscover(ctx, userId, query, 20)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("spotify search failed: %w", err),
+		})
+		return
+	}
+	DiscoverSearchResults(results, query).Render(r.Context(), w)
+}
+
+func (h *HttpHandler) PostDiscoverRadar(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+	userId, err := ctx.UserId()
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get user ID: %w", err),
+		})
+		return
+	}
+	spotifyID := r.URL.Query().Get("spotifyId")
+	if spotifyID == "" {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("missing spotifyId"),
+		})
+		return
+	}
+	if err := h.libraryService.AddSpotifyAlbumToRadar(ctx, userId, spotifyID); err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to add album to radar: %w", err),
+		})
+		return
+	}
+	states, err := h.libraryService.LookupDiscoverState(ctx, userId, []string{spotifyID})
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to look up new state: %w", err),
+		})
+		return
+	}
+	row := library.DiscoverResultDTO{SpotifyID: spotifyID, State: library.DiscoverAlbumStateOnRadar}
+	if s, ok := states[spotifyID]; ok {
+		row.AlbumID = s.AlbumID
+		row.State = s.State
+	}
+	w.Header().Set("HX-Trigger", "radarUpdated")
+	discoverSearchResultRow(row).Render(r.Context(), w)
+}
+
+func (h *HttpHandler) DeleteAlbumRadar(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+	userId, err := ctx.UserId()
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get user ID: %w", err),
+		})
+		return
+	}
+	albumID := r.PathValue("albumId")
+	spotifyID, err := h.libraryService.GetAlbumSpotifyID(ctx, albumID)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to look up album: %w", err),
+		})
+		return
+	}
+	if err := h.libraryService.RemoveAlbumFromRadar(ctx, userId, albumID); err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to remove from radar: %w", err),
+		})
+		return
+	}
+	w.Header().Set("HX-Trigger", "radarUpdated")
+	discoverSearchResultRow(library.DiscoverResultDTO{
+		SpotifyID: spotifyID,
+		State:     library.DiscoverAlbumStateNone,
+	}).Render(r.Context(), w)
+}
+
+func (h *HttpHandler) PostAlbumLibrary(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+	userId, err := ctx.UserId()
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get user ID: %w", err),
+		})
+		return
+	}
+	albumID := r.PathValue("albumId")
+	// Look up spotifyID before the promotion so we can re-render the search-results
+	// row in its new state (the radar-carousel caller uses hx-swap="none" and
+	// ignores the body).
+	spotifyID, err := h.libraryService.GetAlbumSpotifyID(ctx, albumID)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to look up album: %w", err),
+		})
+		return
+	}
+	if err := h.libraryService.PromoteRadarToLibrary(ctx, userId, albumID); err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to promote to library: %w", err),
+		})
+		return
+	}
+	w.Header().Set("HX-Trigger", "radarUpdated, libraryUpdated")
+	discoverSearchResultRow(library.DiscoverResultDTO{
+		SpotifyID: spotifyID,
+		AlbumID:   albumID,
+		State:     library.DiscoverAlbumStateInLibrary,
+	}).Render(r.Context(), w)
 }

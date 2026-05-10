@@ -529,6 +529,19 @@ func (s *Service) SearchAlbumsForDiscover(ctx contextx.ContextX, userID, query s
 	return mergeDiscoverState(results, states), nil
 }
 
+// LookupDiscoverState exposes the per-Spotify-ID state lookup for adapters
+// that need it after a write (e.g., to re-render a row in its new state).
+func (s *Service) LookupDiscoverState(ctx contextx.ContextX, userID string, spotifyIDs []string) (map[string]UserAlbumStateRow, error) {
+	return s.repo.GetUserAlbumStateBySpotifyIDs(ctx, userID, spotifyIDs)
+}
+
+// GetAlbumSpotifyID returns the Spotify ID for a wax album. Thin wrapper over
+// the repo method (already used internally by RemoveAlbumFromLibrary); now
+// exposed so adapters can re-render search-result rows after a radar delete.
+func (s *Service) GetAlbumSpotifyID(ctx contextx.ContextX, albumID string) (string, error) {
+	return s.repo.GetAlbumSpotifyID(ctx, albumID)
+}
+
 // AddSpotifyAlbumToRadar imports a Spotify album's metadata (album, artists,
 // tracks) into wax and adds the album to the user's radar. Refuses with
 // ErrAlbumAlreadyDecided if the album already has any user_releases row.
