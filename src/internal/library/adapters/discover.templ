@@ -231,9 +231,23 @@ templ DiscoverSearchResults(results []library.DiscoverResultDTO, query string) {
 
 templ discoverSearchResultRow(result library.DiscoverResultDTO) {
     <li
-        class="list-row items-center relative cursor-pointer hover:bg-base-200/50 transition-colors"
+        class="list-row items-center cursor-pointer hover:bg-base-200/50 transition-colors"
         data-spotify-id={ result.SpotifyID }
         data-testid="discover-result-row"
+        tabindex="0"
+        aria-label={ result.Title }
+        hx-trigger="click, keyup[key=='Enter']"
+        if result.State == library.DiscoverAlbumStateInLibrary {
+            role="link"
+            hx-get={ fmt.Sprintf("/app/library/albums/%s", result.AlbumID) }
+            hx-target="body"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+        } else {
+            role="button"
+            hx-get={ fmt.Sprintf("/app/library/discover/album-menu?spotifyId=%s", result.SpotifyID) }
+            hx-swap="none"
+        }
     >
         if result.ImageURL != "" {
             <div class="avatar">
@@ -262,25 +276,6 @@ templ discoverSearchResultRow(result library.DiscoverResultDTO) {
         <div class="flex-shrink-0 self-center">
             @discoverResultStateBadge(result.State)
         </div>
-        // Stretched click target — overlays the entire row.
-        if result.State == library.DiscoverAlbumStateInLibrary {
-            <a
-                href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", result.AlbumID)) }
-                class="absolute inset-0 cursor-pointer"
-                aria-label={ result.Title }
-                hx-boost="false"
-                data-testid="discover-result-link"
-            ></a>
-        } else {
-            <button
-                type="button"
-                class="absolute inset-0 cursor-pointer"
-                aria-label={ result.Title }
-                hx-get={ fmt.Sprintf("/app/library/discover/album-menu?spotifyId=%s", result.SpotifyID) }
-                hx-swap="none"
-                data-testid="discover-result-trigger"
-            ></button>
-        }
     </li>
 }
 
