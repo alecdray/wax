@@ -172,6 +172,13 @@ type User struct {
 	SpotifyRefreshToken sql.NullString
 }
 
+type UserAlbumRadar struct {
+	ID        string
+	UserID    string
+	AlbumID   string
+	CreatedAt time.Time
+}
+
 type UserArtist struct {
 	ID        string
 	UserID    string
@@ -181,12 +188,13 @@ type UserArtist struct {
 }
 
 type UserRelease struct {
-	ID        string
-	UserID    string
-	ReleaseID string
-	AddedAt   time.Time
-	DeletedAt sql.NullTime
-	RemovedAt sql.NullTime
+	ID              string
+	UserID          string
+	ReleaseID       string
+	Status          string
+	CreatedAt       time.Time
+	StatusUpdatedAt time.Time
+	DeletedAt       sql.NullTime
 }
 
 type UserTrack struct {
