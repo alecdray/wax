@@ -359,11 +359,13 @@ func (r *Repo) GetRerateQueue(ctx context.Context, userID string) ([]RerateAlbum
 
 // --- Mutations: collection upserts ---
 
-// AddAlbumToCollection runs the full upsert chain for one album: album,
-// tracks, album_tracks, artists, album_artists, releases, user_releases.
-// Returns the canonical AlbumDTO with sqlc-derived IDs and timestamps filled
-// in from the upsert results.
-func (r *Repo) AddAlbumToCollection(ctx context.Context, userID string, album AlbumDTO) (AlbumDTO, error) {
+// EnsureAlbumWithMetadata creates or updates the album row, its artists, its
+// tracks, and its releases — but does NOT touch user_releases or
+// user_album_radar. Used by both the collection-add flow (which then writes
+// user_releases) and the radar-add flow (which then writes user_album_radar).
+//
+// Returns the canonical AlbumDTO with sqlc-derived IDs filled in.
+func (r *Repo) EnsureAlbumWithMetadata(ctx context.Context, album AlbumDTO) (AlbumDTO, error) {
 	albumModel, err := r.q.GetOrCreateAlbum(ctx, sqlc.GetOrCreateAlbumParams{
 		ID:        album.ID,
 		SpotifyID: album.SpotifyID,
@@ -384,15 +386,12 @@ func (r *Repo) AddAlbumToCollection(ctx context.Context, userID string, album Al
 		if err != nil {
 			return album, err
 		}
-
-		_, err = r.q.GetOrCreateAlbumTrack(ctx, sqlc.GetOrCreateAlbumTrackParams{
+		if _, err := r.q.GetOrCreateAlbumTrack(ctx, sqlc.GetOrCreateAlbumTrackParams{
 			AlbumID: albumModel.ID,
 			TrackID: trackModel.ID,
-		})
-		if err != nil {
+		}); err != nil {
 			return album, err
 		}
-
 		album.Tracks[i] = trackDTOFromModel(trackModel)
 	}
 
@@ -405,43 +404,63 @@ func (r *Repo) AddAlbumToCollection(ctx context.Context, userID string, album Al
 		if err != nil {
 			return album, err
 		}
-
-		_, err = r.q.GetOrCreateAlbumArtist(ctx, sqlc.GetOrCreateAlbumArtistParams{
+		if _, err := r.q.GetOrCreateAlbumArtist(ctx, sqlc.GetOrCreateAlbumArtistParams{
 			AlbumID:  albumModel.ID,
 			ArtistID: artistModel.ID,
-		})
-		if err != nil {
+		}); err != nil {
 			return album, err
 		}
-
 		album.Artists[i] = artistDTOFromModel(artistModel)
 	}
 
 	for i, release := range album.Releases {
 		releaseModel, err := r.q.GetOrCreateRelease(ctx, sqlc.GetOrCreateReleaseParams{
 			ID:      release.ID,
-			AlbumID: album.ID,
+			AlbumID: albumModel.ID,
 			Format:  release.Format,
 		})
 		if err != nil {
 			return album, err
 		}
+		album.Releases[i] = releaseDTOFromModel(releaseModel, nil)
+	}
 
+	return album, nil
+}
+
+// AddAlbumToCollection imports the album's metadata and writes an owned
+// user_releases row for every release on the AlbumDTO. The caller is
+// responsible for clearing the album's radar entry (the cross-cutting rule
+// lives at the service layer).
+func (r *Repo) AddAlbumToCollection(ctx context.Context, userID string, album AlbumDTO) (AlbumDTO, error) {
+	album, err := r.EnsureAlbumWithMetadata(ctx, album)
+	if err != nil {
+		return album, err
+	}
+	for i, release := range album.Releases {
 		now := time.Now()
 		userRelease, err := r.q.UpsertOwnedRelease(ctx, sqlc.UpsertOwnedReleaseParams{
 			ID:              uuid.New().String(),
 			UserID:          userID,
-			ReleaseID:       releaseModel.ID,
+			ReleaseID:       release.ID,
 			CreatedAt:       now,
 			StatusUpdatedAt: now,
 		})
 		if err != nil {
 			return album, err
 		}
-
-		album.Releases[i] = releaseDTOFromModel(releaseModel, &userRelease)
+		// UpsertOwnedRelease doesn't return the full release row, so we
+		// rebuild a sqlc.Release from the input DTO. ReleasedAt is dropped
+		// here — the current caller discards the return value, but a future
+		// caller that needs ReleasedAt should re-fetch the release.
+		album.Releases[i] = releaseDTOFromModel(sqlc.Release{
+			ID:        release.ID,
+			AlbumID:   album.ID,
+			Format:    release.Format,
+			DiscogsID: sql.NullString{String: release.DiscogsID, Valid: release.DiscogsID != ""},
+			Label:     sql.NullString{String: release.Label, Valid: release.Label != ""},
+		}, &userRelease)
 	}
-
 	return album, nil
 }
 
