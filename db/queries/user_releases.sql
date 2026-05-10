@@ -68,3 +68,56 @@ UPDATE user_releases
 -- name: DeleteWishlistRelease :exec
 DELETE FROM user_releases
  WHERE user_id = ? AND release_id = ? AND status = 'wishlist';
+
+-- name: GetUserAlbumStateBySpotifyIds :many
+-- For each input Spotify ID, returns the album's wax ID plus the user's state
+-- for that album: 'owned', 'removed', or 'on_radar'. An album may appear in
+-- more than one branch when invariants drift (e.g., a stray radar row alongside
+-- a wishlist or removed user_release); the service collapses to one state per
+-- album with precedence in_library > on_radar > removed.
+--
+-- The Spotify-ID filter is expressed once via a CTE so sqlc's slice expansion
+-- happens at exactly one site (the generator only replaces the first
+-- /*SLICE*/ marker per call).
+WITH target_albums AS (
+    SELECT id, spotify_id
+    FROM albums
+    WHERE spotify_id IN (sqlc.slice('spotify_ids'))
+)
+SELECT ta.id        AS album_id,
+       ta.spotify_id AS spotify_id,
+       'owned'      AS state
+FROM target_albums ta
+JOIN user_releases ON user_releases.release_id IN (
+    SELECT id FROM releases WHERE album_id = ta.id
+)
+WHERE user_releases.user_id = ?
+  AND user_releases.status = 'owned'
+
+UNION ALL
+
+SELECT ta.id        AS album_id,
+       ta.spotify_id AS spotify_id,
+       'removed'    AS state
+FROM target_albums ta
+JOIN user_releases ON user_releases.release_id IN (
+    SELECT id FROM releases WHERE album_id = ta.id
+)
+WHERE user_releases.user_id = ?
+  AND user_releases.status = 'removed'
+  AND NOT EXISTS (
+      SELECT 1 FROM user_releases ur2
+      JOIN releases r2 ON r2.id = ur2.release_id
+      WHERE ur2.user_id = user_releases.user_id
+        AND r2.album_id = ta.id
+        AND ur2.status = 'owned'
+  )
+
+UNION ALL
+
+SELECT ta.id        AS album_id,
+       ta.spotify_id AS spotify_id,
+       'on_radar'   AS state
+FROM target_albums ta
+JOIN user_album_radar ON user_album_radar.album_id = ta.id
+WHERE user_album_radar.user_id = ?;
