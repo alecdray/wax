@@ -17,6 +17,8 @@ import (
 	"github.com/alecdray/wax/src/internal/review"
 	"github.com/alecdray/wax/src/internal/spotify"
 	"github.com/alecdray/wax/src/internal/tags"
+	"github.com/google/uuid"
+	spotifylib "github.com/zmb3/spotify/v2"
 )
 
 type Service struct {
@@ -406,4 +408,68 @@ func (s *Service) GetRadarAlbums(ctx context.Context, userID string) ([]AlbumDTO
 // row for the album.
 func (s *Service) RemoveAlbumFromRadar(ctx context.Context, userID, albumID string) error {
 	return s.repo.RemoveAlbumFromRadar(ctx, userID, albumID)
+}
+
+// spotifyAlbumToDTO converts a Spotify FullAlbum into an AlbumDTO ready for
+// EnsureAlbumWithMetadata. Releases is intentionally omitted — radar entries
+// are pre-decision; the feed sync that populates Releases lives in
+// feed/service.go and writes user_releases rows that radar must not create.
+func spotifyAlbumToDTO(album *spotifylib.FullAlbum) AlbumDTO {
+	var imageURL string
+	if len(album.Images) > 0 {
+		imageURL = album.Images[0].URL
+	}
+	dto := AlbumDTO{
+		ID:        uuid.NewString(),
+		SpotifyID: album.ID.String(),
+		Title:     album.Name,
+		ImageURL:  imageURL,
+	}
+	dto.Artists = make([]ArtistDTO, len(album.Artists))
+	for i, a := range album.Artists {
+		dto.Artists[i] = ArtistDTO{
+			ID:        uuid.NewString(),
+			SpotifyID: a.ID.String(),
+			Name:      a.Name,
+		}
+	}
+	dto.Tracks = make([]TrackDTO, 0, len(album.Tracks.Tracks))
+	for _, t := range album.Tracks.Tracks {
+		dto.Tracks = append(dto.Tracks, TrackDTO{
+			ID:        uuid.NewString(),
+			SpotifyID: t.ID.String(),
+			Title:     t.Name,
+		})
+	}
+	return dto
+}
+
+// AddSpotifyAlbumToRadar imports a Spotify album's metadata (album, artists,
+// tracks) into wax and adds the album to the user's radar. Refuses with
+// ErrAlbumAlreadyDecided if the album already has any user_releases row.
+func (s *Service) AddSpotifyAlbumToRadar(ctx contextx.ContextX, userID, spotifyID string) error {
+	spotifyAlbum, err := s.spotifyService.GetFullAlbum(ctx, userID, spotifyID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch spotify album: %w", err)
+	}
+	dto := spotifyAlbumToDTO(spotifyAlbum)
+
+	return s.db.WithTx(func(tx *db.DB) error {
+		txRepo := NewRepo(tx.Queries())
+		imported, err := txRepo.EnsureAlbumWithMetadata(ctx, dto)
+		if err != nil {
+			return fmt.Errorf("failed to import album metadata: %w", err)
+		}
+		hasRelease, err := txRepo.HasAnyUserReleaseForAlbum(ctx, userID, imported.ID)
+		if err != nil {
+			return fmt.Errorf("failed to check user releases: %w", err)
+		}
+		if hasRelease {
+			return ErrAlbumAlreadyDecided
+		}
+		if err := txRepo.AddAlbumToRadar(ctx, userID, imported.ID); err != nil {
+			return fmt.Errorf("failed to add album to radar: %w", err)
+		}
+		return nil
+	})
 }

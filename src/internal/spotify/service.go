@@ -188,6 +188,19 @@ func (s *Service) GetUsersSavedTracks(ctx contextx.ContextX, userId string) ([]s
 	return collectedTracks, nil
 }
 
+// GetFullAlbum returns one Spotify album by ID, including artists and tracks.
+func (s *Service) GetFullAlbum(ctx contextx.ContextX, userId, spotifyId string) (*spotify.FullAlbum, error) {
+	client, err := s.Client(ctx, userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get spotify client: %w", err)
+	}
+	album, err := client.GetAlbum(ctx, spotify.ID(spotifyId))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get spotify album: %w", err)
+	}
+	return album, nil
+}
+
 // SearchAlbums runs a Spotify catalog search restricted to albums.
 // limit is clamped to the Spotify API max of 50.
 func (s *Service) SearchAlbums(ctx contextx.ContextX, userId, query string, limit int) ([]spotify.SimpleAlbum, error) {
