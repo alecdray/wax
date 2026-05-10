@@ -511,3 +511,55 @@ func (r *Repo) ClearReleaseDiscogsInfo(ctx context.Context, releaseID string) er
 		ID: releaseID,
 	})
 }
+
+// --- Radar (album-level "want to listen") ---
+
+// AddAlbumToRadar inserts a radar row, idempotent on (user_id, album_id).
+// Service-level rule: callers should refuse this if the album already has any user_releases row.
+func (r *Repo) AddAlbumToRadar(ctx context.Context, userID, albumID string) error {
+	_, err := r.q.AddAlbumToRadar(ctx, sqlc.AddAlbumToRadarParams{
+		ID:      uuid.New().String(),
+		UserID:  userID,
+		AlbumID: albumID,
+	})
+	return err
+}
+
+// RemoveAlbumFromRadar deletes the radar row if present (no-op otherwise).
+func (r *Repo) RemoveAlbumFromRadar(ctx context.Context, userID, albumID string) error {
+	return r.q.RemoveAlbumFromRadar(ctx, sqlc.RemoveAlbumFromRadarParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	})
+}
+
+// GetRadarAlbums returns the radar entries that have no user_releases activity.
+// Excludes albums that the user has wishlisted, owns, or has removed — radar is strictly pre-decision.
+func (r *Repo) GetRadarAlbums(ctx context.Context, userID string) ([]RadarDTO, []AlbumDTO, error) {
+	rows, err := r.q.GetRadarAlbums(ctx, userID)
+	if err != nil {
+		return nil, nil, err
+	}
+	radarDTOs := make([]RadarDTO, len(rows))
+	albumDTOs := make([]AlbumDTO, len(rows))
+	for i, row := range rows {
+		radarDTOs[i] = RadarDTO{
+			AlbumID:   row.UserAlbumRadar.AlbumID,
+			CreatedAt: row.UserAlbumRadar.CreatedAt,
+		}
+		albumDTOs[i] = albumDTOFromModel(row.Album, nil, nil, nil, nil)
+	}
+	return radarDTOs, albumDTOs, nil
+}
+
+// IsAlbumOnRadar reports whether the (user, album) pair has a radar row.
+func (r *Repo) IsAlbumOnRadar(ctx context.Context, userID, albumID string) (bool, error) {
+	onRadar, err := r.q.IsAlbumOnRadar(ctx, sqlc.IsAlbumOnRadarParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	})
+	if err != nil {
+		return false, err
+	}
+	return onRadar != 0, nil
+}
