@@ -40,14 +40,6 @@ CREATE TABLE releases (
     deleted_at datetime, discogs_id TEXT, label TEXT, released_at DATETIME,
     unique(album_id, format)
 );
-CREATE TABLE user_releases (
-    id text primary key,
-    user_id text not null references users(id) on delete cascade,
-    release_id text not null references releases(id) on delete cascade,
-    added_at datetime not null default current_timestamp,
-    deleted_at datetime, removed_at datetime,
-    unique(user_id, release_id)
-);
 CREATE TABLE user_tracks (
     id text primary key,
     user_id text not null references users(id) on delete cascade,
@@ -166,5 +158,23 @@ CREATE TABLE album_rating_state (
     ),
     created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, album_id)
+);
+CREATE TABLE IF NOT EXISTS "user_releases" (
+    id                 TEXT PRIMARY KEY,
+    user_id            TEXT NOT NULL REFERENCES users(id)    ON DELETE CASCADE,
+    release_id         TEXT NOT NULL REFERENCES releases(id) ON DELETE CASCADE,
+    status             TEXT NOT NULL DEFAULT 'owned'
+                            CHECK (status IN ('wishlist', 'owned', 'removed')),
+    created_at         DATETIME NOT NULL,
+    status_updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at         DATETIME,
+    UNIQUE(user_id, release_id)
+);
+CREATE TABLE user_album_radar (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id)  ON DELETE CASCADE,
+    album_id   TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, album_id)
 );

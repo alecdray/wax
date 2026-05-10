@@ -10,10 +10,26 @@ import (
 	"time"
 )
 
+const deleteWishlistRelease = `-- name: DeleteWishlistRelease :exec
+DELETE FROM user_releases
+ WHERE user_id = ? AND release_id = ? AND status = 'wishlist'
+`
+
+type DeleteWishlistReleaseParams struct {
+	UserID    string
+	ReleaseID string
+}
+
+func (q *Queries) DeleteWishlistRelease(ctx context.Context, arg DeleteWishlistReleaseParams) error {
+	_, err := q.db.ExecContext(ctx, deleteWishlistRelease, arg.UserID, arg.ReleaseID)
+	return err
+}
+
 const getUserReleases = `-- name: GetUserReleases :many
-SELECT user_releases.id, user_releases.user_id, user_releases.release_id, user_releases.added_at, user_releases.deleted_at, user_releases.removed_at, releases.id, releases.album_id, releases.format, releases.created_at, releases.deleted_at, releases.discogs_id, releases.label, releases.released_at FROM user_releases
+SELECT user_releases.id, user_releases.user_id, user_releases.release_id, user_releases.status, user_releases.created_at, user_releases.status_updated_at, user_releases.deleted_at, releases.id, releases.album_id, releases.format, releases.created_at, releases.deleted_at, releases.discogs_id, releases.label, releases.released_at
+FROM user_releases
 JOIN releases ON user_releases.release_id = releases.id
-WHERE user_id = ? AND removed_at IS NULL
+WHERE user_id = ? AND status = 'owned'
 `
 
 type GetUserReleasesRow struct {
@@ -21,6 +37,7 @@ type GetUserReleasesRow struct {
 	Release     Release
 }
 
+// Returns the user's owned releases.
 func (q *Queries) GetUserReleases(ctx context.Context, userID string) ([]GetUserReleasesRow, error) {
 	rows, err := q.db.QueryContext(ctx, getUserReleases, userID)
 	if err != nil {
@@ -34,9 +51,10 @@ func (q *Queries) GetUserReleases(ctx context.Context, userID string) ([]GetUser
 			&i.UserRelease.ID,
 			&i.UserRelease.UserID,
 			&i.UserRelease.ReleaseID,
-			&i.UserRelease.AddedAt,
+			&i.UserRelease.Status,
+			&i.UserRelease.CreatedAt,
+			&i.UserRelease.StatusUpdatedAt,
 			&i.UserRelease.DeletedAt,
-			&i.UserRelease.RemovedAt,
 			&i.Release.ID,
 			&i.Release.AlbumID,
 			&i.Release.Format,
@@ -60,11 +78,12 @@ func (q *Queries) GetUserReleases(ctx context.Context, userID string) ([]GetUser
 }
 
 const getUserReleasesByAlbumId = `-- name: GetUserReleasesByAlbumId :many
-SELECT user_releases.id, user_releases.user_id, user_releases.release_id, user_releases.added_at, user_releases.deleted_at, user_releases.removed_at, releases.id, releases.album_id, releases.format, releases.created_at, releases.deleted_at, releases.discogs_id, releases.label, releases.released_at FROM user_releases
+SELECT user_releases.id, user_releases.user_id, user_releases.release_id, user_releases.status, user_releases.created_at, user_releases.status_updated_at, user_releases.deleted_at, releases.id, releases.album_id, releases.format, releases.created_at, releases.deleted_at, releases.discogs_id, releases.label, releases.released_at
+FROM user_releases
 JOIN releases ON user_releases.release_id = releases.id
 WHERE user_id = ?
-AND album_id = ?
-AND removed_at IS NULL
+  AND album_id = ?
+  AND status = 'owned'
 `
 
 type GetUserReleasesByAlbumIdParams struct {
@@ -77,6 +96,7 @@ type GetUserReleasesByAlbumIdRow struct {
 	Release     Release
 }
 
+// Returns the user's owned releases for one album.
 func (q *Queries) GetUserReleasesByAlbumId(ctx context.Context, arg GetUserReleasesByAlbumIdParams) ([]GetUserReleasesByAlbumIdRow, error) {
 	rows, err := q.db.QueryContext(ctx, getUserReleasesByAlbumId, arg.UserID, arg.AlbumID)
 	if err != nil {
@@ -90,9 +110,10 @@ func (q *Queries) GetUserReleasesByAlbumId(ctx context.Context, arg GetUserRelea
 			&i.UserRelease.ID,
 			&i.UserRelease.UserID,
 			&i.UserRelease.ReleaseID,
-			&i.UserRelease.AddedAt,
+			&i.UserRelease.Status,
+			&i.UserRelease.CreatedAt,
+			&i.UserRelease.StatusUpdatedAt,
 			&i.UserRelease.DeletedAt,
-			&i.UserRelease.RemovedAt,
 			&i.Release.ID,
 			&i.Release.AlbumID,
 			&i.Release.Format,
@@ -115,71 +136,170 @@ func (q *Queries) GetUserReleasesByAlbumId(ctx context.Context, arg GetUserRelea
 	return items, nil
 }
 
-const softDeleteUserRelease = `-- name: SoftDeleteUserRelease :exec
-UPDATE user_releases
-SET removed_at = current_timestamp
-WHERE user_id = ? AND release_id = ? AND removed_at IS NULL
+const getWishlistReleases = `-- name: GetWishlistReleases :many
+SELECT user_releases.id, user_releases.user_id, user_releases.release_id, user_releases.status, user_releases.created_at, user_releases.status_updated_at, user_releases.deleted_at, releases.id, releases.album_id, releases.format, releases.created_at, releases.deleted_at, releases.discogs_id, releases.label, releases.released_at
+FROM user_releases
+JOIN releases ON user_releases.release_id = releases.id
+WHERE user_id = ? AND status = 'wishlist'
 `
 
-type SoftDeleteUserReleaseParams struct {
+type GetWishlistReleasesRow struct {
+	UserRelease UserRelease
+	Release     Release
+}
+
+// Returns the user's wishlist releases.
+func (q *Queries) GetWishlistReleases(ctx context.Context, userID string) ([]GetWishlistReleasesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getWishlistReleases, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetWishlistReleasesRow
+	for rows.Next() {
+		var i GetWishlistReleasesRow
+		if err := rows.Scan(
+			&i.UserRelease.ID,
+			&i.UserRelease.UserID,
+			&i.UserRelease.ReleaseID,
+			&i.UserRelease.Status,
+			&i.UserRelease.CreatedAt,
+			&i.UserRelease.StatusUpdatedAt,
+			&i.UserRelease.DeletedAt,
+			&i.Release.ID,
+			&i.Release.AlbumID,
+			&i.Release.Format,
+			&i.Release.CreatedAt,
+			&i.Release.DeletedAt,
+			&i.Release.DiscogsID,
+			&i.Release.Label,
+			&i.Release.ReleasedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markReleaseRemoved = `-- name: MarkReleaseRemoved :exec
+UPDATE user_releases
+   SET status = 'removed', status_updated_at = current_timestamp
+ WHERE user_id = ? AND release_id = ? AND status = 'owned'
+`
+
+type MarkReleaseRemovedParams struct {
 	UserID    string
 	ReleaseID string
 }
 
-func (q *Queries) SoftDeleteUserRelease(ctx context.Context, arg SoftDeleteUserReleaseParams) error {
-	_, err := q.db.ExecContext(ctx, softDeleteUserRelease, arg.UserID, arg.ReleaseID)
+func (q *Queries) MarkReleaseRemoved(ctx context.Context, arg MarkReleaseRemovedParams) error {
+	_, err := q.db.ExecContext(ctx, markReleaseRemoved, arg.UserID, arg.ReleaseID)
 	return err
 }
 
-const softDeleteUserReleasesByAlbumId = `-- name: SoftDeleteUserReleasesByAlbumId :exec
+const markReleasesRemovedByAlbumId = `-- name: MarkReleasesRemovedByAlbumId :exec
 UPDATE user_releases
-SET removed_at = current_timestamp
-WHERE user_id = ? AND release_id IN (
-    SELECT id FROM releases WHERE album_id = ?
-)
+   SET status = 'removed', status_updated_at = current_timestamp
+ WHERE user_id = ?
+   AND status = 'owned'
+   AND release_id IN (SELECT id FROM releases WHERE album_id = ?)
 `
 
-type SoftDeleteUserReleasesByAlbumIdParams struct {
+type MarkReleasesRemovedByAlbumIdParams struct {
 	UserID  string
 	AlbumID string
 }
 
-func (q *Queries) SoftDeleteUserReleasesByAlbumId(ctx context.Context, arg SoftDeleteUserReleasesByAlbumIdParams) error {
-	_, err := q.db.ExecContext(ctx, softDeleteUserReleasesByAlbumId, arg.UserID, arg.AlbumID)
+func (q *Queries) MarkReleasesRemovedByAlbumId(ctx context.Context, arg MarkReleasesRemovedByAlbumIdParams) error {
+	_, err := q.db.ExecContext(ctx, markReleasesRemovedByAlbumId, arg.UserID, arg.AlbumID)
 	return err
 }
 
-const upsertUserRelease = `-- name: UpsertUserRelease :one
-INSERT INTO user_releases (id, user_id, release_id, added_at) VALUES (?, ?, ?, ?)
+const upsertOwnedRelease = `-- name: UpsertOwnedRelease :one
+INSERT INTO user_releases (id, user_id, release_id, status, created_at, status_updated_at)
+VALUES (?, ?, ?, 'owned', ?, ?)
 ON CONFLICT (user_id, release_id)
 DO UPDATE SET
-    added_at = EXCLUDED.added_at,
-    removed_at = NULL
-RETURNING id, user_id, release_id, added_at, deleted_at, removed_at
+    status            = 'owned',
+    status_updated_at = EXCLUDED.status_updated_at
+RETURNING id, user_id, release_id, status, created_at, status_updated_at, deleted_at
 `
 
-type UpsertUserReleaseParams struct {
-	ID        string
-	UserID    string
-	ReleaseID string
-	AddedAt   time.Time
+type UpsertOwnedReleaseParams struct {
+	ID              string
+	UserID          string
+	ReleaseID       string
+	CreatedAt       time.Time
+	StatusUpdatedAt time.Time
 }
 
-func (q *Queries) UpsertUserRelease(ctx context.Context, arg UpsertUserReleaseParams) (UserRelease, error) {
-	row := q.db.QueryRowContext(ctx, upsertUserRelease,
+// Upserts a user_release in the 'owned' state. On insert, created_at = sqlc.arg(created_at).
+// On conflict, status flips to 'owned' and status_updated_at is bumped; created_at is preserved.
+func (q *Queries) UpsertOwnedRelease(ctx context.Context, arg UpsertOwnedReleaseParams) (UserRelease, error) {
+	row := q.db.QueryRowContext(ctx, upsertOwnedRelease,
 		arg.ID,
 		arg.UserID,
 		arg.ReleaseID,
-		arg.AddedAt,
+		arg.CreatedAt,
+		arg.StatusUpdatedAt,
 	)
 	var i UserRelease
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.ReleaseID,
-		&i.AddedAt,
+		&i.Status,
+		&i.CreatedAt,
+		&i.StatusUpdatedAt,
 		&i.DeletedAt,
-		&i.RemovedAt,
+	)
+	return i, err
+}
+
+const upsertWishlistRelease = `-- name: UpsertWishlistRelease :one
+INSERT INTO user_releases (id, user_id, release_id, status, created_at, status_updated_at)
+VALUES (?, ?, ?, 'wishlist', ?, ?)
+ON CONFLICT (user_id, release_id)
+DO UPDATE SET
+    status            = 'wishlist',
+    status_updated_at = EXCLUDED.status_updated_at
+RETURNING id, user_id, release_id, status, created_at, status_updated_at, deleted_at
+`
+
+type UpsertWishlistReleaseParams struct {
+	ID              string
+	UserID          string
+	ReleaseID       string
+	CreatedAt       time.Time
+	StatusUpdatedAt time.Time
+}
+
+// Upserts a user_release in the 'wishlist' state. On insert, created_at = sqlc.arg(created_at).
+// On conflict, status flips to 'wishlist' and status_updated_at is bumped; created_at is preserved.
+func (q *Queries) UpsertWishlistRelease(ctx context.Context, arg UpsertWishlistReleaseParams) (UserRelease, error) {
+	row := q.db.QueryRowContext(ctx, upsertWishlistRelease,
+		arg.ID,
+		arg.UserID,
+		arg.ReleaseID,
+		arg.CreatedAt,
+		arg.StatusUpdatedAt,
+	)
+	var i UserRelease
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ReleaseID,
+		&i.Status,
+		&i.CreatedAt,
+		&i.StatusUpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }

@@ -41,7 +41,12 @@ func releaseDTOFromModel(model sqlc.Release, userRelease *sqlc.UserRelease) Rele
 		dto.ReleasedAt = &model.ReleasedAt.Time
 	}
 	if userRelease != nil {
-		dto.AddedAt = &userRelease.AddedAt
+		dto.Status = UserReleaseStatus(userRelease.Status)
+		dto.CreatedAt = &userRelease.CreatedAt
+		dto.StatusUpdatedAt = &userRelease.StatusUpdatedAt
+		if dto.Status == UserReleaseStatusOwned {
+			dto.AddedAt = &userRelease.StatusUpdatedAt
+		}
 	}
 	return dto
 }
@@ -56,9 +61,9 @@ func albumFormatDTOFromRelease(r sqlc.Release, ur *sqlc.UserRelease) AlbumFormat
 	if r.ReleasedAt.Valid {
 		dto.ReleasedAt = &r.ReleasedAt.Time
 	}
-	if ur != nil {
+	if ur != nil && ur.Status == string(UserReleaseStatusOwned) {
 		dto.Owned = true
-		dto.AddedAt = &ur.AddedAt
+		dto.AddedAt = &ur.StatusUpdatedAt
 	}
 	return dto
 }
@@ -345,6 +350,9 @@ func (r *Repo) GetRerateQueue(ctx context.Context, userID string) ([]RerateAlbum
 // tracks, album_tracks, artists, album_artists, releases, user_releases.
 // Returns the canonical AlbumDTO with sqlc-derived IDs and timestamps filled
 // in from the upsert results.
+//
+// Touches multiple tables; callers must invoke this inside a db.WithTx so the
+// release write and radar wipe land atomically.
 func (r *Repo) AddAlbumToCollection(ctx context.Context, userID string, album AlbumDTO) (AlbumDTO, error) {
 	albumModel, err := r.q.GetOrCreateAlbum(ctx, sqlc.GetOrCreateAlbumParams{
 		ID:        album.ID,
@@ -409,17 +417,27 @@ func (r *Repo) AddAlbumToCollection(ctx context.Context, userID string, album Al
 			return album, err
 		}
 
-		userRelease, err := r.q.UpsertUserRelease(ctx, sqlc.UpsertUserReleaseParams{
-			ID:        uuid.New().String(),
-			UserID:    userID,
-			ReleaseID: releaseModel.ID,
-			AddedAt:   *release.AddedAt,
+		now := time.Now()
+		userRelease, err := r.q.UpsertOwnedRelease(ctx, sqlc.UpsertOwnedReleaseParams{
+			ID:              uuid.New().String(),
+			UserID:          userID,
+			ReleaseID:       releaseModel.ID,
+			CreatedAt:       now,
+			StatusUpdatedAt: now,
 		})
 		if err != nil {
 			return album, err
 		}
 
 		album.Releases[i] = releaseDTOFromModel(releaseModel, &userRelease)
+	}
+
+	// Adding any release to the collection clears the album from the user's radar.
+	if err := r.q.RemoveAlbumFromRadar(ctx, sqlc.RemoveAlbumFromRadarParams{
+		UserID:  userID,
+		AlbumID: album.ID,
+	}); err != nil {
+		return album, fmt.Errorf("failed to clear radar: %w", err)
 	}
 
 	return album, nil
@@ -440,30 +458,35 @@ func (r *Repo) AddOwnedRelease(ctx context.Context, userID, albumID string, form
 		}
 		releaseID = rel.ID
 	}
-	_, err := r.q.UpsertUserRelease(ctx, sqlc.UpsertUserReleaseParams{
-		ID:        uuid.New().String(),
-		UserID:    userID,
-		ReleaseID: releaseID,
-		AddedAt:   addedAt,
-	})
-	if err != nil {
+	if _, err := r.q.UpsertOwnedRelease(ctx, sqlc.UpsertOwnedReleaseParams{
+		ID:              uuid.New().String(),
+		UserID:          userID,
+		ReleaseID:       releaseID,
+		CreatedAt:       addedAt,
+		StatusUpdatedAt: addedAt,
+	}); err != nil {
 		return "", err
+	}
+	if err := r.q.RemoveAlbumFromRadar(ctx, sqlc.RemoveAlbumFromRadarParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	}); err != nil {
+		return "", fmt.Errorf("failed to clear radar: %w", err)
 	}
 	return releaseID, nil
 }
 
-// SoftDeleteUserRelease marks a single user-release as removed.
-func (r *Repo) SoftDeleteUserRelease(ctx context.Context, userID, releaseID string) error {
-	return r.q.SoftDeleteUserRelease(ctx, sqlc.SoftDeleteUserReleaseParams{
+// MarkReleaseRemoved transitions an owned user_release to status='removed'.
+func (r *Repo) MarkReleaseRemoved(ctx context.Context, userID, releaseID string) error {
+	return r.q.MarkReleaseRemoved(ctx, sqlc.MarkReleaseRemovedParams{
 		UserID:    userID,
 		ReleaseID: releaseID,
 	})
 }
 
-// SoftDeleteUserReleasesByAlbumID marks all of a user's releases for an album
-// as removed.
-func (r *Repo) SoftDeleteUserReleasesByAlbumID(ctx context.Context, userID, albumID string) error {
-	return r.q.SoftDeleteUserReleasesByAlbumId(ctx, sqlc.SoftDeleteUserReleasesByAlbumIdParams{
+// MarkReleasesRemovedByAlbumID transitions all of a user's owned releases for an album to 'removed'.
+func (r *Repo) MarkReleasesRemovedByAlbumID(ctx context.Context, userID, albumID string) error {
+	return r.q.MarkReleasesRemovedByAlbumId(ctx, sqlc.MarkReleasesRemovedByAlbumIdParams{
 		UserID:  userID,
 		AlbumID: albumID,
 	})
@@ -490,4 +513,140 @@ func (r *Repo) ClearReleaseDiscogsInfo(ctx context.Context, releaseID string) er
 	return r.q.UpdateReleaseDiscogsInfo(ctx, sqlc.UpdateReleaseDiscogsInfoParams{
 		ID: releaseID,
 	})
+}
+
+// --- Radar (album-level "want to listen") ---
+
+// AddAlbumToRadar inserts a radar row, idempotent on (user_id, album_id).
+// Service-level rule: callers should refuse this if the album already has any user_releases row.
+func (r *Repo) AddAlbumToRadar(ctx context.Context, userID, albumID string) error {
+	_, err := r.q.AddAlbumToRadar(ctx, sqlc.AddAlbumToRadarParams{
+		ID:      uuid.New().String(),
+		UserID:  userID,
+		AlbumID: albumID,
+	})
+	return err
+}
+
+// RemoveAlbumFromRadar deletes the radar row if present (no-op otherwise).
+func (r *Repo) RemoveAlbumFromRadar(ctx context.Context, userID, albumID string) error {
+	return r.q.RemoveAlbumFromRadar(ctx, sqlc.RemoveAlbumFromRadarParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	})
+}
+
+// GetRadarAlbums returns the radar entries that have no user_releases activity.
+// Excludes albums that the user has wishlisted, owns, or has removed — radar is strictly pre-decision.
+func (r *Repo) GetRadarAlbums(ctx context.Context, userID string) ([]RadarDTO, []AlbumDTO, error) {
+	rows, err := r.q.GetRadarAlbums(ctx, userID)
+	if err != nil {
+		return nil, nil, err
+	}
+	radarDTOs := make([]RadarDTO, len(rows))
+	albumDTOs := make([]AlbumDTO, len(rows))
+	for i, row := range rows {
+		radarDTOs[i] = RadarDTO{
+			AlbumID:   row.UserAlbumRadar.AlbumID,
+			CreatedAt: row.UserAlbumRadar.CreatedAt,
+		}
+		albumDTOs[i] = albumDTOFromModel(row.Album, nil, nil, nil, nil)
+	}
+	return radarDTOs, albumDTOs, nil
+}
+
+// IsAlbumOnRadar reports whether the (user, album) pair has a radar row.
+func (r *Repo) IsAlbumOnRadar(ctx context.Context, userID, albumID string) (bool, error) {
+	onRadar, err := r.q.IsAlbumOnRadar(ctx, sqlc.IsAlbumOnRadarParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	})
+	if err != nil {
+		return false, err
+	}
+	return onRadar != 0, nil
+}
+
+// --- Wishlist (release-level pre-acquisition) ---
+
+// AddReleaseToWishlist upserts a user_release in the 'wishlist' state.
+// If a release row doesn't yet exist for (album, format), one is created.
+// Always clears the album's radar entry inside the same transactional path the caller is on.
+func (r *Repo) AddReleaseToWishlist(ctx context.Context, userID, albumID string, format models.ReleaseFormat, releaseID string) (string, error) {
+	if releaseID == "" {
+		rel, err := r.q.GetOrCreateRelease(ctx, sqlc.GetOrCreateReleaseParams{
+			ID:      uuid.New().String(),
+			AlbumID: albumID,
+			Format:  format,
+		})
+		if err != nil {
+			return "", err
+		}
+		releaseID = rel.ID
+	}
+	now := time.Now()
+	if _, err := r.q.UpsertWishlistRelease(ctx, sqlc.UpsertWishlistReleaseParams{
+		ID:              uuid.New().String(),
+		UserID:          userID,
+		ReleaseID:       releaseID,
+		CreatedAt:       now,
+		StatusUpdatedAt: now,
+	}); err != nil {
+		return "", err
+	}
+	if err := r.q.RemoveAlbumFromRadar(ctx, sqlc.RemoveAlbumFromRadarParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	}); err != nil {
+		return "", fmt.Errorf("failed to clear radar: %w", err)
+	}
+	return releaseID, nil
+}
+
+// RemoveReleaseFromWishlist hard-deletes the wishlist row.
+// Owned and removed rows are untouched (the WHERE clause filters on status='wishlist').
+func (r *Repo) RemoveReleaseFromWishlist(ctx context.Context, userID, releaseID string) error {
+	return r.q.DeleteWishlistRelease(ctx, sqlc.DeleteWishlistReleaseParams{
+		UserID:    userID,
+		ReleaseID: releaseID,
+	})
+}
+
+// GetWishlistReleases returns the user's wishlist releases.
+func (r *Repo) GetWishlistReleases(ctx context.Context, userID string) ([]ReleaseDTO, error) {
+	rows, err := r.q.GetWishlistReleases(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]ReleaseDTO, len(rows))
+	for i, row := range rows {
+		out[i] = releaseDTOFromModel(row.Release, &row.UserRelease)
+	}
+	return out, nil
+}
+
+// MarkReleaseOwned transitions any user_release row (wishlist or removed) to 'owned'
+// and clears the album's radar entry. Used by the wishlist acquire flow and any
+// "re-acquire a removed release" path that doesn't need to create a new release row.
+//
+// CreatedAt is only used when no row exists yet (fresh insert). On conflict, the
+// upsert preserves the existing row's created_at — passing time.Now() here is harmless.
+func (r *Repo) MarkReleaseOwned(ctx context.Context, userID, albumID, releaseID string) error {
+	now := time.Now()
+	if _, err := r.q.UpsertOwnedRelease(ctx, sqlc.UpsertOwnedReleaseParams{
+		ID:              uuid.New().String(),
+		UserID:          userID,
+		ReleaseID:       releaseID,
+		CreatedAt:       now,
+		StatusUpdatedAt: now,
+	}); err != nil {
+		return err
+	}
+	if err := r.q.RemoveAlbumFromRadar(ctx, sqlc.RemoveAlbumFromRadarParams{
+		UserID:  userID,
+		AlbumID: albumID,
+	}); err != nil {
+		return fmt.Errorf("failed to clear radar: %w", err)
+	}
+	return nil
 }

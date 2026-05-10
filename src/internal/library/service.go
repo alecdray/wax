@@ -228,8 +228,8 @@ func (s *Service) RemoveAlbumFromLibrary(ctx contextx.ContextX, userId, albumId 
 		return fmt.Errorf("failed to get album: %w", err)
 	}
 
-	if err := s.repo.SoftDeleteUserReleasesByAlbumID(ctx, userId, albumId); err != nil {
-		return fmt.Errorf("failed to soft delete releases: %w", err)
+	if err := s.repo.MarkReleasesRemovedByAlbumID(ctx, userId, albumId); err != nil {
+		return fmt.Errorf("failed to mark releases removed: %w", err)
 	}
 
 	if err := s.spotifyService.RemoveAlbumFromSavedLibrary(ctx, userId, spotifyID); err != nil {
@@ -295,8 +295,8 @@ func (s *Service) SaveAlbumFormats(ctx context.Context, userID, albumID string, 
 					}
 				}
 			} else if current.Owned && releaseID != "" {
-				if err := txRepo.SoftDeleteUserRelease(ctx, userID, releaseID); err != nil {
-					return fmt.Errorf("failed to soft delete user release: %w", err)
+				if err := txRepo.MarkReleaseRemoved(ctx, userID, releaseID); err != nil {
+					return fmt.Errorf("failed to mark release removed: %w", err)
 				}
 			}
 		}
@@ -310,4 +310,15 @@ func (s *Service) GetUnratedAlbums(ctx context.Context, userID string) ([]AlbumS
 		return nil, fmt.Errorf("failed to get unrated albums: %w", err)
 	}
 	return dtos, nil
+}
+
+// AcquireFromWishlist transitions a user's wishlist release to 'owned' in a single tx.
+func (s *Service) AcquireFromWishlist(ctx context.Context, userID, albumID, releaseID string) error {
+	return s.db.WithTx(func(tx *db.DB) error {
+		txRepo := NewRepo(tx.Queries())
+		if err := txRepo.MarkReleaseOwned(ctx, userID, albumID, releaseID); err != nil {
+			return fmt.Errorf("failed to acquire from wishlist: %w", err)
+		}
+		return nil
+	})
 }
