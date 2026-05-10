@@ -914,7 +914,13 @@ templ LibraryStats(lib *library.Library) {
 	}
 }
 
-templ DashboardHeaderBar(feeds []feed.FeedDTO) {
+type HeaderBarProps struct {
+	Active    string // "library" | "discover"
+	ShowFeeds bool
+	Feeds     []feed.FeedDTO
+}
+
+templ LibraryHeaderBar(props HeaderBarProps) {
 	<div class="bg-base-100 border-b border-base-300 h-11 w-full flex-shrink-0 sticky top-0 z-10">
 		<div class="h-full flex items-center justify-between px-6">
 			<div class="flex items-center gap-4">
@@ -922,15 +928,34 @@ templ DashboardHeaderBar(feeds []feed.FeedDTO) {
 				<div class="h-4 w-px bg-base-300"></div>
 				<div class="flex items-center gap-1">
 					<div class="tooltip tooltip-bottom" data-tip="Library">
-						<div class="btn btn-ghost btn-xs btn-square opacity-30 pointer-events-none">
-							@templates.CollectionIcon(templates.IconProps{Style: templates.IconStyleFill})
-						</div>
+						if props.Active == "library" {
+							<div class="btn btn-ghost btn-xs btn-square opacity-30 pointer-events-none" data-testid="header-library-icon-active">
+								@templates.CollectionIcon(templates.IconProps{Style: templates.IconStyleFill})
+							</div>
+						} else {
+							<a href="/app/library/dashboard" class="btn btn-ghost btn-xs btn-square" data-testid="header-library-icon">
+								@templates.CollectionIcon(templates.IconProps{Style: templates.IconStyleOutline})
+							</a>
+						}
+					</div>
+					<div class="tooltip tooltip-bottom" data-tip="Discover">
+						if props.Active == "discover" {
+							<div class="btn btn-ghost btn-xs btn-square opacity-30 pointer-events-none" data-testid="header-discover-icon-active">
+								@templates.CompassIcon(templates.IconProps{Style: templates.IconStyleFill})
+							</div>
+						} else {
+							<a href="/app/library/discover" class="btn btn-ghost btn-xs btn-square" data-testid="header-discover-icon">
+								@templates.CompassIcon(templates.IconProps{Style: templates.IconStyleOutline})
+							</a>
+						}
 					</div>
 				</div>
 			</div>
 			<div class="flex items-center gap-2">
-				@feedsDropdown(feeds)
-				<div class="h-4 w-px bg-base-300"></div>
+				if props.ShowFeeds {
+					@feedsDropdown(props.Feeds)
+					<div class="h-4 w-px bg-base-300"></div>
+				}
 				<div class="dropdown dropdown-end">
 					<div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle">
 						@templates.UserIcon(templates.IconProps{Style: templates.IconStyleOutline})
@@ -1073,7 +1098,7 @@ templ DashboardPage(props DashboardPageProps) {
 		Title: templates.CreatePageTitle("Dashboard"),
 	}) {
 		<div class="w-full flex flex-col" hx-history="false">
-			@DashboardHeaderBar(props.Feeds)
+			@LibraryHeaderBar(HeaderBarProps{Active: "library", ShowFeeds: true, Feeds: props.Feeds})
 			<div class="flex flex-col py-4 gap-4 items-center">
 				@LibraryStats(props.Library)
 				@CarouselSection(CarouselSectionProps{
