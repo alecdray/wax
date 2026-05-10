@@ -980,6 +980,7 @@ templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 						<a
 							href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) }
 							class="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity w-26"
+							data-testid="carousel-album-card"
 						>
 							@carouselCardInner(album)
 						</a>
@@ -989,6 +990,7 @@ templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 							hx-get={ fmt.Sprintf("/app/library/discover/album-menu?spotifyId=%s", album.SpotifyID) }
 							hx-swap="none"
 							class="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity w-26 cursor-pointer"
+							data-testid="carousel-discover-card"
 						>
 							@carouselCardInner(album)
 						</button>
