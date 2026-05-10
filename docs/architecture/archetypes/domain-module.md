@@ -26,16 +26,24 @@ Required: `service.go`, `README.md`, `CLAUDE.md`. `repo.go` is required if the m
 
 ## Service layer
 
+The service is the module's domain rule keeper and the contract surface — what peer modules and adapters consume. `*Repo` is internal; `*Service` is what crosses module boundaries.
+
 - The `Service` struct lives in `service.go`. All business logic is a method on `*Service`.
 - The constructor takes peer domain modules' `*Service` types and the module's own `*Repo`. Wiring happens in `server/`.
 - Methods take `contextx.ContextX`, never `context.Context`. Extract the user ID with `ctx.UserId()`.
 - Services hold concrete `*Repo`. If a service test needs to mock the repo, the service file declares a small interface locally next to the consumer (Go convention: accept interfaces, return structs).
 
+A service method that is a thin 1:1 passthrough to its repo is fine — the service is still doing real work (import boundary, `ContextX → userID` translation, future home for authz/validation). When a service feels chatty across many small repo calls, the lever is fatter SQL (CTEs, `RETURNING`, multi-row writes), not fatter repos. Letting the repo hold policy collapses the encapsulation, because peers consume `*Service`, not `*Repo`.
+
 ## Repository layer
+
+The repo is a domain ↔ SQL adapter: it speaks domain in both directions (takes domain IDs, returns DTOs) and contains zero policy. No validation, no decisions about what should happen, no invariants enforced — those belong in the service, which composes single-purpose repo calls.
 
 - `repo.go` is the **only** file in the module allowed to import `core/db/sqlc`.
 - Methods are named for domain operations (e.g. `GetUserAlbumRatings`, `InsertReview`) and return DTOs / domain types — never `sqlc.*` types. SQLC types do not appear in any signature outside `repo.go`.
 - `Repo` is a concrete struct. Its constructor takes a `*sqlc.Queries` so it can be bound either to the global handle or to a transaction (see *Transactions* below).
+
+When a method feels borderline, ask: *could a different domain flow reuse this exact persistence step?* If yes, it's a repo method. If the step encodes a decision tied to one specific flow (a read-then-write conditional on business state, a cross-table write that only makes sense for one caller), it's the service composing repo calls.
 
 ## Transactions
 
@@ -74,6 +82,16 @@ Size is a *signal* that splitting might be worth investigating, not a *reason* t
 Canonical example of a justified split: `review/rating.go` (rating values, scoring questions, labels) and `review/state.go` (rating-state machine — snoozing, rerate timing). They are genuinely independent concepts: a rating is a value, a state is a workflow; they share no types and no methods cross them.
 
 Canonical example of a *wrong* split: separating `library` into `album.go` + `release.go` + `view.go`. Albums, releases, and the dashboard slice operations are all parts of one aggregate cluster — they share types (`AlbumDTO` carries `[]ReleaseDTO`; `AlbumDTOs` is a slice of `AlbumDTO`) and methods cross them (`AlbumDTOs.SortByDate` calls into `ReleaseDTOs.OldestAddedAtDate`). One `library.go` file is correct.
+
+## Where shared logic lives
+
+Invariants and shared rules land in different places depending on what they touch:
+
+- **Pure-value rules** (validation of a value, a state-machine transition, formatting a domain ID) — method on the domain type in `<package>.go`. Stateless, no DB, callable from anywhere in the module.
+- **Service-level rules reused across methods of the same module** (a read+check several public methods perform before mutating) — private method on `*Service`.
+- **Cross-module rules** (a constraint that depends on data owned by another module) — method on the *owning* module's `*Service`, called by peers via the injected service. The rule lives where the data lives.
+
+When several service methods all do the same read → guard → write dance, the right move is often *not* extracting a private helper — it's that there's a missing domain verb. Repeated guards are a signal that the callers should converge on one bigger operation rather than each composing the same primitives. Shared helpers fix duplication; a missing concept fixes the *reason* for the duplication.
 
 ## Allowed imports
 
