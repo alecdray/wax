@@ -2369,6 +2369,18 @@
       }
     }
   }
+  .tooltip-right {
+    @layer daisyui.l1.l2 {
+      > .tooltip-content, &[data-tip]:before {
+        transform: translateX(calc(var(--tt-pos, -0.25rem) + 0.25rem)) translateY(-50%);
+        inset: 50% auto auto var(--tt-off);
+      }
+      &:after {
+        transform: translateX(var(--tt-pos, -0.25rem)) translateY(-50%) rotate(90deg);
+        inset: 50% auto auto calc(var(--tt-tail) + 1px);
+      }
+    }
+  }
   .tooltip-top {
     @layer daisyui.l1.l2 {
       > .tooltip-content, &[data-tip]:before {
@@ -3314,6 +3326,9 @@
     flex-shrink: 1;
   }
   .flex-shrink-0 {
+    flex-shrink: 0;
+  }
+  .shrink-0 {
     flex-shrink: 0;
   }
   .flex-grow {
