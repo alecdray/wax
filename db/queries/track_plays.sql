@@ -19,7 +19,11 @@ SELECT albums.*, MAX(track_plays.played_at) as last_played_at,
         SELECT 1 FROM user_releases
         JOIN releases ON releases.id = user_releases.release_id
         WHERE releases.album_id = albums.id AND user_releases.user_id = track_plays.user_id AND user_releases.status = 'owned'
-    ) as in_library
+    ) as in_library,
+    EXISTS (
+        SELECT 1 FROM user_album_radar
+        WHERE user_album_radar.album_id = albums.id AND user_album_radar.user_id = track_plays.user_id
+    ) as on_radar
 FROM track_plays
 JOIN albums ON albums.id = track_plays.album_id
 WHERE track_plays.user_id = ?

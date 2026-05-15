@@ -31,6 +31,7 @@ type AlbumSummaryDTO struct {
 	Artists   string
 	ImageURL  string
 	InLibrary bool
+	OnRadar   bool
 }
 
 type ArtistDTO struct {
