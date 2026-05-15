@@ -34,7 +34,7 @@ The fragment is the reusable piece. Factor the inner content into a fragment tem
 
 | Change | File |
 |---|---|
-| New page surface | new `<surface>.templ` in `adapters/` |
+| New page surface | new `<surface>_page.templ` in `adapters/views/` |
 | New URL route for the page | `routes.go` |
 | The handler that returns the page | `http.go` |
 | Layout-level chrome shared by every page | the shared layout primitive in `core/templates/` |

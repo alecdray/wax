@@ -141,7 +141,7 @@ When several service methods all do the same read → guard → write dance, the
 | New domain type / pure function | `<package>.go` at module root (or the existing topic file if there's a justified split) |
 | New HTTP handler | `adapters/http.go` |
 | New URL route | `adapters/routes.go` |
-| New templ component | `adapters/<name>.templ`, then `task build/templ` |
+| New templ component | `adapters/views/<name>_page.templ` or `_frag.templ` per [`docs/design/`](../../design/), then `task build/templ` |
 | New background task | `task.go` (implements `core/task.Task`) |
 
 ## Module sizing & splits
