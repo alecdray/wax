@@ -12,7 +12,7 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 		Title: templates.CreatePageTitle(album.Title),
 	}) {
 		<div class="w-full flex flex-col">
-			@LibraryHeaderBar(HeaderBarProps{Active: "library"})
+			@LibraryHeaderBarFrag(HeaderBarProps{Active: "library"})
 			<div class="flex flex-col max-w-2xl mx-auto w-full px-4 py-6 gap-6">
 				// Album header: cover art + title + artists
 				<div class="flex gap-4 items-center">
@@ -94,7 +94,7 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 				<div
 					data-testid="album-detail-rating"
 				>
-					@AlbumScoreBadge(album, false)
+					@AlbumScoreBadgeFrag(album, false)
 				</div>
 				// Rating History
 				@AlbumRatingHistoryFrag(album, false)
@@ -112,7 +112,7 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 							@templates.TagIcon(templates.IconProps{})
 						</button>
 					</div>
-					@AlbumTagsCell(album, false)
+					@AlbumTagsCellFrag(album, false)
 				</div>
 				// Sleeve Notes
 				@SleeveNotesSectionFrag(album, false)

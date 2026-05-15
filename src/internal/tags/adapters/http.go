@@ -171,7 +171,7 @@ func (h *HttpHandler) SubmitAlbumTags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = libraryViews.AlbumTagsCell(*album, true).Render(ctx, w)
+	err = libraryViews.AlbumTagsCellFrag(*album, true).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
@@ -180,7 +180,7 @@ func (h *HttpHandler) SubmitAlbumTags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = libraryViews.AlbumRowTagsSection(*album, true).Render(ctx, w)
+	err = libraryViews.AlbumRowTagsSectionFrag(*album, true).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,

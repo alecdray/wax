@@ -1,0 +1,36 @@
+package views
+
+import (
+	"github.com/alecdray/wax/src/internal/core/templates"
+	"github.com/alecdray/wax/src/internal/feed"
+	"github.com/alecdray/wax/src/internal/library"
+)
+
+type DashboardPageProps struct {
+	Feeds           []feed.FeedDTO
+	Library         *library.Library
+	RecentAlbums    []library.AlbumSummaryDTO
+	FirstPageAlbums []library.AlbumDTO
+	Artists         []library.ArtistDTO
+	FilterParams    library.FilterParams
+}
+
+templ DashboardPage(props DashboardPageProps) {
+	@templates.RootComponent(templates.RootProps{
+		Title: templates.CreatePageTitle("Dashboard"),
+	}) {
+		<div class="w-full flex flex-col" hx-history="false">
+			@LibraryHeaderBarFrag(HeaderBarProps{Active: "library", ShowFeeds: true, Feeds: props.Feeds})
+			<div class="flex flex-col py-4 gap-4 items-center">
+				@LibraryStatsFrag(props.Library)
+				@CarouselSectionFrag(CarouselSectionProps{
+					RegularAlbums: props.RecentAlbums,
+					Active:        CarouselViewRecentlyPlayed,
+				})
+				if props.Library != nil {
+					@AlbumsListFrag(props.FirstPageAlbums, "date", "desc", props.FilterParams, props.Artists)
+				}
+			</div>
+		</div>
+	}
+}

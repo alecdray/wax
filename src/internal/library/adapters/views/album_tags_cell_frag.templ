@@ -1,0 +1,28 @@
+package views
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/library"
+)
+
+func GetAlbumTagsID(albumId string) string {
+	return fmt.Sprintf("album-tags-%s", albumId)
+}
+
+templ AlbumTagsCellFrag(album library.AlbumDTO, isOobSwap bool) {
+	<div
+		id={ GetAlbumTagsID(album.ID) }
+		class="flex flex-wrap gap-1"
+		if isOobSwap {
+			hx-swap-oob="true"
+		}
+	>
+		if len(album.Tags) == 0 {
+			<span class="text-xs text-base-content/30">—</span>
+		} else {
+			for _, tag := range album.Tags {
+				<span class="badge badge-sm badge-ghost text-xs">{ tag.Name }</span>
+			}
+		}
+	</div>
+}

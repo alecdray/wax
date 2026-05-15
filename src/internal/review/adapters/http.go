@@ -282,11 +282,11 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libViews.AlbumScoreReadout(*album, true).Render(ctx, w); err != nil {
+	if err := libViews.AlbumScoreReadoutFrag(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libViews.AlbumScoreBadge(*album, true).Render(ctx, w); err != nil {
+	if err := libViews.AlbumScoreBadgeFrag(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
@@ -294,7 +294,7 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libViews.AlbumRowTagsSection(*album, true).Render(ctx, w); err != nil {
+	if err := libViews.AlbumRowTagsSectionFrag(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
@@ -330,7 +330,7 @@ func (h *HttpHandler) SnoozeRating(w http.ResponseWriter, r *http.Request) {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libViews.AlbumScoreReadout(*album, true).Render(ctx, w); err != nil {
+	if err := libViews.AlbumScoreReadoutFrag(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
@@ -368,11 +368,11 @@ func (h *HttpHandler) DeleteRatingLogEntry(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := libViews.AlbumScoreReadout(*album, true).Render(ctx, w); err != nil {
+	if err := libViews.AlbumScoreReadoutFrag(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libViews.AlbumScoreBadge(*album, true).Render(ctx, w); err != nil {
+	if err := libViews.AlbumScoreBadgeFrag(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
@@ -380,7 +380,7 @@ func (h *HttpHandler) DeleteRatingLogEntry(w http.ResponseWriter, r *http.Reques
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libViews.AlbumRowTagsSection(*album, true).Render(ctx, w); err != nil {
+	if err := libViews.AlbumRowTagsSectionFrag(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}

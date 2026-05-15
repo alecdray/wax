@@ -1,0 +1,36 @@
+package views
+
+import (
+	"github.com/alecdray/wax/src/internal/core/db/models"
+	"github.com/alecdray/wax/src/internal/core/templates"
+	"github.com/alecdray/wax/src/internal/library"
+)
+
+templ releaseFormatIcon(format models.ReleaseFormat) {
+	switch format {
+		case models.ReleaseFormatVinyl:
+			@templates.VinylIcon(templates.IconProps{})
+		case models.ReleaseFormatCD:
+			@templates.CDIcon(templates.IconProps{})
+		case models.ReleaseFormatCassette:
+			@templates.CassetteIcon(templates.IconProps{})
+		case models.ReleaseFormatDigital:
+			@templates.DigitalIcon(templates.IconProps{})
+	}
+}
+
+templ formatIcon(releases library.ReleaseDTOs, format models.ReleaseFormat) {
+	if release := releases.FindFormat(format); release != nil && release.AddedAt != nil {
+		<div class="tooltip tooltip-top" data-tip={ string(format) + " - " + release.AddedAt.Format("Jan 2, 2006") }>
+			<div class="opacity-70">
+				@releaseFormatIcon(format)
+			</div>
+		</div>
+	} else {
+		<div class="tooltip tooltip-top" data-tip={ string(format) + " - Not in library" }>
+			<div class="opacity-20">
+				@releaseFormatIcon(format)
+			</div>
+		</div>
+	}
+}

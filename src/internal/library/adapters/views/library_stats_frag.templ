@@ -1,0 +1,36 @@
+package views
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/library"
+)
+
+templ LibraryStatsFrag(lib *library.Library) {
+	if lib != nil {
+		<div
+			id="library-stats"
+			class="w-full flex-shrink-0 px-4"
+			data-testid="library-stats"
+			hx-get="/app/library/dashboard/stats"
+			hx-trigger="libraryUpdated from:body"
+			hx-swap="outerHTML"
+		>
+			<div class="bg-base-200 p-2 rounded-xl">
+				<div class="stats stats-horizontal shadow-sm w-full">
+					<div class="stat py-2">
+						<div class="stat-title text-xs">Artists</div>
+						<div class="stat-value text-2xl">{ fmt.Sprintf("%d", len(lib.Artists)) }</div>
+					</div>
+					<div class="stat py-2">
+						<div class="stat-title text-xs">Albums</div>
+						<div class="stat-value text-2xl">{ fmt.Sprintf("%d", len(lib.Albums)) }</div>
+					</div>
+					<div class="stat py-2">
+						<div class="stat-title text-xs">Tracks</div>
+						<div class="stat-value text-2xl">{ fmt.Sprintf("%d", len(lib.Tracks)) }</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}

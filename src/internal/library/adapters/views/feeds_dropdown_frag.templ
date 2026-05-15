@@ -1,0 +1,136 @@
+package views
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/core/db/models"
+	"github.com/alecdray/wax/src/internal/core/templates"
+	"github.com/alecdray/wax/src/internal/feed"
+)
+
+func anyFeedIsSyncing(feeds []feed.FeedDTO) bool {
+	for _, f := range feeds {
+		if f.LastSyncStatus.IsSyncing() {
+			return true
+		}
+	}
+	return false
+}
+
+func getFeedsDropdownButtonIndicatorColor(feeds []feed.FeedDTO) templates.NeonColor {
+	color := templates.NeonColorSuccess
+	for _, f := range feeds {
+		if f.LastSyncStatus.IsSyncFailed() {
+			color = templates.NeonColorError
+			break
+		} else if f.LastSyncStatus.IsUnsyned() || f.IsSyncStale() || f.LastSyncStatus.IsSyncing() {
+			color = templates.NeonColorWarning
+		}
+	}
+	return color
+}
+
+templ FeedsDropdownButtonFrag(feeds []feed.FeedDTO, oob bool) {
+	<div
+		id="feeds-dropdown-button"
+		tabindex="0"
+		role="button"
+		class="btn btn-ghost btn-xs gap-1.5"
+		if oob {
+			hx-swap-oob="true"
+			hx-swap="morph"
+		}
+	>
+		@templates.DatabaseIcon(templates.IconProps{})
+		<span class="text-xs">Feeds</span>
+		if len(feeds) > 0 {
+			@templates.NeonEffect(getFeedsDropdownButtonIndicatorColor(feeds), templates.NeonHoverEffectNone, "rounded-full") {
+				<div
+					class={ "w-2 h-2 rounded-full", }
+				></div>
+			}
+		}
+	</div>
+}
+
+templ feedsDropdown(feeds []feed.FeedDTO) {
+	<div class="dropdown dropdown-end" hx-ext="morph">
+		@FeedsDropdownButtonFrag(feeds, false)
+		<div tabindex="0" class="dropdown-content z-[1] card card-compact bg-base-100 shadow-xl border border-base-300 mt-1">
+			@FeedsDropdownContentFrag(feeds)
+		</div>
+	</div>
+}
+
+templ FeedsDropdownContentFrag(feeds []feed.FeedDTO) {
+	<div
+		id="feeds-dropdown-content"
+		tabindex="0"
+		class="menu menu-compact w-56 p-2"
+		hx-on:htmx:after-swap="this.focus()"
+		hx-get="/app/library/dashboard/feeds-dropdown-content"
+		if getFeedsDropdownButtonIndicatorColor(feeds) == templates.NeonColorSuccess {
+			hx-trigger="every 30s"
+		} else {
+			hx-trigger="every 5s"
+		}
+		hx-vals={ fmt.Sprintf(`{"wasSyncing": "%v"}`, anyFeedIsSyncing(feeds)) }
+		hx-swap="morph"
+	>
+		<div class="menu-title px-2 py-1">
+			<span class="text-xs font-semibold opacity-60">Feed Status</span>
+		</div>
+		if len(feeds) == 0 {
+			<div class="px-2 py-3 text-xs opacity-50">No feeds configured</div>
+		} else {
+			for _, f := range feeds {
+				<li class={ templ.KV("menu-disabled", f.LastSyncStatus.IsSyncing()) }>
+					<button
+						class="flex justify-between"
+						hx-post={ fmt.Sprintf("/app/library/dashboard/feeds/sync?feedId=%s", f.ID) }
+						hx-target="#feeds-dropdown-content"
+						hx-swap="morph"
+						if f.LastSyncStatus.IsSyncing() {
+							disabled
+						} else {
+							title="Click to sync"
+						}
+					>
+						<div class="flex items-center gap-2">
+							if f.LastSyncStatus.IsUnsyned() {
+								<div class="text-warning">
+									@templates.WarningIcon(templates.IconProps{Style: templates.IconStyleOutline})
+								</div>
+							} else if f.LastSyncStatus.IsSyncing() {
+								<div class="text-info">
+									@templates.SpinnerIcon(templates.IconProps{})
+								</div>
+							} else if f.LastSyncStatus == models.FeedSyncStatusFailure {
+								<div class="text-error">
+									@templates.XMarkIcon(templates.IconProps{Style: templates.IconStyleOutline})
+								</div>
+							} else if f.LastSyncStatus.IsSynced() {
+								<div class={ templ.KV("text-success", !f.IsSyncStale()), templ.KV("text-warning", f.IsSyncStale()) }>
+									@templates.CheckIcon(templates.IconProps{Style: templates.IconStyleOutline})
+								</div>
+							}
+							<span class="text-sm font-medium">{ string(f.Kind) }</span>
+						</div>
+						<div class="text-xs opacity-60">
+							if f.LastSyncStatus.IsUnsyned() {
+								Never synced
+							} else if f.LastSyncStatus.IsSyncing() {
+								Syncing...
+							} else if f.LastSyncStatus == models.FeedSyncStatusFailure {
+								Failed
+							} else if f.IsSyncStale() {
+								Stale
+							} else {
+								Synced
+							}
+						</div>
+					</button>
+				</li>
+			}
+		}
+	</div>
+}

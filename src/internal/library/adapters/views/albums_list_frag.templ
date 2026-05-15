@@ -1,0 +1,496 @@
+package views
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/core/db/models"
+	"github.com/alecdray/wax/src/internal/library"
+	"net/url"
+	"slices"
+	"strings"
+)
+
+func buildAlbumsTableURL(sortBy, dir string, fp library.FilterParams) string {
+	q := url.Values{}
+	if sortBy != "" {
+		q.Set("sortBy", sortBy)
+	}
+	if dir != "" {
+		q.Set("dir", dir)
+	}
+	if fp.MinRating != nil {
+		q.Set("minRating", fmt.Sprintf("%g", *fp.MinRating))
+	}
+	if fp.MaxRating != nil {
+		q.Set("maxRating", fmt.Sprintf("%g", *fp.MaxRating))
+	}
+	if fp.Rated != "" {
+		q.Set("rated", fp.Rated)
+	}
+	for _, format := range fp.Formats {
+		q.Add("format", string(format))
+	}
+	for _, artistID := range fp.ArtistIDs {
+		q.Add("artist", artistID)
+	}
+	return "/app/library/dashboard/albums-table?" + q.Encode()
+}
+
+// buildAlbumsPageURL constructs the URL for the infinite scroll sentinel.
+func buildAlbumsPageURL(offset int, sortBy, dir string, fp library.FilterParams) string {
+	q := url.Values{}
+	q.Set("offset", fmt.Sprintf("%d", offset))
+	if sortBy != "" {
+		q.Set("sortBy", sortBy)
+	}
+	if dir != "" {
+		q.Set("dir", dir)
+	}
+	if fp.MinRating != nil {
+		q.Set("minRating", fmt.Sprintf("%g", *fp.MinRating))
+	}
+	if fp.MaxRating != nil {
+		q.Set("maxRating", fmt.Sprintf("%g", *fp.MaxRating))
+	}
+	if fp.Rated != "" {
+		q.Set("rated", fp.Rated)
+	}
+	for _, format := range fp.Formats {
+		q.Add("format", string(format))
+	}
+	for _, artistID := range fp.ArtistIDs {
+		q.Add("artist", artistID)
+	}
+	return "/app/library/dashboard/albums-page?" + q.Encode()
+}
+
+func sortLabel(sortBy string) string {
+	switch sortBy {
+	case "album":
+		return "Album"
+	case "artist":
+		return "Artist"
+	case "rating":
+		return "Rating"
+	case "lastPlayed":
+		return "Last Played"
+	default:
+		return "Date Added"
+	}
+}
+
+templ albumListRow(album library.AlbumDTO) {
+	<li class="list-row items-center" data-testid="album-list-row">
+		<button
+			class="flex flex-col gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+			hx-get={ fmt.Sprintf("/app/library/albums/%s/formats", album.ID) }
+			hx-trigger="click"
+			hx-swap="none"
+		>
+			<div
+				id={ dashboardReleasesID(album.ID) }
+				class="flex flex-col gap-2"
+			>
+				@formatIcon(album.Releases, models.ReleaseFormatDigital)
+				@formatIcon(album.Releases, models.ReleaseFormatVinyl)
+				@formatIcon(album.Releases, models.ReleaseFormatCD)
+				@formatIcon(album.Releases, models.ReleaseFormatCassette)
+			</div>
+		</button>
+		<a href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) } class="flex-shrink-0">
+			if album.ImageURL != "" {
+				<div class="avatar">
+					<div class="mask mask-squircle size-24 flex-shrink-0">
+						<img src={ album.ImageURL } alt={ album.Title }/>
+					</div>
+				</div>
+			} else {
+				<div class="avatar avatar-placeholder">
+					<div class="mask mask-squircle size-24 flex-shrink-0 bg-base-300"></div>
+				</div>
+			}
+		</a>
+		<div class="list-col-grow flex flex-col justify-between min-w-0 h-full pt-2 gap-2">
+			<a href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) } class="block min-w-0">
+				<div class="font-medium truncate" data-testid="album-row-title-link">{ album.Title }</div>
+				if len(album.Artists) > 0 {
+					<div class="text-sm text-base-content/60 truncate">
+						for i, artist := range album.Artists {
+							if i > 0 {
+								<span>, </span>
+							}
+							{ artist.Name }
+						}
+					</div>
+				}
+			</a>
+			@AlbumRowTagsSectionFrag(album, false)
+		</div>
+		<div class="flex-shrink-0 self-stretch flex items-center">
+			@AlbumScoreReadoutFrag(album, false)
+		</div>
+	</li>
+}
+
+templ AlbumsListBodyFrag(albums []library.AlbumDTO, offset int, sortBy string, sortDir string, fp library.FilterParams) {
+	if len(albums) == 0 {
+		if offset == 0 {
+			<li class="py-8 text-center opacity-50 text-sm">No albums match your filters</li>
+		}
+	} else {
+		for _, album := range albums {
+			@albumListRow(album)
+		}
+		if len(albums) == library.AlbumsPageSize {
+			<li
+				hx-get={ buildAlbumsPageURL(offset+library.AlbumsPageSize, sortBy, sortDir, fp) }
+				hx-trigger="revealed"
+				hx-swap="outerHTML"
+			></li>
+		}
+	}
+}
+
+templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []library.ArtistDTO) {
+	<div class="flex gap-2 px-4 py-2 overflow-x-auto flex-shrink-0">
+		// Sort chip
+		<div x-data>
+			<button
+				class="btn btn-sm btn-primary"
+				@click="$refs.sortDialog.showModal()"
+				data-testid="sort-chip"
+			>
+				{ sortLabel(sortBy) }
+				if sortDir == "asc" {
+					↑
+				} else {
+					↓
+				}
+			</button>
+			<dialog x-ref="sortDialog" class="modal">
+				<div class="modal-box max-w-sm">
+					<form method="dialog">
+						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
+					</form>
+					<h3 class="font-bold text-base mb-4">Sort</h3>
+					<form
+						hx-get="/app/library/dashboard/albums-table"
+						hx-target="#album-list"
+						hx-swap="outerHTML"
+						@submit="$refs.sortDialog.close()"
+					>
+						if fp.MinRating != nil {
+							<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
+						}
+						if fp.MaxRating != nil {
+							<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
+						}
+						if fp.Rated != "" {
+							<input type="hidden" name="rated" value={ fp.Rated }/>
+						}
+						for _, format := range fp.Formats {
+							<input type="hidden" name="format" value={ string(format) }/>
+						}
+						for _, artistID := range fp.ArtistIDs {
+							<input type="hidden" name="artist" value={ artistID }/>
+						}
+						<div class="flex flex-col gap-2 mb-4">
+							for _, opt := range []struct{ value, label string }{
+								{"date", "Date Added"},
+								{"rating", "Rating"},
+								{"album", "Album"},
+								{"artist", "Artist"},
+								{"lastPlayed", "Last Played"},
+							} {
+								<label class="flex items-center gap-2 cursor-pointer">
+									<input
+										type="radio"
+										name="sortBy"
+										value={ opt.value }
+										class="radio radio-sm"
+										checked?={ sortBy == opt.value || (sortBy == "" && opt.value == "date") }
+									/>
+									<span class="text-sm">{ opt.label }</span>
+								</label>
+							}
+						</div>
+						<div class="flex gap-4 mb-4">
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input type="radio" name="dir" value="desc" class="radio radio-sm" checked?={ sortDir != "asc" }/>
+								<span class="text-sm">Descending</span>
+							</label>
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input type="radio" name="dir" value="asc" class="radio radio-sm" checked?={ sortDir == "asc" }/>
+								<span class="text-sm">Ascending</span>
+							</label>
+						</div>
+						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
+					</form>
+				</div>
+				<form method="dialog" class="modal-backdrop"><button>close</button></form>
+			</dialog>
+		</div>
+		// Rating chip
+		<div x-data>
+			<button
+				class={ templ.KV("btn btn-sm btn-primary", fp.MinRating != nil || fp.MaxRating != nil || fp.Rated != ""), templ.KV("btn btn-sm btn-ghost btn-outline", fp.MinRating == nil && fp.MaxRating == nil && fp.Rated == "") }
+				@click="$refs.ratingDialog.showModal()"
+				data-testid="rating-chip"
+			>
+				if fp.Rated == "unrated" {
+					Unrated
+				} else if fp.MinRating != nil || fp.MaxRating != nil {
+					if fp.MinRating != nil && fp.MaxRating != nil {
+						Rating: { fmt.Sprintf("%g", *fp.MinRating) }–{ fmt.Sprintf("%g", *fp.MaxRating) }
+					} else if fp.MinRating != nil {
+						Rating ≥ { fmt.Sprintf("%g", *fp.MinRating) }
+					} else {
+						Rating ≤ { fmt.Sprintf("%g", *fp.MaxRating) }
+					}
+				} else if fp.Rated == "only" {
+					Rated only
+				} else {
+					Rating
+				}
+			</button>
+			<dialog x-ref="ratingDialog" class="modal">
+				<div class="modal-box max-w-sm">
+					<form method="dialog">
+						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
+					</form>
+					<h3 class="font-bold text-base mb-4">Filter by Rating</h3>
+					<form
+						hx-get="/app/library/dashboard/albums-table"
+						hx-target="#album-list"
+						hx-swap="outerHTML"
+						@submit="$refs.ratingDialog.close()"
+					>
+						if sortBy != "" {
+							<input type="hidden" name="sortBy" value={ sortBy }/>
+						}
+						if sortDir != "" {
+							<input type="hidden" name="dir" value={ sortDir }/>
+						}
+						for _, format := range fp.Formats {
+							<input type="hidden" name="format" value={ string(format) }/>
+						}
+						for _, artistID := range fp.ArtistIDs {
+							<input type="hidden" name="artist" value={ artistID }/>
+						}
+						<div class="flex gap-3 mb-4">
+							<label class="flex flex-col gap-1 flex-1">
+								<span class="text-xs opacity-60">Min</span>
+								<input
+									type="number"
+									name="minRating"
+									class="input input-sm input-bordered w-full"
+									min="0"
+									max="10"
+									step="0.5"
+									if fp.MinRating != nil {
+										value={ fmt.Sprintf("%g", *fp.MinRating) }
+									}
+									placeholder="0"
+								/>
+							</label>
+							<label class="flex flex-col gap-1 flex-1">
+								<span class="text-xs opacity-60">Max</span>
+								<input
+									type="number"
+									name="maxRating"
+									class="input input-sm input-bordered w-full"
+									min="0"
+									max="10"
+									step="0.5"
+									if fp.MaxRating != nil {
+										value={ fmt.Sprintf("%g", *fp.MaxRating) }
+									}
+									placeholder="10"
+								/>
+							</label>
+						</div>
+						<div class="flex flex-col gap-2 mb-4">
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input type="radio" name="rated" value="" class="radio radio-sm" checked?={ fp.Rated == "" }/>
+								<span class="text-sm">All albums</span>
+							</label>
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input type="radio" name="rated" value="only" class="radio radio-sm" checked?={ fp.Rated == "only" }/>
+								<span class="text-sm">Rated only</span>
+							</label>
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input type="radio" name="rated" value="unrated" class="radio radio-sm" checked?={ fp.Rated == "unrated" }/>
+								<span class="text-sm">Unrated only</span>
+							</label>
+						</div>
+						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
+					</form>
+				</div>
+				<form method="dialog" class="modal-backdrop"><button>close</button></form>
+			</dialog>
+		</div>
+		// Format chip
+		<div x-data>
+			<button
+				class={ templ.KV("btn btn-sm btn-primary", len(fp.Formats) > 0), templ.KV("btn btn-sm btn-ghost btn-outline", len(fp.Formats) == 0) }
+				@click="$refs.formatDialog.showModal()"
+				data-testid="format-chip"
+			>
+				if len(fp.Formats) > 0 {
+					<span class="capitalize">{ string(fp.Formats[0]) }</span>
+				} else {
+					Format
+				}
+			</button>
+			<dialog x-ref="formatDialog" class="modal">
+				<div class="modal-box max-w-sm">
+					<form method="dialog">
+						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
+					</form>
+					<h3 class="font-bold text-base mb-4">Filter by Format</h3>
+					<form
+						hx-get="/app/library/dashboard/albums-table"
+						hx-target="#album-list"
+						hx-swap="outerHTML"
+						@submit="$refs.formatDialog.close()"
+					>
+						if sortBy != "" {
+							<input type="hidden" name="sortBy" value={ sortBy }/>
+						}
+						if sortDir != "" {
+							<input type="hidden" name="dir" value={ sortDir }/>
+						}
+						if fp.MinRating != nil {
+							<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
+						}
+						if fp.MaxRating != nil {
+							<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
+						}
+						if fp.Rated != "" {
+							<input type="hidden" name="rated" value={ fp.Rated }/>
+						}
+						for _, artistID := range fp.ArtistIDs {
+							<input type="hidden" name="artist" value={ artistID }/>
+						}
+						<div class="flex flex-col gap-2 mb-4">
+							for _, opt := range []struct{ value, label string }{
+								{"", "All formats"},
+								{"digital", "Digital"},
+								{"vinyl", "Vinyl"},
+								{"cd", "CD"},
+								{"cassette", "Cassette"},
+							} {
+								<label class="flex items-center gap-2 cursor-pointer">
+									<input
+										type="radio"
+										name="format"
+										value={ opt.value }
+										class="radio radio-sm"
+										checked?={ (opt.value == "" && len(fp.Formats) == 0) || (len(fp.Formats) > 0 && string(fp.Formats[0]) == opt.value) }
+									/>
+									<span class="text-sm">{ opt.label }</span>
+								</label>
+							}
+						</div>
+						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
+					</form>
+				</div>
+				<form method="dialog" class="modal-backdrop"><button>close</button></form>
+			</dialog>
+		</div>
+		// Artist chip
+		if len(artists) > 0 {
+			<div x-data>
+				<button
+					class={ templ.KV("btn btn-sm btn-primary", len(fp.ArtistIDs) > 0), templ.KV("btn btn-sm btn-ghost btn-outline", len(fp.ArtistIDs) == 0) }
+					@click="$refs.artistDialog.showModal()"
+					data-testid="artist-chip"
+				>
+					if len(fp.ArtistIDs) == 1 {
+						1 Artist
+					} else if len(fp.ArtistIDs) > 1 {
+						{ fmt.Sprintf("%d Artists", len(fp.ArtistIDs)) }
+					} else {
+						Artist
+					}
+				</button>
+				<dialog x-ref="artistDialog" class="modal">
+					<div class="modal-box max-w-sm">
+						<form method="dialog">
+							<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
+						</form>
+						<h3 class="font-bold text-base mb-4">Filter by Artist</h3>
+						<form
+							hx-get="/app/library/dashboard/albums-table"
+							hx-target="#album-list"
+							hx-swap="outerHTML"
+							@submit="$refs.artistDialog.close()"
+						>
+							if sortBy != "" {
+								<input type="hidden" name="sortBy" value={ sortBy }/>
+							}
+							if sortDir != "" {
+								<input type="hidden" name="dir" value={ sortDir }/>
+							}
+							if fp.MinRating != nil {
+								<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
+							}
+							if fp.MaxRating != nil {
+								<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
+							}
+							if fp.Rated != "" {
+								<input type="hidden" name="rated" value={ fp.Rated }/>
+							}
+							for _, format := range fp.Formats {
+								<input type="hidden" name="format" value={ string(format) }/>
+							}
+							<div x-data="{ search: '' }">
+								<input
+									x-model="search"
+									type="search"
+									placeholder="Search artists..."
+									class="input input-sm input-bordered w-full mb-3"
+								/>
+								<div class="max-h-56 overflow-y-auto flex flex-col gap-1">
+									for _, artist := range artists {
+										<label
+											class="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-base-200 rounded"
+											x-show="!search || $el.dataset.name.includes(search.toLowerCase())"
+											data-name={ strings.ToLower(artist.Name) }
+										>
+											<input
+												type="checkbox"
+												name="artist"
+												value={ artist.ID }
+												class="checkbox checkbox-sm"
+												checked?={ slices.Contains(fp.ArtistIDs, artist.ID) }
+											/>
+											<span class="text-sm">{ artist.Name }</span>
+										</label>
+									}
+								</div>
+							</div>
+							<button type="submit" class="btn btn-primary btn-sm w-full mt-4">Apply</button>
+						</form>
+					</div>
+					<form method="dialog" class="modal-backdrop"><button>close</button></form>
+				</dialog>
+			</div>
+		}
+	</div>
+}
+
+templ AlbumsListFrag(albums []library.AlbumDTO, sortBy string, sortDir string, fp library.FilterParams, artists []library.ArtistDTO) {
+	<div
+		id="album-list"
+		class="w-full max-w-3xl"
+		data-testid="albums-list"
+		hx-get={ buildAlbumsTableURL(sortBy, sortDir, fp) }
+		hx-trigger="libraryUpdated from:body"
+		hx-swap="outerHTML"
+	>
+		@filterChipBar(sortBy, sortDir, fp, artists)
+		<ul class="list px-4">
+			@AlbumsListBodyFrag(albums, 0, sortBy, sortDir, fp)
+		</ul>
+	</div>
+}

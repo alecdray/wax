@@ -152,7 +152,7 @@ func (h *HttpHandler) GetCarousel(w http.ResponseWriter, r *http.Request) {
 		props.RegularAlbums = albums
 	}
 
-	views.CarouselSection(props).Render(r.Context(), w)
+	views.CarouselSectionFrag(props).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetAlbumsTable(w http.ResponseWriter, r *http.Request) {
@@ -198,7 +198,7 @@ func (h *HttpHandler) GetAlbumsTable(w http.ResponseWriter, r *http.Request) {
 	fp := parseFilterParams(r)
 	albums = albums.Filter(fp)
 
-	component := views.AlbumsList(albums.Page(0), sortBy, dir, fp, lib.Artists)
+	component := views.AlbumsListFrag(albums.Page(0), sortBy, dir, fp, lib.Artists)
 	component.Render(r.Context(), w)
 }
 
@@ -241,10 +241,10 @@ func (h *HttpHandler) TriggerFeedSync(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	contentComponent := views.FeedsDropdownContent(feeds)
+	contentComponent := views.FeedsDropdownContentFrag(feeds)
 	contentComponent.Render(r.Context(), w)
 
-	buttonComponent := views.FeedsDropdownButton(feeds, true)
+	buttonComponent := views.FeedsDropdownButtonFrag(feeds, true)
 	buttonComponent.Render(r.Context(), w)
 }
 
@@ -292,7 +292,7 @@ func (h *HttpHandler) GetAlbumsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	views.AlbumsListBody(page, offset, sortBy, dir, fp).Render(r.Context(), w)
+	views.AlbumsListBodyFrag(page, offset, sortBy, dir, fp).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetAlbumDetailPage(w http.ResponseWriter, r *http.Request) {
@@ -371,11 +371,11 @@ func (h *HttpHandler) GetFeedsDropdown(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Render content first
-	contentComponent := views.FeedsDropdownContent(feeds)
+	contentComponent := views.FeedsDropdownContentFrag(feeds)
 	contentComponent.Render(r.Context(), w)
 
 	// Render button as OOB swap
-	buttonComponent := views.FeedsDropdownButton(feeds, true)
+	buttonComponent := views.FeedsDropdownButtonFrag(feeds, true)
 	buttonComponent.Render(r.Context(), w)
 }
 
@@ -395,7 +395,7 @@ func (h *HttpHandler) GetLibraryStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	views.LibraryStats(lib).Render(r.Context(), w)
+	views.LibraryStatsFrag(lib).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetSleeveNotesEditor(w http.ResponseWriter, r *http.Request) {
@@ -551,7 +551,7 @@ func (h *HttpHandler) SaveSleeveNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = views.AlbumRowTagsSection(*album, true).Render(ctx, w)
+	err = views.AlbumRowTagsSectionFrag(*album, true).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
