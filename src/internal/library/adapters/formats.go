@@ -49,7 +49,7 @@ func (h *HttpHandler) GetFormatsModal(w http.ResponseWriter, r *http.Request) {
 		defaultSearch = album.Title + " " + album.Artists[0].Name
 	}
 
-	if err := views.FormatsModal(albumID, defaultSearch, formats).Render(ctx, w); err != nil {
+	if err := views.FormatsModalFrag(albumID, defaultSearch, formats).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }
@@ -112,7 +112,7 @@ func (h *HttpHandler) PutFormats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update format icons on album detail page and close the modal (both OOB).
-	if err := views.FormatsReleasesOOB(albumID, album.Releases).Render(ctx, w); err != nil {
+	if err := views.FormatsReleasesOOBFrag(albumID, album.Releases).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
@@ -161,7 +161,7 @@ func (h *HttpHandler) GetDiscogsSearch(w http.ResponseWriter, r *http.Request) {
 		items = items[:10]
 	}
 
-	if err := views.DiscogsSearchResults(albumID, format, items).Render(ctx, w); err != nil {
+	if err := views.DiscogsSearchResultsFrag(albumID, format, items).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }
@@ -207,7 +207,7 @@ func (h *HttpHandler) GetDiscogsRelease(w http.ResponseWriter, r *http.Request) 
 		item.Label = []string{label}
 	}
 
-	if err := views.DiscogsReleaseDetails(format, item).Render(ctx, w); err != nil {
+	if err := views.DiscogsReleaseDetailsFrag(format, item).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }

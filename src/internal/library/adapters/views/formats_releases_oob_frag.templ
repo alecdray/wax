@@ -1,0 +1,40 @@
+package views
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/core/db/models"
+	"github.com/alecdray/wax/src/internal/library"
+)
+
+func formatsReleasesID(albumID string) string {
+	return fmt.Sprintf("album-detail-releases-%s", albumID)
+}
+
+func dashboardReleasesID(albumID string) string {
+	return fmt.Sprintf("dashboard-releases-%s", albumID)
+}
+
+// FormatsReleasesOOBFrag updates the format icons on the album detail page and dashboard after a save.
+templ FormatsReleasesOOBFrag(albumID string, releases library.ReleaseDTOs) {
+	<div
+		id={ formatsReleasesID(albumID) }
+		class="flex flex-wrap gap-2 items-center"
+		data-testid="album-detail-releases"
+		hx-swap-oob="true"
+	>
+		@formatIcon(releases, models.ReleaseFormatDigital)
+		@formatIcon(releases, models.ReleaseFormatVinyl)
+		@formatIcon(releases, models.ReleaseFormatCD)
+		@formatIcon(releases, models.ReleaseFormatCassette)
+	</div>
+	<div
+		id={ dashboardReleasesID(albumID) }
+		class="flex flex-col gap-2"
+		hx-swap-oob="true"
+	>
+		@formatIcon(releases, models.ReleaseFormatDigital)
+		@formatIcon(releases, models.ReleaseFormatVinyl)
+		@formatIcon(releases, models.ReleaseFormatCD)
+		@formatIcon(releases, models.ReleaseFormatCassette)
+	</div>
+}
