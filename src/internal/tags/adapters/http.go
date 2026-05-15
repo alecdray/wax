@@ -88,7 +88,7 @@ func (h *HttpHandler) GetTagsModal(w http.ResponseWriter, r *http.Request) {
 
 	suggestions := h.fetchGenreSuggestions(ctx, album)
 
-	err = views.TagsModal(*album, allTags, tagGroups, suggestions).Render(ctx, w)
+	err = views.TagsModalFrag(*album, allTags, tagGroups, suggestions).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
@@ -162,7 +162,7 @@ func (h *HttpHandler) SubmitAlbumTags(w http.ResponseWriter, r *http.Request) {
 	// to avoid an extra DB round-trip.
 	album.Tags = newTags
 
-	err = views.CloseTagsModal().Render(ctx, w)
+	err = views.CloseTagsModalFrag().Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
