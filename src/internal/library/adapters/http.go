@@ -605,7 +605,7 @@ func (h *HttpHandler) GetDiscoverRadar(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	views.RadarCarousel(radar, false).Render(r.Context(), w)
+	views.RadarCarouselFrag(radar, false).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetAlbumActionsModal(w http.ResponseWriter, r *http.Request) {
@@ -631,7 +631,7 @@ func (h *HttpHandler) GetAlbumActionsModal(w http.ResponseWriter, r *http.Reques
 		})
 		return
 	}
-	views.AlbumActionsModal(result).Render(r.Context(), w)
+	views.AlbumActionsModalFrag(result).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetDiscoverSearch(w http.ResponseWriter, r *http.Request) {
@@ -646,7 +646,7 @@ func (h *HttpHandler) GetDiscoverSearch(w http.ResponseWriter, r *http.Request) 
 	}
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	if query == "" {
-		views.DiscoverSearchResults(nil, "").Render(r.Context(), w)
+		views.DiscoverSearchResultsFrag(nil, "").Render(r.Context(), w)
 		return
 	}
 	results, err := h.libraryService.SearchAlbumsForDiscover(ctx, userId, query, 20)
@@ -657,7 +657,7 @@ func (h *HttpHandler) GetDiscoverSearch(w http.ResponseWriter, r *http.Request) 
 		})
 		return
 	}
-	views.DiscoverSearchResults(results, query).Render(r.Context(), w)
+	views.DiscoverSearchResultsFrag(results, query).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) PostDiscoverRadar(w http.ResponseWriter, r *http.Request) {

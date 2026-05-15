@@ -1,0 +1,92 @@
+package views
+
+import (
+    "fmt"
+    "github.com/alecdray/wax/src/internal/core/templates"
+    "github.com/alecdray/wax/src/internal/library"
+)
+
+const AlbumActionsModalId = "album-actions-modal"
+
+templ AlbumActionsModalFrag(result library.DiscoverResultDTO) {
+    @templates.Modal(AlbumActionsModalId, templates.ModalProps{
+        ModalContent: albumActionsModalContent(result),
+    })
+}
+
+templ albumActionsModalContent(result library.DiscoverResultDTO) {
+    <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-3 min-w-0">
+            if result.ImageURL != "" {
+                <div class="avatar">
+                    <div class="mask mask-squircle size-16 flex-shrink-0">
+                        <img src={ result.ImageURL } alt={ result.Title }/>
+                    </div>
+                </div>
+            } else {
+                <div class="avatar avatar-placeholder">
+                    <div class="mask mask-squircle size-16 flex-shrink-0 bg-base-300"></div>
+                </div>
+            }
+            <div class="min-w-0">
+                <h3 class="font-semibold text-lg truncate">{ result.Title }</h3>
+                if len(result.Artists) > 0 {
+                    <div class="text-sm text-base-content/60 truncate">
+                        for i, artist := range result.Artists {
+                            if i > 0 {
+                                <span>, </span>
+                            }
+                            { artist.Name }
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="flex flex-col gap-2">
+            <a
+                href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", result.SpotifyID)) }
+                target="_blank"
+                rel="noopener noreferrer"
+                class="btn btn-sm btn-outline"
+                data-testid="album-modal-open-spotify"
+            >Open in Spotify</a>
+            switch result.State {
+                case library.DiscoverAlbumStateOnRadar:
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-primary"
+                        hx-post={ fmt.Sprintf("/app/library/albums/%s/library", result.AlbumID) }
+                        hx-swap="none"
+                        hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
+                        data-testid="album-modal-add-to-library"
+                    >Add to library</button>
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-ghost text-error"
+                        hx-delete={ fmt.Sprintf("/app/library/albums/%s/radar", result.AlbumID) }
+                        hx-swap="none"
+                        hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
+                        data-testid="album-modal-remove-radar"
+                    >Remove from radar</button>
+                case library.DiscoverAlbumStateRemoved:
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-primary"
+                        hx-post={ fmt.Sprintf("/app/library/albums/%s/library", result.AlbumID) }
+                        hx-swap="none"
+                        hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
+                        data-testid="album-modal-reacquire"
+                    >Re-acquire</button>
+                default:
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-primary"
+                        hx-post={ fmt.Sprintf("/app/library/discover/radar?spotifyId=%s", result.SpotifyID) }
+                        hx-swap="none"
+                        hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
+                        data-testid="album-modal-add-radar"
+                    >Add to radar</button>
+            }
+        </div>
+    </div>
+}
