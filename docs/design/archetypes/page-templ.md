@@ -20,7 +20,7 @@ templ AlbumDetailPage(props AlbumDetailProps) {
 }
 ```
 
-That wrapper supplies the `<!DOCTYPE>`, `<head>`, fonts, HTMX, modal container, and navbar. The page templ never emits these itself — if a page needs to add to the `<head>`, that capability extends through the layout primitive, not by reaching around it.
+That wrapper supplies the root chrome — `<!DOCTYPE>`, `<head>`, fonts, HTMX, modal container — and a slot for the page's navbar. The page passes its own navbar component into that slot (or omits it, for pages with no chrome — e.g. login). If a page needs to add to the `<head>`, that capability extends through the layout primitive, not by reaching around it. The page is responsible for the shape of its content container inside the wrapper; widths, scroll behaviour, and layout direction differ per page and belong with the page, not the primitive.
 
 ## Import rules
 
