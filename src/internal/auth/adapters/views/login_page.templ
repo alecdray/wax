@@ -7,7 +7,7 @@ type LoginPageProps struct {
 }
 
 templ LoginPage(props LoginPageProps) {
-  @templates.RootComponent(templates.RootProps{
+  @templates.PageLayoutComponent(templates.PageLayoutProps{
     Title: templates.CreatePageTitle("Login"),
   }) {
     <div
