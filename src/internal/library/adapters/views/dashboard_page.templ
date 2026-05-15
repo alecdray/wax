@@ -16,11 +16,11 @@ type DashboardPageProps struct {
 }
 
 templ DashboardPage(props DashboardPageProps) {
-	@templates.RootComponent(templates.RootProps{
-		Title: templates.CreatePageTitle("Dashboard"),
+	@templates.PageLayoutComponent(templates.PageLayoutProps{
+		Title:  templates.CreatePageTitle("Dashboard"),
+		Navbar: LibraryHeaderBarFrag(HeaderBarProps{Active: "library", ShowFeeds: true, Feeds: props.Feeds}),
 	}) {
 		<div class="w-full flex flex-col" hx-history="false">
-			@LibraryHeaderBarFrag(HeaderBarProps{Active: "library", ShowFeeds: true, Feeds: props.Feeds})
 			<div class="flex flex-col py-4 gap-4 items-center">
 				@LibraryStatsFrag(props.Library)
 				@CarouselSectionFrag(CarouselSectionProps{
