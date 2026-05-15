@@ -1,4 +1,4 @@
-package adapters
+package views
 
 import "github.com/alecdray/wax/src/internal/core/templates"
 
@@ -7,7 +7,7 @@ type LoginPageProps struct {
 }
 
 templ LoginPage(props LoginPageProps) {
-  @templates.RootComponent(templates.RootProps{
+  @templates.PageLayoutComponent(templates.PageLayoutProps{
     Title: templates.CreatePageTitle("Login"),
   }) {
     <div

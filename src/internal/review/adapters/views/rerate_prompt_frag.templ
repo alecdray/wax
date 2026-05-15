@@ -1,0 +1,50 @@
+package views
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/library"
+)
+
+type ReratePromptProps struct {
+	Album     library.AlbumDTO
+	IsDue     bool
+	IsStalled bool
+}
+
+templ ReratePromptFrag(props ReratePromptProps) {
+	<div data-testid="rerate-prompt" class="flex flex-col gap-4">
+		<p class="text-sm text-base-content/70 truncate">{ props.Album.Title }</p>
+		if props.Album.Rating != nil && props.Album.Rating.Rating != nil {
+			<p class="text-xs text-base-content/40">
+				Current score: <span class="font-bold tabular-nums">{ fmt.Sprintf("%.1f", *props.Album.Rating.Rating) }</span>
+				if props.Album.RatingState != nil {
+					<span class="badge badge-xs badge-ghost ml-1">{ string(props.Album.RatingState.State) }</span>
+				}
+			</p>
+		}
+		<div class="flex flex-col gap-2">
+			<a
+				class="btn btn-primary"
+				hx-get={ fmt.Sprintf("/app/review/rating-recommender/questions?albumId=%s&mode=finalized", props.Album.ID) }
+				hx-target="closest [data-testid='rerate-prompt']"
+				hx-swap="outerHTML"
+				data-testid="rerate-rate-now"
+			>Rate now</a>
+			if !props.IsStalled {
+				if props.IsDue {
+					<form hx-post={ fmt.Sprintf("/app/review/rating/snooze?albumId=%s", props.Album.ID) } hx-swap="none" class="contents">
+						<button class="btn btn-ghost" type="submit" data-testid="rerate-snooze">Snooze 1 week</button>
+					</form>
+				} else {
+					<a
+						class="btn btn-ghost"
+						hx-get={ fmt.Sprintf("/app/review/rating-recommender/questions?albumId=%s&mode=provisional", props.Album.ID) }
+						hx-target="closest [data-testid='rerate-prompt']"
+						hx-swap="outerHTML"
+						data-testid="rerate-update-provisional"
+					>Update provisional</a>
+				}
+			}
+		</div>
+	</div>
+}

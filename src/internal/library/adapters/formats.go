@@ -13,6 +13,7 @@ import (
 	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/discogs"
 	"github.com/alecdray/wax/src/internal/library"
+	"github.com/alecdray/wax/src/internal/library/adapters/views"
 )
 
 // GetFormatsModal renders the formats management modal for an album.
@@ -48,7 +49,7 @@ func (h *HttpHandler) GetFormatsModal(w http.ResponseWriter, r *http.Request) {
 		defaultSearch = album.Title + " " + album.Artists[0].Name
 	}
 
-	if err := FormatsModal(albumID, defaultSearch, formats).Render(ctx, w); err != nil {
+	if err := views.FormatsModalFrag(albumID, defaultSearch, formats).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }
@@ -111,11 +112,11 @@ func (h *HttpHandler) PutFormats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update format icons on album detail page and close the modal (both OOB).
-	if err := FormatsReleasesOOB(albumID, album.Releases).Render(ctx, w); err != nil {
+	if err := views.FormatsReleasesOOBFrag(albumID, album.Releases).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := templates.ForceCloseModal(FormatsModalId).Render(ctx, w); err != nil {
+	if err := templates.ForceCloseModal(views.FormatsModalId).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }
@@ -160,7 +161,7 @@ func (h *HttpHandler) GetDiscogsSearch(w http.ResponseWriter, r *http.Request) {
 		items = items[:10]
 	}
 
-	if err := DiscogsSearchResults(albumID, format, items).Render(ctx, w); err != nil {
+	if err := views.DiscogsSearchResultsFrag(albumID, format, items).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }
@@ -206,7 +207,7 @@ func (h *HttpHandler) GetDiscogsRelease(w http.ResponseWriter, r *http.Request) 
 		item.Label = []string{label}
 	}
 
-	if err := DiscogsReleaseDetails(format, item).Render(ctx, w); err != nil {
+	if err := views.DiscogsReleaseDetailsFrag(format, item).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }

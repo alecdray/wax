@@ -1,0 +1,45 @@
+package views
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/review"
+	"strconv"
+)
+
+templ baseQuestionRadio(q review.BaseQuestion, opt review.QuestionOption) {
+	<label class="flex items-center gap-3 cursor-pointer">
+		<input
+			type="radio"
+			name={ string(q.Key) }
+			value={ strconv.Itoa(opt.Value) }
+			class="radio radio-primary radio-sm"
+			required
+		/>
+		<span class="text-base-content/70">{ opt.Label }</span>
+	</label>
+}
+
+templ baseQuestionFieldset(q review.BaseQuestion) {
+	<fieldset class="flex flex-col gap-3">
+		<legend class="text-base-content font-medium mb-2">{ q.Question }</legend>
+		for _, opt := range q.Options {
+			@baseQuestionRadio(q, opt)
+		}
+	</fieldset>
+}
+
+// BaseQuestionsFormFrag renders the base questions step.
+// mode is "provisional" or "finalized". albumId identifies the album.
+templ BaseQuestionsFormFrag(albumId string, mode review.RatingMode, questions review.BaseQuestions) {
+	<form
+		data-testid="rating-questionnaire"
+		hx-post={ fmt.Sprintf("/app/review/rating-recommender/questions?albumId=%s&mode=%s", albumId, string(mode)) }
+		hx-swap="outerHTML"
+		class="flex flex-col gap-8"
+	>
+		for _, q := range questions {
+			@baseQuestionFieldset(q)
+		}
+		<button class="btn btn-primary" type="submit" data-testid="rating-calculate">Next</button>
+	</form>
+}

@@ -1,14 +1,11 @@
-package adapters
+package views
 
 import (
   "encoding/json"
   "fmt"
-  "github.com/alecdray/wax/src/internal/core/templates"
   "github.com/alecdray/wax/src/internal/library"
   "github.com/alecdray/wax/src/internal/tags"
 )
-
-const TagsModalId = "tags-modal"
 
 func tagsAlpineData(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO, suggestions []string) string {
   // Build initial chips from album's current tags
@@ -104,7 +101,7 @@ func tagsAlpineData(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*
   }`, string(chipsJSON), string(tagsJSON), string(groupsJSON), string(suggestionsJSON))
 }
 
-templ TagsForm(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO, suggestions []string) {
+templ TagsFormFrag(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO, suggestions []string) {
   <div x-data={ tagsAlpineData(album, allTags, tagGroups, suggestions) }>
     <!-- Group selector -->
     if len(tagGroups) > 0 {
@@ -185,21 +182,11 @@ templ TagsForm(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.
   </div>
 }
 
-templ TagsFormWrapper(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO, suggestions []string) {
+templ TagsFormWrapperFrag(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO, suggestions []string) {
   <form
     class="flex flex-col gap-2"
     hx-post={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
   >
-    @TagsForm(album, allTags, tagGroups, suggestions)
+    @TagsFormFrag(album, allTags, tagGroups, suggestions)
   </form>
-}
-
-templ TagsModal(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO, suggestions []string) {
-  @templates.Modal(TagsModalId, templates.ModalProps{
-    ModalContent: TagsFormWrapper(album, allTags, tagGroups, suggestions),
-  })
-}
-
-templ CloseTagsModal() {
-  @templates.ForceCloseModal(TagsModalId)
 }

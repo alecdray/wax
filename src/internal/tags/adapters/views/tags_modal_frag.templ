@@ -1,0 +1,19 @@
+package views
+
+import (
+  "github.com/alecdray/wax/src/internal/core/templates"
+  "github.com/alecdray/wax/src/internal/library"
+  "github.com/alecdray/wax/src/internal/tags"
+)
+
+const TagsModalId = "tags-modal"
+
+templ TagsModalFrag(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO, suggestions []string) {
+  @templates.Modal(TagsModalId, templates.ModalProps{
+    ModalContent: TagsFormWrapperFrag(album, allTags, tagGroups, suggestions),
+  })
+}
+
+templ CloseTagsModalFrag() {
+  @templates.ForceCloseModal(TagsModalId)
+}

@@ -1,0 +1,69 @@
+package views
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/library"
+	"github.com/alecdray/wax/src/internal/review"
+)
+
+// GetAlbumScoreBadgeID returns the DOM ID for the score badge (detail panel).
+func GetAlbumScoreBadgeID(albumId string) string {
+	return fmt.Sprintf("album-score-badge-%s", albumId)
+}
+
+func ratingColorClass(album library.AlbumDTO) string {
+	if album.RatingState == nil {
+		return "badge-primary"
+	}
+	switch album.RatingState.State {
+	case "stalled":
+		return "badge-error"
+	case "finalized":
+		return "badge-primary"
+	case "provisional":
+		return "badge-ghost"
+	default:
+		return "badge-primary"
+	}
+}
+
+func ratingBadgeClass(album library.AlbumDTO) string {
+	return "badge badge-soft text-nowrap cursor-pointer " + ratingColorClass(album)
+}
+
+// AlbumScoreBadgeFrag renders the score badge used in the detail panel.
+// Shows "score - label" (e.g. "7.3 - Staff Pick"), clickable to open the rating modal.
+templ AlbumScoreBadgeFrag(album library.AlbumDTO, isOobSwap bool) {
+	if album.Rating != nil && album.Rating.Rating != nil {
+		<div
+			id={ GetAlbumScoreBadgeID(album.ID) }
+			data-testid="album-score-badge"
+			class={ ratingBadgeClass(album) }
+			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
+			hx-trigger="click"
+			hx-swap="none"
+			if isOobSwap {
+				hx-swap-oob="true"
+			}
+		>
+			if album.RatingState != nil && album.RatingState.State == "stalled" {
+				Stalled —
+			}
+			{ fmt.Sprintf("%.1f", *album.Rating.Rating) } - { string(review.GetRatingLabel(*album.Rating.Rating)) }
+		</div>
+	} else {
+		<button
+			id={ GetAlbumScoreBadgeID(album.ID) }
+			data-testid="album-score-badge"
+			class="btn btn-xs btn-ghost opacity-20 hover:opacity-100 cursor-pointer text-nowrap"
+			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
+			hx-trigger="click"
+			hx-swap="none"
+			if isOobSwap {
+				hx-swap-oob="true"
+			}
+		>
+			Rate
+		</button>
+	}
+}

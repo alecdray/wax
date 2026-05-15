@@ -1,0 +1,114 @@
+package views
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/core/templates"
+	"github.com/alecdray/wax/src/internal/library"
+	"github.com/alecdray/wax/src/internal/review"
+	"strconv"
+)
+
+func ratingConfirmAlpineData(rating *float64) string {
+	initial := "''"
+	if rating != nil {
+		initial = strconv.FormatFloat(*rating, 'f', -1, 64)
+	}
+	key := "["
+	for i, entry := range review.RatingKey {
+		if i > 0 {
+			key += ","
+		}
+		key += fmt.Sprintf("[%s,%s,'%s']",
+			strconv.FormatFloat(entry.MinValue, 'f', -1, 64),
+			strconv.FormatFloat(entry.MaxValue, 'f', -1, 64),
+			string(entry.Label),
+		)
+	}
+	key += "]"
+	return fmt.Sprintf(`{rating: %s, getRatingLabel(v){const n=parseFloat(v);if(isNaN(n))return'';const c=Math.min(10,Math.max(0,n));const k=%s;for(const[mn,mx,l]of k)if(c>=mn&&c<=mx)return l;return k[k.length-1][2]}}`, initial, key)
+}
+
+templ RatingConfirmFormFrag(album library.AlbumDTO, mode review.RatingMode, rating *float64) {
+	<form
+		data-testid="rating-confirm"
+		class="flex flex-col gap-4"
+		hx-ext="morph"
+		hx-post={ fmt.Sprintf("/app/review/rating-recommender/rating?albumId=%s", album.ID) }
+	>
+		<input type="hidden" name="mode" value={ string(mode) }/>
+		<div class="flex items-center gap-2">
+			<p class="max-w-[75%] text-ellipsis text-nowrap overflow-hidden">{ album.Title }</p>
+			<div class="flex gap-1">
+				<button
+					class="btn btn-ghost btn-sm btn-square"
+					type="button"
+					hx-get={ fmt.Sprintf("/app/review/rating-recommender/questions?albumId=%s&mode=%s", album.ID, string(mode)) }
+					hx-target="closest form"
+					hx-swap="outerHTML"
+				>
+					@templates.QuestionMarkIcon(templates.IconProps{})
+				</button>
+			</div>
+		</div>
+		<fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border px-4">
+			<legend class="fieldset-legend">Rating</legend>
+			<label class="input w-full" x-data={ ratingConfirmAlpineData(rating) }>
+				<input
+					name="rating"
+					data-testid="rating-input"
+					type="number"
+					min="0"
+					max="10"
+					class="grow"
+					step="0.1"
+					placeholder="Enter your rating"
+					if rating != nil {
+						value={ fmt.Sprintf("%.1f", *rating) }
+					}
+					required
+					x-model="rating"
+					autofocus
+				/>
+				<span class="badge badge-primary badge-soft badge-s" x-show="rating !== ''" x-text="getRatingLabel(rating)"></span>
+			</label>
+			<div class="collapse collapse-arrow">
+				<input type="checkbox"/>
+				<div class="collapse-title text-xs">Rating key</div>
+				<div class="collapse-content">
+					<table class="table table-xs">
+						<tbody>
+							for _, entry := range review.RatingKey {
+								<tr>
+									<td class="tabular-nums w-px whitespace-nowrap">{ strconv.FormatFloat(entry.MinValue, 'f', -1, 64) }</td>
+									<td>{ string(entry.Label) }</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			</div>
+			@ratingConfirmError("")
+		</fieldset>
+		<fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border px-4">
+			<legend class="fieldset-legend">Note <span class="font-normal text-base-content/40">(optional)</span></legend>
+			<textarea
+				name="note"
+				data-testid="rating-note"
+				class="textarea w-full min-h-20"
+				placeholder="Add a note about this rating..."
+				maxlength="2000"
+			></textarea>
+		</fieldset>
+		<button
+			class="btn btn-primary w-full"
+			type="submit"
+			data-testid="rating-lock-in"
+			hx-target-error="next .error"
+		>Lock in</button>
+		<p class="label error text-error"></p>
+	</form>
+}
+
+templ ratingConfirmError(text string) {
+	<p class="label error text-error">{ text }</p>
+}

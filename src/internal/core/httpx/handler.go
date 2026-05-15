@@ -5,10 +5,14 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"github.com/alecdray/wax/src/internal/core/templates"
 
 	"github.com/a-h/templ"
 )
+
+// unauthorizedRedirectPath is the public auth route that renders the
+// "Unauthorized" page. Owned by the `auth` module; referenced here as a
+// URL string so `core/httpx` doesn't depend on the auth package.
+const unauthorizedRedirectPath = "/unauthorized"
 
 type ErrorResponseKind int
 
@@ -79,10 +83,19 @@ func HandleErrorResponse(ctx context.Context, w http.ResponseWriter, props Handl
 	}
 }
 
-func HandleUnauthorized(ctx context.Context, w http.ResponseWriter, err error) {
-	HandleErrorResponse(ctx, w, HandleErrorResponseProps{
-		Status:   http.StatusUnauthorized,
-		Err:      err,
-		Response: *NewErrorResponse().SetComponent(templates.Unauthorized()),
-	})
+// HandleUnauthorized logs the auth failure and redirects the client to
+// the dedicated unauthorized page. For HTMX requests it emits an
+// `HX-Redirect` header so HTMX performs a full-page navigation rather
+// than swapping a fragment; for plain browser navigation it issues a
+// 303 See Other.
+func HandleUnauthorized(ctx context.Context, w http.ResponseWriter, r *http.Request, err error) {
+	slog.ErrorContext(ctx, "http unauthorized", "error", err)
+
+	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Set("HX-Redirect", unauthorizedRedirectPath)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	http.Redirect(w, r, unauthorizedRedirectPath, http.StatusSeeOther)
 }

@@ -1,12 +1,14 @@
-package templates
+package views
+
+import "github.com/alecdray/wax/src/internal/core/templates"
 
 const unauthorizedRedirectDelaySeconds = 5
 
-templ Unauthorized() {
-  @RootComponent(RootProps{
-    Title: CreatePageTitle("Unauthorized"),
+templ UnauthorizedPage() {
+  @templates.PageLayoutComponent(templates.PageLayoutProps{
+    Title: templates.CreatePageTitle("Unauthorized"),
   }) {
-    @Redirect("/", unauthorizedRedirectDelaySeconds)
+    @templates.Redirect("/", unauthorizedRedirectDelaySeconds)
     <div>
       <h1 class="text-center text-2xl p-5">Unauthorized</h1>
       <p class="text-center">Please log in to access this page.</p>

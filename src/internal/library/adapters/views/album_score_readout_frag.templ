@@ -1,0 +1,67 @@
+package views
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/library"
+)
+
+// GetAlbumScoreReadoutID returns the DOM ID for the score readout (list view).
+func GetAlbumScoreReadoutID(albumId string) string {
+	return fmt.Sprintf("album-score-readout-%s", albumId)
+}
+
+func ratingStateClass(album library.AlbumDTO) string {
+	if album.RatingState == nil {
+		return "text-base-content/20 hover:text-base-content/60"
+	}
+	switch album.RatingState.State {
+	case "stalled":
+		return "text-error/50 hover:text-error/70"
+	case "finalized":
+		return "text-primary hover:text-primary/80"
+	case "provisional":
+		if album.RatingState.IsRerateDue() {
+			return "text-base-content/40 hover:text-base-content/60"
+		}
+		return "text-base-content hover:text-base-content/80"
+	default:
+		return "text-primary hover:text-primary/80"
+	}
+}
+
+// AlbumScoreReadoutFrag renders the score readout used in the list view.
+// Shows the score as a large prominent number, clickable to open the rating modal.
+templ AlbumScoreReadoutFrag(album library.AlbumDTO, isOobSwap bool) {
+	if album.Rating != nil && album.Rating.Rating != nil {
+		<div
+			id={ GetAlbumScoreReadoutID(album.ID) }
+			data-testid="album-score-readout"
+			class={ "min-w-14 h-full flex flex-col items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none transition-colors", ratingStateClass(album) }
+			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
+			hx-trigger="click"
+			hx-swap="none"
+			if isOobSwap {
+				hx-swap-oob="true"
+			}
+		>
+			{ fmt.Sprintf("%.1f", *album.Rating.Rating) }
+			if album.RatingState != nil && album.RatingState.State == "stalled" {
+				<span class="text-xs font-normal badge badge-xs badge-error badge-soft">Stalled</span>
+			}
+		</div>
+	} else {
+		<div
+			id={ GetAlbumScoreReadoutID(album.ID) }
+			data-testid="album-score-readout"
+			class="min-w-14 h-full flex items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none text-base-content/20 hover:text-base-content/60 transition-colors"
+			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
+			hx-trigger="click"
+			hx-swap="none"
+			if isOobSwap {
+				hx-swap-oob="true"
+			}
+		>
+			--
+		</div>
+	}
+}

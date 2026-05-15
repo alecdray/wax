@@ -1,19 +1,18 @@
-package adapters
+package views
 
 import (
 	"fmt"
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/library"
-	"github.com/alecdray/wax/src/internal/review"
 )
 
 templ AlbumDetailPage(album library.AlbumDTO) {
-	@templates.RootComponent(templates.RootProps{
-		Title: templates.CreatePageTitle(album.Title),
+	@templates.PageLayoutComponent(templates.PageLayoutProps{
+		Title:  templates.CreatePageTitle(album.Title),
+		Navbar: LibraryHeaderBarFrag(HeaderBarProps{Active: "library"}),
 	}) {
 		<div class="w-full flex flex-col">
-			@LibraryHeaderBar(HeaderBarProps{Active: "library"})
 			<div class="flex flex-col max-w-2xl mx-auto w-full px-4 py-6 gap-6">
 				// Album header: cover art + title + artists
 				<div class="flex gap-4 items-center">
@@ -95,10 +94,10 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 				<div
 					data-testid="album-detail-rating"
 				>
-					@AlbumScoreBadge(album, false)
+					@AlbumScoreBadgeFrag(album, false)
 				</div>
 				// Rating History
-				@AlbumRatingHistory(album, false)
+				@AlbumRatingHistoryFrag(album, false)
 				// Tags
 				<div class="flex flex-col gap-2" data-testid="album-detail-tags">
 					<div class="flex items-center justify-start gap-2">
@@ -113,10 +112,10 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 							@templates.TagIcon(templates.IconProps{})
 						</button>
 					</div>
-					@AlbumTagsCell(album, false)
+					@AlbumTagsCellFrag(album, false)
 				</div>
 				// Sleeve Notes
-				@SleeveNotesSection(album, false)
+				@SleeveNotesSectionFrag(album, false)
 				// Tracks
 				if len(album.Tracks) > 0 {
 					<div class="flex flex-col gap-2">
@@ -145,52 +144,4 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 			</div>
 		</div>
 	}
-}
-
-templ AlbumRatingHistory(album library.AlbumDTO, isOobSwap bool) {
-	<div
-		class="collapse collapse-arrow"
-		data-testid="album-detail-rating-history"
-		id={ fmt.Sprintf("album-rating-history-%s", album.ID) }
-		if isOobSwap {
-			hx-swap-oob="true"
-		}
-	>
-		<input type="checkbox" checked?={ isOobSwap }/>
-		<div class="collapse-title p-0 min-h-0 flex items-center">
-			<span class="text-xs font-semibold uppercase tracking-wider text-base-content/40">Rating History</span>
-		</div>
-		<div class="collapse-content p-0">
-			if len(album.RatingLog) == 0 {
-				<span class="text-xs text-base-content/30">No ratings yet</span>
-			} else {
-				<div class="flex flex-col divide-y divide-base-300">
-					for _, entry := range album.RatingLog {
-						<div class="flex items-start justify-between py-3 gap-2" data-testid="rating-history-entry">
-							<div class="flex flex-col gap-1 min-w-0">
-								<div class="flex items-center gap-2">
-									<span class="badge badge-soft badge-primary text-nowrap" data-testid="rating-history-score">{ fmt.Sprintf("%.4g", *entry.Rating) } - { string(review.GetRatingLabel(*entry.Rating)) }</span>
-									if entry.State != nil {
-										<span class="badge badge-xs badge-ghost text-nowrap">{ string(*entry.State) }</span>
-									}
-									<span class="text-xs text-base-content/40">{ entry.CreatedAt.Format("Jan 2, 2006") }</span>
-								</div>
-								if entry.Note != nil {
-									<p class="text-sm text-base-content/70 whitespace-pre-wrap" data-testid="rating-history-note">{ *entry.Note }</p>
-								}
-							</div>
-							<button
-								class="btn btn-ghost btn-xs btn-square text-error flex-shrink-0"
-								data-testid="rating-history-delete"
-								hx-delete={ fmt.Sprintf("/app/review/rating-log/%s?albumId=%s", entry.ID, album.ID) }
-								hx-swap="none"
-							>
-								@templates.TrashIcon(templates.IconProps{})
-							</button>
-						</div>
-					}
-				</div>
-			}
-		</div>
-	</div>
 }

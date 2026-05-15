@@ -14,6 +14,7 @@ import (
 	"github.com/alecdray/wax/src/internal/discogs"
 	"github.com/alecdray/wax/src/internal/feed"
 	"github.com/alecdray/wax/src/internal/library"
+	"github.com/alecdray/wax/src/internal/library/adapters/views"
 	"github.com/alecdray/wax/src/internal/musicbrainz"
 	"github.com/alecdray/wax/src/internal/notes"
 	"github.com/alecdray/wax/src/internal/spotify"
@@ -99,7 +100,7 @@ func (h *HttpHandler) GetDashboardPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dashboardPage := DashboardPage(DashboardPageProps{
+	dashboardPage := views.DashboardPage(views.DashboardPageProps{
 		Library:         lib,
 		Feeds:           feeds,
 		RecentAlbums:    recentAlbums,
@@ -119,22 +120,22 @@ func (h *HttpHandler) GetCarousel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	view := CarouselView(r.URL.Query().Get("view"))
+	view := views.CarouselView(r.URL.Query().Get("view"))
 	if view == "" {
-		view = CarouselViewRecentlyPlayed
+		view = views.CarouselViewRecentlyPlayed
 	}
 
-	props := CarouselSectionProps{Active: view}
+	props := views.CarouselSectionProps{Active: view}
 
 	switch view {
-	case CarouselViewUnrated:
+	case views.CarouselViewUnrated:
 		albums, err := h.libraryService.GetUnratedAlbums(ctx, userId)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		props.RegularAlbums = albums
-	case CarouselViewRerateDue:
+	case views.CarouselViewRerateDue:
 		albums, err := h.libraryService.GetRerateQueue(ctx, userId)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -142,7 +143,7 @@ func (h *HttpHandler) GetCarousel(w http.ResponseWriter, r *http.Request) {
 		}
 		props.RerateAlbums = albums
 	default:
-		props.Active = CarouselViewRecentlyPlayed
+		props.Active = views.CarouselViewRecentlyPlayed
 		albums, err := h.libraryService.GetRecentlyPlayedAlbums(ctx, userId)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -151,7 +152,7 @@ func (h *HttpHandler) GetCarousel(w http.ResponseWriter, r *http.Request) {
 		props.RegularAlbums = albums
 	}
 
-	CarouselSection(props).Render(r.Context(), w)
+	views.CarouselSectionFrag(props).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetAlbumsTable(w http.ResponseWriter, r *http.Request) {
@@ -197,7 +198,7 @@ func (h *HttpHandler) GetAlbumsTable(w http.ResponseWriter, r *http.Request) {
 	fp := parseFilterParams(r)
 	albums = albums.Filter(fp)
 
-	component := AlbumsList(albums.Page(0), sortBy, dir, fp, lib.Artists)
+	component := views.AlbumsListFrag(albums.Page(0), sortBy, dir, fp, lib.Artists)
 	component.Render(r.Context(), w)
 }
 
@@ -240,10 +241,10 @@ func (h *HttpHandler) TriggerFeedSync(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	contentComponent := FeedsDropdownContent(feeds)
+	contentComponent := views.FeedsDropdownContentFrag(feeds)
 	contentComponent.Render(r.Context(), w)
 
-	buttonComponent := FeedsDropdownButton(feeds, true)
+	buttonComponent := views.FeedsDropdownButtonFrag(feeds, true)
 	buttonComponent.Render(r.Context(), w)
 }
 
@@ -291,7 +292,7 @@ func (h *HttpHandler) GetAlbumsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	albumsListBody(page, offset, sortBy, dir, fp).Render(r.Context(), w)
+	views.AlbumsListBodyFrag(page, offset, sortBy, dir, fp).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetAlbumDetailPage(w http.ResponseWriter, r *http.Request) {
@@ -314,7 +315,7 @@ func (h *HttpHandler) GetAlbumDetailPage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	AlbumDetailPage(*album).Render(r.Context(), w)
+	views.AlbumDetailPage(*album).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) DeleteAlbum(w http.ResponseWriter, r *http.Request) {
@@ -370,11 +371,11 @@ func (h *HttpHandler) GetFeedsDropdown(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Render content first
-	contentComponent := FeedsDropdownContent(feeds)
+	contentComponent := views.FeedsDropdownContentFrag(feeds)
 	contentComponent.Render(r.Context(), w)
 
 	// Render button as OOB swap
-	buttonComponent := FeedsDropdownButton(feeds, true)
+	buttonComponent := views.FeedsDropdownButtonFrag(feeds, true)
 	buttonComponent.Render(r.Context(), w)
 }
 
@@ -394,7 +395,7 @@ func (h *HttpHandler) GetLibraryStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	LibraryStats(lib).Render(r.Context(), w)
+	views.LibraryStatsFrag(lib).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetSleeveNotesEditor(w http.ResponseWriter, r *http.Request) {
@@ -427,7 +428,7 @@ func (h *HttpHandler) GetSleeveNotesEditor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = SleeveNotesEditor(*album, "").Render(ctx, w)
+	err = views.SleeveNotesEditorFrag(*album, "").Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
@@ -466,7 +467,7 @@ func (h *HttpHandler) GetSleeveNotesView(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = SleeveNotesSection(*album, false).Render(ctx, w)
+	err = views.SleeveNotesSectionFrag(*album, false).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
@@ -512,7 +513,7 @@ func (h *HttpHandler) SaveSleeveNote(w http.ResponseWriter, r *http.Request) {
 		} else {
 			album = &library.AlbumDTO{ID: albumId}
 		}
-		err = SleeveNotesEditor(*album, fmt.Sprintf("Note exceeds maximum length of %d characters.", notes.MaxSleeveNoteLength)).Render(ctx, w)
+		err = views.SleeveNotesEditorFrag(*album, fmt.Sprintf("Note exceeds maximum length of %d characters.", notes.MaxSleeveNoteLength)).Render(ctx, w)
 		if err != nil {
 			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 				Status: http.StatusInternalServerError,
@@ -541,7 +542,7 @@ func (h *HttpHandler) SaveSleeveNote(w http.ResponseWriter, r *http.Request) {
 	}
 	album.SleeveNote = sleeveNote
 
-	err = SleeveNotesSection(*album, false).Render(ctx, w)
+	err = views.SleeveNotesSectionFrag(*album, false).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
@@ -550,7 +551,7 @@ func (h *HttpHandler) SaveSleeveNote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = AlbumRowTagsSection(*album, true).Render(ctx, w)
+	err = views.AlbumRowTagsSectionFrag(*album, true).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
@@ -579,7 +580,7 @@ func (h *HttpHandler) GetDiscoverPage(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	DiscoverPage(DiscoverPageProps{
+	views.DiscoverPage(views.DiscoverPageProps{
 		RadarAlbums:   radar,
 		Query:         "",
 		SearchResults: nil,
@@ -604,7 +605,7 @@ func (h *HttpHandler) GetDiscoverRadar(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	RadarCarousel(radar, false).Render(r.Context(), w)
+	views.RadarCarouselFrag(radar, false).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetAlbumActionsModal(w http.ResponseWriter, r *http.Request) {
@@ -630,7 +631,7 @@ func (h *HttpHandler) GetAlbumActionsModal(w http.ResponseWriter, r *http.Reques
 		})
 		return
 	}
-	AlbumActionsModal(result).Render(r.Context(), w)
+	views.AlbumActionsModalFrag(result).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetDiscoverSearch(w http.ResponseWriter, r *http.Request) {
@@ -645,7 +646,7 @@ func (h *HttpHandler) GetDiscoverSearch(w http.ResponseWriter, r *http.Request) 
 	}
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	if query == "" {
-		DiscoverSearchResults(nil, "").Render(r.Context(), w)
+		views.DiscoverSearchResultsFrag(nil, "").Render(r.Context(), w)
 		return
 	}
 	results, err := h.libraryService.SearchAlbumsForDiscover(ctx, userId, query, 20)
@@ -656,7 +657,7 @@ func (h *HttpHandler) GetDiscoverSearch(w http.ResponseWriter, r *http.Request) 
 		})
 		return
 	}
-	DiscoverSearchResults(results, query).Render(r.Context(), w)
+	views.DiscoverSearchResultsFrag(results, query).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) PostDiscoverRadar(w http.ResponseWriter, r *http.Request) {

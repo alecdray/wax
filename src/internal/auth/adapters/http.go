@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/alecdray/wax/src/internal/auth"
+	"github.com/alecdray/wax/src/internal/auth/adapters/views"
 	"github.com/alecdray/wax/src/internal/core/app"
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/httpx"
@@ -48,10 +49,14 @@ func (h *HttpHandler) GetLoginPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	loginPage := LoginPage(LoginPageProps{
+	loginPage := views.LoginPage(views.LoginPageProps{
 		AuthURL: h.service.SpotifyAuthURL(a.Config().StateCode),
 	})
 	loginPage.Render(r.Context(), w)
+}
+
+func (h *HttpHandler) GetUnauthorizedPage(w http.ResponseWriter, r *http.Request) {
+	views.UnauthorizedPage().Render(r.Context(), w)
 }
 
 func (h *HttpHandler) Logout(w http.ResponseWriter, r *http.Request) {
