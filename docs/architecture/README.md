@@ -38,3 +38,7 @@ grep -h "^# " src/internal/*/CLAUDE.md
 ```
 
 (There is no separate module registry — that would duplicate what each `CLAUDE.md` already declares and would drift the same way the wiki did.)
+
+## Known gaps
+
+Current architectural violations are tracked in [known-gaps.md](known-gaps.md). The archetype docs describe the target; that file records where reality diverges and what closing each gap would require.

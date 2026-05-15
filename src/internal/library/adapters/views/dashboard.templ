@@ -1,4 +1,4 @@
-package adapters
+package views
 
 import (
 	"fmt"
@@ -520,7 +520,7 @@ templ albumListRow(album library.AlbumDTO) {
 	</li>
 }
 
-templ albumsListBody(albums []library.AlbumDTO, offset int, sortBy string, sortDir string, fp library.FilterParams) {
+templ AlbumsListBody(albums []library.AlbumDTO, offset int, sortBy string, sortDir string, fp library.FilterParams) {
 	if len(albums) == 0 {
 		if offset == 0 {
 			<li class="py-8 text-center opacity-50 text-sm">No albums match your filters</li>
@@ -879,7 +879,7 @@ templ AlbumsList(albums []library.AlbumDTO, sortBy string, sortDir string, fp li
 	>
 		@filterChipBar(sortBy, sortDir, fp, artists)
 		<ul class="list px-4">
-			@albumsListBody(albums, 0, sortBy, sortDir, fp)
+			@AlbumsListBody(albums, 0, sortBy, sortDir, fp)
 		</ul>
 	</div>
 }

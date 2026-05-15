@@ -10,8 +10,9 @@ import (
 	"github.com/alecdray/wax/src/internal/core/httpx"
 	"github.com/alecdray/wax/src/internal/discogs"
 	"github.com/alecdray/wax/src/internal/library"
-	libraryAdapters "github.com/alecdray/wax/src/internal/library/adapters"
+	libraryViews "github.com/alecdray/wax/src/internal/library/adapters/views"
 	"github.com/alecdray/wax/src/internal/tags"
+	"github.com/alecdray/wax/src/internal/tags/adapters/views"
 )
 
 type HttpHandler struct {
@@ -87,7 +88,7 @@ func (h *HttpHandler) GetTagsModal(w http.ResponseWriter, r *http.Request) {
 
 	suggestions := h.fetchGenreSuggestions(ctx, album)
 
-	err = TagsModal(*album, allTags, tagGroups, suggestions).Render(ctx, w)
+	err = views.TagsModal(*album, allTags, tagGroups, suggestions).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
@@ -161,7 +162,7 @@ func (h *HttpHandler) SubmitAlbumTags(w http.ResponseWriter, r *http.Request) {
 	// to avoid an extra DB round-trip.
 	album.Tags = newTags
 
-	err = CloseTagsModal().Render(ctx, w)
+	err = views.CloseTagsModal().Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
@@ -170,7 +171,7 @@ func (h *HttpHandler) SubmitAlbumTags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = libraryAdapters.AlbumTagsCell(*album, true).Render(ctx, w)
+	err = libraryViews.AlbumTagsCell(*album, true).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
@@ -179,7 +180,7 @@ func (h *HttpHandler) SubmitAlbumTags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = libraryAdapters.AlbumRowTagsSection(*album, true).Render(ctx, w)
+	err = libraryViews.AlbumRowTagsSection(*album, true).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,

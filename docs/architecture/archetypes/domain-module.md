@@ -18,8 +18,9 @@ src/internal/<module>/
 └── adapters/           # required only if the module has HTTP entrypoints
     ├── http.go         # HttpHandler struct + handler methods
     ├── routes.go       # RegisterRoutes(mux *httpx.Mux, h *HttpHandler)
-    ├── *.templ         # templ source
-    └── *_templ.go      # generated; do not edit by hand
+    └── views/          # rendering layer — its own Go package (`package views`)
+        ├── *.templ     # templ source; see docs/design/ for archetype rules
+        └── *_templ.go  # generated; do not edit by hand
 ```
 
 Required: `service.go`, `README.md`, `CLAUDE.md`. `repo.go` is required if the module owns persistence (the common case); a module that delegates all persistence to peer services can omit it. Everything else is optional. `adapters/` exists if and only if the module exposes HTTP routes.
@@ -109,7 +110,7 @@ When several service methods all do the same read → guard → write dance, the
 ## Adapters
 
 - HTTP handlers are methods on `HttpHandler` in `adapters/http.go`. The struct's fields are the peer `*Service` types it needs; a constructor `NewHttpHandler(...)` takes them.
-- Templ components live in `adapters/*.templ` and are generated to `*_templ.go` by `task build/templ`. Never edit `*_templ.go` by hand.
+- Templ components live in `adapters/views/*.templ` and are generated to `*_templ.go` by `task build/templ`. Never edit `*_templ.go` by hand. The `views/` sub-package is its own Go package (`package views`); handlers in `http.go` import it and call components by qualified name (e.g. `views.AlbumDetailPage(...)`). Design-side rules for the templ files themselves live in [`docs/design/`](../../design/).
 - URL patterns and route registration live in `adapters/routes.go`. Signature:
 
   ```go
@@ -120,7 +121,7 @@ When several service methods all do the same read → guard → write dance, the
   ```
 
   `server/` passes the appropriate mux (root mux for public routes, app sub-mux for authenticated routes). The module decides which paths and methods bind to which handler methods.
-- Adapters import their own module's `*Service` and peer modules' `*Service` / DTO types **only**. They do not import `repo.go`, `sqlc`, or peer modules' `adapters/` packages.
+- Adapters import their own module's `*Service` and peer modules' `*Service` / DTO types **only**. They do not import `repo.go`, `sqlc`, or peer modules' `adapters/` (or `adapters/views/`) packages.
 - Error responses go through `httpx.HandleErrorResponse`. Responses are HTML fragments for HTMX consumption.
 
 ## Background tasks

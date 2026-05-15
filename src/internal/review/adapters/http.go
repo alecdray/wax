@@ -9,8 +9,9 @@ import (
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/httpx"
 	"github.com/alecdray/wax/src/internal/library"
-	libAdapters "github.com/alecdray/wax/src/internal/library/adapters"
+	libViews "github.com/alecdray/wax/src/internal/library/adapters/views"
 	"github.com/alecdray/wax/src/internal/review"
+	"github.com/alecdray/wax/src/internal/review/adapters/views"
 )
 
 type HttpHandler struct {
@@ -57,24 +58,24 @@ func (h *HttpHandler) GetRatingRecommender(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	props := RatingModalProps{Album: *album}
+	props := views.RatingModalProps{Album: *album}
 
 	if album.RatingState == nil {
-		props.ContentType = RatingModalContentQuestions
+		props.ContentType = views.RatingModalContentQuestions
 		props.Mode = review.RatingModeProvisional
 	} else if album.RatingState.State == review.RatingStateFinalized {
-		props.ContentType = RatingModalContentConfirm
+		props.ContentType = views.RatingModalContentConfirm
 		props.Mode = review.RatingModeFinalized
 		if album.Rating != nil {
 			props.Rating = album.Rating.Rating
 		}
 	} else {
-		props.ContentType = RatingModalContentReratePrompt
+		props.ContentType = views.RatingModalContentReratePrompt
 		props.RerateIsDue = album.RatingState.IsRerateDue()
 		props.RerateIsStalled = album.RatingState.State == review.RatingStateStalled
 	}
 
-	if err := RatingModal(props).Render(ctx, w); err != nil {
+	if err := views.RatingModal(props).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }
@@ -93,7 +94,7 @@ func (h *HttpHandler) GetRatingRecommenderQuestions(w http.ResponseWriter, r *ht
 		mode = review.RatingModeProvisional
 	}
 
-	if err := BaseQuestionsForm(albumID, mode, review.AllBaseQuestions).Render(ctx, w); err != nil {
+	if err := views.BaseQuestionsForm(albumID, mode, review.AllBaseQuestions).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }
@@ -139,7 +140,7 @@ func (h *HttpHandler) SubmitRatingRecommenderQuestions(w http.ResponseWriter, r 
 	if review.DetectContradictions(questions, mode) {
 		questionValues["mode"] = string(mode)
 		questionValues["final_score"] = strconv.FormatFloat(finalScore, 'f', 2, 64)
-		if err := ConfidenceInterstitial(albumID, mode, finalScore, questionValues).Render(ctx, w); err != nil {
+		if err := views.ConfidenceInterstitial(albumID, mode, finalScore, questionValues).Render(ctx, w); err != nil {
 			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		}
 		return
@@ -156,7 +157,7 @@ func (h *HttpHandler) SubmitRatingRecommenderQuestions(w http.ResponseWriter, r 
 		return
 	}
 
-	if err := RatingConfirmForm(*album, mode, &finalScore).Render(ctx, w); err != nil {
+	if err := views.RatingConfirmForm(*album, mode, &finalScore).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }
@@ -193,7 +194,7 @@ func (h *HttpHandler) GetRatingConfirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := RatingConfirmForm(*album, mode, &finalScore).Render(ctx, w); err != nil {
+	if err := views.RatingConfirmForm(*album, mode, &finalScore).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }
@@ -277,23 +278,23 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 		return
 	}
 
-	if err := CloseRatingModal().Render(ctx, w); err != nil {
+	if err := views.CloseRatingModal().Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libAdapters.AlbumScoreReadout(*album, true).Render(ctx, w); err != nil {
+	if err := libViews.AlbumScoreReadout(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libAdapters.AlbumScoreBadge(*album, true).Render(ctx, w); err != nil {
+	if err := libViews.AlbumScoreBadge(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libAdapters.AlbumRatingHistory(*album, true).Render(ctx, w); err != nil {
+	if err := libViews.AlbumRatingHistory(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libAdapters.AlbumRowTagsSection(*album, true).Render(ctx, w); err != nil {
+	if err := libViews.AlbumRowTagsSection(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
@@ -325,11 +326,11 @@ func (h *HttpHandler) SnoozeRating(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := CloseRatingModal().Render(ctx, w); err != nil {
+	if err := views.CloseRatingModal().Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libAdapters.AlbumScoreReadout(*album, true).Render(ctx, w); err != nil {
+	if err := libViews.AlbumScoreReadout(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
@@ -367,19 +368,19 @@ func (h *HttpHandler) DeleteRatingLogEntry(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := libAdapters.AlbumScoreReadout(*album, true).Render(ctx, w); err != nil {
+	if err := libViews.AlbumScoreReadout(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libAdapters.AlbumScoreBadge(*album, true).Render(ctx, w); err != nil {
+	if err := libViews.AlbumScoreBadge(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libAdapters.AlbumRatingHistory(*album, true).Render(ctx, w); err != nil {
+	if err := libViews.AlbumRatingHistory(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libAdapters.AlbumRowTagsSection(*album, true).Render(ctx, w); err != nil {
+	if err := libViews.AlbumRowTagsSection(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
