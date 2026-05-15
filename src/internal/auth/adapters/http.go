@@ -55,6 +55,10 @@ func (h *HttpHandler) GetLoginPage(w http.ResponseWriter, r *http.Request) {
 	loginPage.Render(r.Context(), w)
 }
 
+func (h *HttpHandler) GetUnauthorizedPage(w http.ResponseWriter, r *http.Request) {
+	views.UnauthorizedPage().Render(r.Context(), w)
+}
+
 func (h *HttpHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())
 	a, err := ctx.App()
