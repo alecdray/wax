@@ -428,7 +428,7 @@ func (h *HttpHandler) GetSleeveNotesEditor(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = views.SleeveNotesEditor(*album, "").Render(ctx, w)
+	err = views.SleeveNotesEditorFrag(*album, "").Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
@@ -467,7 +467,7 @@ func (h *HttpHandler) GetSleeveNotesView(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = views.SleeveNotesSection(*album, false).Render(ctx, w)
+	err = views.SleeveNotesSectionFrag(*album, false).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
@@ -513,7 +513,7 @@ func (h *HttpHandler) SaveSleeveNote(w http.ResponseWriter, r *http.Request) {
 		} else {
 			album = &library.AlbumDTO{ID: albumId}
 		}
-		err = views.SleeveNotesEditor(*album, fmt.Sprintf("Note exceeds maximum length of %d characters.", notes.MaxSleeveNoteLength)).Render(ctx, w)
+		err = views.SleeveNotesEditorFrag(*album, fmt.Sprintf("Note exceeds maximum length of %d characters.", notes.MaxSleeveNoteLength)).Render(ctx, w)
 		if err != nil {
 			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 				Status: http.StatusInternalServerError,
@@ -542,7 +542,7 @@ func (h *HttpHandler) SaveSleeveNote(w http.ResponseWriter, r *http.Request) {
 	}
 	album.SleeveNote = sleeveNote
 
-	err = views.SleeveNotesSection(*album, false).Render(ctx, w)
+	err = views.SleeveNotesSectionFrag(*album, false).Render(ctx, w)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
