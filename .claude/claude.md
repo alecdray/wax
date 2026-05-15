@@ -21,10 +21,11 @@ For agents adding new code:
 - New code under `src/internal/<module>/` must follow the rules of that module's archetype. Read the module's `CLAUDE.md` first.
 - New modules: pick an archetype before writing code. If unsure, see [`docs/architecture/README.md`](../docs/architecture/README.md).
 
-### HTMX (frontend convention)
-- Forms use `hx-post`, `hx-put` for submissions; responses are HTML fragments.
-- Use `hx-swap` to control content replacement.
-- Return error components for inline display.
+## Design
+
+Every `.templ` file is one of three design archetypes (page templ, fragment templ, primitive), determined by location. Cross-cutting design principles (HTMX-first, fragments over pages, inline errors, theme tokens) and the visual vocabulary (Tailwind + DaisyUI `wax` theme) live alongside the archetype docs.
+
+Full rules: [`docs/design/`](../docs/design/).
 
 ## Development
 
