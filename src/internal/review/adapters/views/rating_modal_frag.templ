@@ -1,0 +1,51 @@
+package views
+
+import (
+	"github.com/alecdray/wax/src/internal/core/templates"
+	"github.com/alecdray/wax/src/internal/library"
+	"github.com/alecdray/wax/src/internal/review"
+)
+
+const RatingModalId = "rating-modal"
+
+type RatingModalContent int
+
+const (
+	RatingModalContentQuestions    RatingModalContent = iota
+	RatingModalContentReratePrompt RatingModalContent = iota
+	RatingModalContentConfirm      RatingModalContent = iota
+)
+
+type RatingModalProps struct {
+	Album           library.AlbumDTO
+	Mode            review.RatingMode
+	Rating          *float64
+	ContentType     RatingModalContent
+	RerateIsDue     bool
+	RerateIsStalled bool
+}
+
+templ RatingModalFrag(props RatingModalProps) {
+	switch props.ContentType {
+	case RatingModalContentQuestions:
+		@templates.Modal(RatingModalId, templates.ModalProps{
+			ModalContent: BaseQuestionsFormFrag(props.Album.ID, props.Mode, review.AllBaseQuestions),
+		})
+	case RatingModalContentReratePrompt:
+		@templates.Modal(RatingModalId, templates.ModalProps{
+			ModalContent: ReratePromptFrag(ReratePromptProps{
+				Album:     props.Album,
+				IsDue:     props.RerateIsDue,
+				IsStalled: props.RerateIsStalled,
+			}),
+		})
+	default:
+		@templates.Modal(RatingModalId, templates.ModalProps{
+			ModalContent: RatingConfirmFormFrag(props.Album, props.Mode, props.Rating),
+		})
+	}
+}
+
+templ CloseRatingModalFrag() {
+	@templates.ForceCloseModal(RatingModalId)
+}
