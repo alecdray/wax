@@ -17,7 +17,7 @@ func ratingLabelTagClass(album library.AlbumDTO) string {
 	if album.RatingState != nil && album.RatingState.State == "finalized" {
 		return "badge badge-sm badge-soft badge-primary text-xs text-nowrap"
 	}
-	return "badge badge-sm badge-soft badge-ghost text-xs text-nowrap text-base-content/60"
+	return "badge badge-sm badge-soft badge-ghost text-xs text-nowrap text-muted"
 }
 
 templ AlbumRowTagsSectionFrag(album library.AlbumDTO, isOobSwap bool) {
@@ -34,17 +34,17 @@ templ AlbumRowTagsSectionFrag(album library.AlbumDTO, isOobSwap bool) {
 				<span class={ ratingLabelTagClass(album) }>{ string(review.GetRatingLabel(*album.Rating.Rating)) }</span>
 			}
 			if album.SleeveNote != nil && album.SleeveNote.Content != "" {
-				<span class="badge badge-sm badge-ghost text-xs text-base-content/60" data-testid="album-row-notes-icon">
-					@templates.PenIcon(templates.IconProps{})
+				<span class="badge badge-sm badge-ghost text-xs text-muted" data-testid="album-row-notes-icon">
+					@templates.Icon(templates.IconProps{Name: "pen"})
 				</span>
 			}
 			for i, tag := range album.Tags {
 				if i < maxTagsInAlbumTagsCell {
-					<span class="badge badge-sm badge-ghost text-xs text-nowrap text-base-content/60">{ tag.Name }</span>
+					<span class="badge badge-sm badge-ghost text-xs text-nowrap text-muted">{ tag.Name }</span>
 				}
 			}
 			if len(album.Tags) > maxTagsInAlbumTagsCell {
-				<span class="badge badge-sm badge-ghost text-xs text-nowrap text-base-content/50">+{ fmt.Sprintf("%d", len(album.Tags)-maxTagsInAlbumTagsCell) }</span>
+				<span class="badge badge-sm badge-ghost text-xs text-nowrap text-subtle">+{ fmt.Sprintf("%d", len(album.Tags)-maxTagsInAlbumTagsCell) }</span>
 			}
 			<button
 				class={ "btn btn-ghost btn-xs text-secondary" }
@@ -52,7 +52,7 @@ templ AlbumRowTagsSectionFrag(album library.AlbumDTO, isOobSwap bool) {
 				hx-trigger="click"
 				hx-swap="none"
 			>
-				@templates.TagIcon(templates.IconProps{})
+				@templates.Icon(templates.IconProps{Name: "tag"})
 			</button>
 		</div>
 	</div>

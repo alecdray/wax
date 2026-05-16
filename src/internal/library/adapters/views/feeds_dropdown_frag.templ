@@ -40,7 +40,7 @@ templ FeedsDropdownButtonFrag(feeds []feed.FeedDTO, oob bool) {
 			hx-swap="morph"
 		}
 	>
-		@templates.DatabaseIcon(templates.IconProps{})
+		@templates.Icon(templates.IconProps{Name: "database"})
 		<span class="text-xs">Feeds</span>
 		if len(feeds) > 0 {
 			@templates.NeonEffect(getFeedsDropdownButtonIndicatorColor(feeds), templates.NeonHoverEffectNone, "rounded-full") {
@@ -77,10 +77,10 @@ templ FeedsDropdownContentFrag(feeds []feed.FeedDTO) {
 		hx-swap="morph"
 	>
 		<div class="menu-title px-2 py-1">
-			<span class="text-xs font-semibold opacity-60">Feed Status</span>
+			<span class="text-xs font-semibold text-muted">Feed Status</span>
 		</div>
 		if len(feeds) == 0 {
-			<div class="px-2 py-3 text-xs opacity-50">No feeds configured</div>
+			<div class="px-2 py-3 text-xs text-subtle">No feeds configured</div>
 		} else {
 			for _, f := range feeds {
 				<li class={ templ.KV("menu-disabled", f.LastSyncStatus.IsSyncing()) }>
@@ -98,24 +98,26 @@ templ FeedsDropdownContentFrag(feeds []feed.FeedDTO) {
 						<div class="flex items-center gap-2">
 							if f.LastSyncStatus.IsUnsyned() {
 								<div class="text-warning">
-									@templates.WarningIcon(templates.IconProps{Style: templates.IconStyleOutline})
+									@templates.Icon(templates.IconProps{Name: "exclamation-triangle"})
 								</div>
 							} else if f.LastSyncStatus.IsSyncing() {
 								<div class="text-info">
-									@templates.SpinnerIcon(templates.IconProps{})
+									<span class="animate-spin inline-block">
+										@templates.Icon(templates.IconProps{Name: "arrow-repeat"})
+									</span>
 								</div>
 							} else if f.LastSyncStatus == models.FeedSyncStatusFailure {
 								<div class="text-error">
-									@templates.XMarkIcon(templates.IconProps{Style: templates.IconStyleOutline})
+									@templates.Icon(templates.IconProps{Name: "x-circle"})
 								</div>
 							} else if f.LastSyncStatus.IsSynced() {
 								<div class={ templ.KV("text-success", !f.IsSyncStale()), templ.KV("text-warning", f.IsSyncStale()) }>
-									@templates.CheckIcon(templates.IconProps{Style: templates.IconStyleOutline})
+									@templates.Icon(templates.IconProps{Name: "check-circle"})
 								</div>
 							}
 							<span class="text-sm font-medium">{ string(f.Kind) }</span>
 						</div>
-						<div class="text-xs opacity-60">
+						<div class="text-xs text-muted">
 							if f.LastSyncStatus.IsUnsyned() {
 								Never synced
 							} else if f.LastSyncStatus.IsSyncing() {

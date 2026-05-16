@@ -15,28 +15,28 @@ templ LibraryHeaderBarFrag(props HeaderBarProps) {
 	<div class="bg-base-100 border-b border-base-300 h-11 w-full flex-shrink-0 sticky top-0 z-10">
 		<div class="h-full flex items-center justify-between px-6">
 			<div class="flex items-center gap-4">
-				<a href="/" class="text-lg text-primary font-brand">wax</a>
+				<a href="/" class="text-lg text-accent font-brand">wax</a>
 				<div class="h-4 w-px bg-base-300"></div>
 				<div class="flex items-center gap-1">
 					<div class="tooltip tooltip-bottom" data-tip="Library">
 						if props.Active == "library" {
-							<div class="btn btn-ghost btn-xs btn-square opacity-30 pointer-events-none" data-testid="header-library-icon-active">
-								@templates.CollectionIcon(templates.IconProps{Style: templates.IconStyleFill})
+							<div class="btn btn-ghost btn-xs btn-square is-disabled" data-testid="header-library-icon-active">
+								@templates.Icon(templates.IconProps{Name: "collection", Style: templates.IconStyleFill})
 							</div>
 						} else {
 							<a href="/app/library/dashboard" class="btn btn-ghost btn-xs btn-square" data-testid="header-library-icon">
-								@templates.CollectionIcon(templates.IconProps{Style: templates.IconStyleOutline})
+								@templates.Icon(templates.IconProps{Name: "collection", Style: templates.IconStyleOutline})
 							</a>
 						}
 					</div>
 					<div class="tooltip tooltip-bottom" data-tip="Discover">
 						if props.Active == "discover" {
-							<div class="btn btn-ghost btn-xs btn-square opacity-30 pointer-events-none" data-testid="header-discover-icon-active">
-								@templates.CompassIcon(templates.IconProps{Style: templates.IconStyleFill})
+							<div class="btn btn-ghost btn-xs btn-square is-disabled" data-testid="header-discover-icon-active">
+								@templates.Icon(templates.IconProps{Name: "compass", Style: templates.IconStyleFill})
 							</div>
 						} else {
 							<a href="/app/library/discover" class="btn btn-ghost btn-xs btn-square" data-testid="header-discover-icon">
-								@templates.CompassIcon(templates.IconProps{Style: templates.IconStyleOutline})
+								@templates.Icon(templates.IconProps{Name: "compass", Style: templates.IconStyleOutline})
 							</a>
 						}
 					</div>
@@ -49,7 +49,7 @@ templ LibraryHeaderBarFrag(props HeaderBarProps) {
 				}
 				<div class="dropdown dropdown-end">
 					<div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle">
-						@templates.UserIcon(templates.IconProps{Style: templates.IconStyleOutline})
+						@templates.Icon(templates.IconProps{Name: "person-circle"})
 					</div>
 					<ul tabindex="0" class="dropdown-content z-[1] menu menu-compact bg-base-100 rounded-box w-32 shadow-xl border border-base-300 mt-1">
 						<li><a href="/logout" class="text-xs">Logout</a></li>

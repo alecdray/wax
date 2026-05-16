@@ -34,7 +34,7 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 								href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", album.SpotifyID)) }
 								target="_blank"
 								rel="noopener noreferrer"
-								class="text-base-content/30 hover:text-base-content flex-shrink-0 mt-1"
+								class="text-ghost hover:text-default flex-shrink-0 mt-1"
 								title="Open in Spotify"
 							>
 								<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
@@ -47,13 +47,13 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 							<div class="flex flex-wrap gap-x-2 gap-y-0.5" data-testid="album-detail-artists">
 								for i, artist := range album.Artists {
 									if i > 0 {
-										<span class="text-sm text-base-content/20 cursor-default">|</span>
+										<span class="text-sm text-ghost cursor-default">|</span>
 									}
 									<a
 										href={ templ.URL(fmt.Sprintf("https://open.spotify.com/artist/%s", artist.SpotifyID)) }
 										target="_blank"
 										rel="noopener noreferrer"
-										class="text-sm text-base-content/70 hover:text-base-content"
+										class="text-sm text-muted hover:text-default"
 									>{ artist.Name }</a>
 								}
 							</div>
@@ -61,7 +61,7 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 						// Formats
 						<div class="flex flex-col gap-2">
 							<button
-								class="flex flex-wrap gap-2 items-center cursor-pointer hover:opacity-80 transition-opacity"
+								class="flex flex-wrap gap-2 items-center cursor-pointer hover-fade"
 								data-testid="album-detail-releases-btn"
 								hx-get={ fmt.Sprintf("/app/library/albums/%s/formats", album.ID) }
 								hx-trigger="click"
@@ -82,11 +82,11 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 						// Dates
 						<div class="flex gap-2 items-center">
 							if oldest := album.Releases.OldestAddedAtDate(); oldest != nil {
-								<span class="text-xs text-base-content/50">Added { oldest.Format("Jan 2, 2006") }</span>
+								<span class="text-xs text-subtle">Added { oldest.Format("Jan 2, 2006") }</span>
 							}
 							if album.LastPlayedAt != nil {
-								<span class="text-base-content/20 cursor-default">|</span>
-								<span class="text-xs text-base-content/50" data-testid="album-detail-last-played">Last played { album.LastPlayedAt.Format("Jan 2, 2006") }</span>
+								<span class="text-ghost cursor-default">|</span>
+								<span class="text-xs text-subtle" data-testid="album-detail-last-played">Last played { album.LastPlayedAt.Format("Jan 2, 2006") }</span>
 							}
 						</div>
 					</div>
@@ -101,15 +101,15 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 				// Tags
 				<div class="flex flex-col gap-2" data-testid="album-detail-tags">
 					<div class="flex items-center justify-start gap-2">
-						<span class="text-xs font-semibold uppercase tracking-wider text-base-content/40">Tags</span>
+						<span class="text-xs font-semibold uppercase tracking-wider text-subtle">Tags</span>
 						<button
 							data-testid="album-detail-tags-edit"
-							class="btn btn-ghost btn-xs text-base-content/40"
+							class="btn btn-ghost btn-xs text-subtle"
 							hx-get={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
 							hx-trigger="click"
 							hx-swap="none"
 						>
-							@templates.TagIcon(templates.IconProps{})
+							@templates.Icon(templates.IconProps{Name: "tag"})
 						</button>
 					</div>
 					@AlbumTagsCellFrag(album, false)
@@ -119,11 +119,11 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 				// Tracks
 				if len(album.Tracks) > 0 {
 					<div class="flex flex-col gap-2">
-						<span class="text-xs font-semibold uppercase tracking-wider text-base-content/40">Tracks</span>
+						<span class="text-xs font-semibold uppercase tracking-wider text-subtle">Tracks</span>
 						<div class="flex flex-col divide-y divide-base-300">
 							for i, track := range album.Tracks {
 								<div class="flex items-center gap-3 py-2">
-									<span class="text-xs text-base-content/30 w-5 text-right flex-shrink-0">{ fmt.Sprintf("%d", i+1) }</span>
+									<span class="text-xs text-ghost w-5 text-right flex-shrink-0">{ fmt.Sprintf("%d", i+1) }</span>
 									<span class="text-sm">{ track.Title }</span>
 								</div>
 							}
