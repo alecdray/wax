@@ -31,7 +31,7 @@ templ albumActionsModalContent(result library.DiscoverResultDTO) {
             <div class="min-w-0">
                 <h3 class="font-semibold text-lg truncate">{ result.Title }</h3>
                 if len(result.Artists) > 0 {
-                    <div class="text-sm text-base-content/60 truncate">
+                    <div class="text-sm text-muted truncate">
                         for i, artist := range result.Artists {
                             if i > 0 {
                                 <span>, </span>

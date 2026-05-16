@@ -37,12 +37,12 @@ templ formatsModalContent(albumID string, defaultSearch string, formats []librar
 }
 
 templ digitalFormatRow(f library.AlbumFormatDTO) {
-	<div class="flex items-center gap-3 py-2 opacity-50 cursor-not-allowed">
+	<div class="flex items-center gap-3 py-2 is-disabled">
 		<div class="w-5 h-5 flex items-center justify-center">
 			@releaseFormatIcon(f.Format)
 		</div>
 		<span class="text-sm capitalize flex-1">{ string(f.Format) }</span>
-		<span class="text-xs text-base-content/50">via Spotify</span>
+		<span class="text-xs text-subtle">via Spotify</span>
 	</div>
 }
 
@@ -53,7 +53,7 @@ templ physicalFormatRow(albumID string, defaultSearch string, f library.AlbumFor
 		@htmx:after-swap={ fmt.Sprintf("if ($event.detail.target.id === 'discogs-details-%s') hasRelease = true", string(f.Format)) }
 	>
 		<div class="flex items-center gap-3">
-			<div class="w-5 h-5 flex items-center justify-center" :class="owned ? 'opacity-70' : 'opacity-20'">
+			<div class="w-5 h-5 flex items-center justify-center" :class="owned ? 'text-muted' : 'text-ghost'">
 				@releaseFormatIcon(f.Format)
 			</div>
 			<span class="text-sm capitalize flex-1">{ string(f.Format) }</span>
@@ -69,7 +69,7 @@ templ physicalFormatRow(albumID string, defaultSearch string, f library.AlbumFor
 			<div class="flex gap-2">
 				<button
 					type="button"
-					class="btn btn-ghost btn-xs text-base-content/50"
+					class="btn btn-ghost btn-xs text-subtle"
 					@click="showDiscogs = !showDiscogs"
 					hx-get={ fmt.Sprintf("/app/library/albums/%s/formats/%s/discogs/search", albumID, string(f.Format)) }
 					hx-include={ fmt.Sprintf("#discogs-search-input-%s", string(f.Format)) }
@@ -100,7 +100,7 @@ templ physicalFormatRow(albumID string, defaultSearch string, f library.AlbumFor
 }
 
 templ discogsAttachedDetails(f library.AlbumFormatDTO) {
-	<div class="text-xs text-base-content/60 flex flex-col gap-0.5" id={ fmt.Sprintf("discogs-details-%s", string(f.Format)) }>
+	<div class="text-xs text-muted flex flex-col gap-0.5" id={ fmt.Sprintf("discogs-details-%s", string(f.Format)) }>
 		if f.Label != "" {
 			<span>{ f.Label }</span>
 		}

@@ -18,7 +18,7 @@ templ AlbumTagsCellFrag(album library.AlbumDTO, isOobSwap bool) {
 		}
 	>
 		if len(album.Tags) == 0 {
-			<span class="text-xs text-base-content/30">—</span>
+			<span class="text-xs text-ghost">—</span>
 		} else {
 			for _, tag := range album.Tags {
 				<span class="badge badge-sm badge-ghost text-xs">{ tag.Name }</span>

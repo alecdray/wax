@@ -46,6 +46,35 @@
     }
 }
 
+.is-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.hover-fade {
+    transition: opacity 150ms;
+}
+.hover-fade:hover {
+    opacity: 0.8;
+}
+
+@utility text-default {
+    color: var(--color-base-content);
+}
+
+@utility text-muted {
+    color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+}
+
+@utility text-subtle {
+    color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+}
+
+@utility text-ghost {
+    color: color-mix(in oklab, var(--color-base-content) 20%, transparent);
+}
+
 .font-brand {
     font-family: "Instrument Sans", sans-serif;
     font-optical-sizing: auto;

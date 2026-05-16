@@ -7,7 +7,7 @@ import (
 
 templ SleeveNotesEditorFrag(album library.AlbumDTO, errMsg string) {
 	<div class="flex items-center justify-start gap-2">
-		<span class="text-xs font-semibold uppercase tracking-wider text-base-content/40">Sleeve Notes</span>
+		<span class="text-xs font-semibold uppercase tracking-wider text-subtle">Sleeve Notes</span>
 	</div>
 	if errMsg != "" {
 		<p class="text-xs text-error" data-testid="sleeve-notes-error">{ errMsg }</p>

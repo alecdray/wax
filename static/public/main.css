@@ -13,7 +13,6 @@
     --container-sm: 24rem;
     --container-2xl: 42rem;
     --container-3xl: 48rem;
-    --container-7xl: 80rem;
     --text-xs: 0.75rem;
     --text-xs--line-height: calc(1 / 0.75);
     --text-sm: 0.875rem;
@@ -28,8 +27,6 @@
     --text-2xl--line-height: calc(2 / 1.5);
     --text-4xl: 2.25rem;
     --text-4xl--line-height: calc(2.5 / 2.25);
-    --text-5xl: 3rem;
-    --text-5xl--line-height: 1;
     --text-9xl: 8rem;
     --text-9xl--line-height: 1;
     --font-weight-normal: 400;
@@ -41,7 +38,6 @@
     --leading-tight: 1.25;
     --radius-xl: 0.75rem;
     --animate-spin: spin 1s linear infinite;
-    --blur-xs: 4px;
     --default-transition-duration: 150ms;
     --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     --default-font-family: var(--font-sans);
@@ -2369,6 +2365,18 @@
       }
     }
   }
+  .tooltip-left {
+    @layer daisyui.l1.l2 {
+      > .tooltip-content, &[data-tip]:before {
+        transform: translateX(calc(var(--tt-pos, 0.25rem) - 0.25rem)) translateY(-50%);
+        inset: 50% var(--tt-off) auto auto;
+      }
+      &:after {
+        transform: translateX(var(--tt-pos, 0.25rem)) translateY(-50%) rotate(-90deg);
+        inset: 50% calc(var(--tt-tail) + 1px) auto auto;
+      }
+    }
+  }
   .tooltip-right {
     @layer daisyui.l1.l2 {
       > .tooltip-content, &[data-tip]:before {
@@ -2433,11 +2441,17 @@
   .top-2 {
     top: calc(var(--spacing) * 2);
   }
+  .-right-1 {
+    right: calc(var(--spacing) * -1);
+  }
   .right-1 {
     right: calc(var(--spacing) * 1);
   }
   .right-2 {
     right: calc(var(--spacing) * 2);
+  }
+  .-bottom-1 {
+    bottom: calc(var(--spacing) * -1);
   }
   .join {
     display: inline-flex;
@@ -2766,9 +2780,6 @@
   .m-0 {
     margin: calc(var(--spacing) * 0);
   }
-  .m-3 {
-    margin: calc(var(--spacing) * 3);
-  }
   .filter {
     @layer daisyui.l1.l2.l3 {
       display: flex;
@@ -2985,6 +2996,30 @@
       padding-inline: calc(var(--size) / 2 - var(--border));
     }
   }
+  .kbd {
+    box-shadow: none;
+    @layer daisyui.l1.l2.l3 {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-field);
+      background-color: var(--color-base-200);
+      vertical-align: middle;
+      padding-inline: 0.5em;
+      border: var(--border) solid var(--color-base-content);
+      @supports (color: color-mix(in lab, red, red)) {
+        border: var(--border) solid color-mix(in srgb, var(--color-base-content) 20%, #0000);
+      }
+      border-bottom: calc(var(--border) + 1px) solid var(--color-base-content);
+      @supports (color: color-mix(in lab, red, red)) {
+        border-bottom: calc(var(--border) + 1px) solid color-mix(in srgb, var(--color-base-content) 20%, #0000);
+      }
+      --size: calc(var(--size-selector, 0.25rem) * 6);
+      font-size: 0.875rem;
+      height: var(--size);
+      min-width: var(--size);
+    }
+  }
   .tabs {
     @layer daisyui.l1.l2.l3 {
       display: flex;
@@ -3044,21 +3079,6 @@
       align-items: center;
       width: 50%;
       justify-content: flex-end;
-    }
-  }
-  .navbar-start {
-    @layer daisyui.l1.l2.l3 {
-      display: inline-flex;
-      align-items: center;
-      width: 50%;
-      justify-content: flex-start;
-    }
-  }
-  .navbar-center {
-    @layer daisyui.l1.l2.l3 {
-      display: inline-flex;
-      align-items: center;
-      flex-shrink: 0;
     }
   }
   .carousel {
@@ -3191,10 +3211,6 @@
       height: var(--size);
     }
   }
-  .size-4 {
-    width: calc(var(--spacing) * 4);
-    height: calc(var(--spacing) * 4);
-  }
   .size-24 {
     width: calc(var(--spacing) * 24);
     height: calc(var(--spacing) * 24);
@@ -3301,9 +3317,6 @@
   .max-w-3xl {
     max-width: var(--container-3xl);
   }
-  .max-w-7xl {
-    max-width: var(--container-7xl);
-  }
   .max-w-\[75\%\] {
     max-width: 75%;
   }
@@ -3336,14 +3349,6 @@
   }
   .grow {
     flex-grow: 1;
-  }
-  .skew-x-0 {
-    --tw-skew-x: skewX(0deg);
-    transform: var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,);
-  }
-  .skew-x-24 {
-    --tw-skew-x: skewX(24deg);
-    transform: var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,);
   }
   .animate-spin {
     animation: var(--animate-spin);
@@ -3446,9 +3451,6 @@
   }
   .gap-4 {
     gap: calc(var(--spacing) * 4);
-  }
-  .gap-5 {
-    gap: calc(var(--spacing) * 5);
   }
   .gap-6 {
     gap: calc(var(--spacing) * 6);
@@ -3558,6 +3560,9 @@
       border-color: currentColor;
     }
   }
+  .border-accent {
+    border-color: var(--color-accent);
+  }
   .border-base-200 {
     border-color: var(--color-base-200);
   }
@@ -3578,6 +3583,9 @@
   }
   .bg-base-300 {
     background-color: var(--color-base-300);
+  }
+  .bg-primary {
+    background-color: var(--color-primary);
   }
   .mask-squircle {
     @layer daisyui.l1.l2 {
@@ -3612,9 +3620,6 @@
   }
   .p-5 {
     padding: calc(var(--spacing) * 5);
-  }
-  .p-6 {
-    padding: calc(var(--spacing) * 6);
   }
   .menu-title {
     @layer daisyui.l1.l2.l3 {
@@ -3713,10 +3718,6 @@
     font-size: var(--text-4xl);
     line-height: var(--tw-leading, var(--text-4xl--line-height));
   }
-  .text-5xl {
-    font-size: var(--text-5xl);
-    line-height: var(--tw-leading, var(--text-5xl--line-height));
-  }
   .text-9xl {
     font-size: var(--text-9xl);
     line-height: var(--tw-leading, var(--text-9xl--line-height));
@@ -3813,6 +3814,9 @@
       }
     }
   }
+  .text-accent {
+    color: var(--color-accent);
+  }
   .text-base-content {
     color: var(--color-base-content);
   }
@@ -3858,6 +3862,9 @@
       color: color-mix(in oklab, var(--color-base-content) 80%, transparent);
     }
   }
+  .text-default {
+    color: var(--color-base-content);
+  }
   .text-error {
     color: var(--color-error);
   }
@@ -3867,14 +3874,35 @@
       color: color-mix(in oklab, var(--color-error) 50%, transparent);
     }
   }
+  .text-ghost {
+    color: var(--color-base-content);
+    @supports (color: color-mix(in lab, red, red)) {
+      color: color-mix(in oklab, var(--color-base-content) 20%, transparent);
+    }
+  }
   .text-info {
     color: var(--color-info);
+  }
+  .text-muted {
+    color: var(--color-base-content);
+    @supports (color: color-mix(in lab, red, red)) {
+      color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+    }
   }
   .text-primary {
     color: var(--color-primary);
   }
+  .text-primary-content {
+    color: var(--color-primary-content);
+  }
   .text-secondary {
     color: var(--color-secondary);
+  }
+  .text-subtle {
+    color: var(--color-base-content);
+    @supports (color: color-mix(in lab, red, red)) {
+      color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+    }
   }
   .text-success {
     color: var(--color-success);
@@ -3960,14 +3988,6 @@
         }
       }
     }
-  }
-  .blur-none {
-    --tw-blur:  ;
-    filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
-  }
-  .blur-xs {
-    --tw-blur: blur(var(--blur-xs));
-    filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
   }
   .filter {
     filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
@@ -4090,13 +4110,6 @@
       }
     }
   }
-  .hover\:text-base-content {
-    &:hover {
-      @media (hover: hover) {
-        color: var(--color-base-content);
-      }
-    }
-  }
   .hover\:text-base-content\/60 {
     &:hover {
       @media (hover: hover) {
@@ -4117,13 +4130,10 @@
       }
     }
   }
-  .hover\:text-base-content\/80 {
+  .hover\:text-default {
     &:hover {
       @media (hover: hover) {
         color: var(--color-base-content);
-        @supports (color: color-mix(in lab, red, red)) {
-          color: color-mix(in oklab, var(--color-base-content) 80%, transparent);
-        }
       }
     }
   }
@@ -4133,6 +4143,16 @@
         color: var(--color-error);
         @supports (color: color-mix(in lab, red, red)) {
           color: color-mix(in oklab, var(--color-error) 70%, transparent);
+        }
+      }
+    }
+  }
+  .hover\:text-muted {
+    &:hover {
+      @media (hover: hover) {
+        color: var(--color-base-content);
+        @supports (color: color-mix(in lab, red, red)) {
+          color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
         }
       }
     }
@@ -4245,6 +4265,14 @@
       overflow-y: auto;
     }
   }
+  .md\:text-subtle {
+    @media (width >= 48rem) {
+      color: var(--color-base-content);
+      @supports (color: color-mix(in lab, red, red)) {
+        color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+      }
+    }
+  }
   .\[\&_a\]\:text-info {
     & a {
       color: var(--color-info);
@@ -4325,6 +4353,17 @@
   .btn-analog {
     background-color: transparent;
   }
+}
+.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.hover-fade {
+  transition: opacity 150ms;
+}
+.hover-fade:hover {
+  opacity: 0.8;
 }
 .font-brand {
   font-family: "Instrument Sans", sans-serif;
@@ -4600,26 +4639,6 @@
     background-position-x: -115%;
   }
 }
-@property --tw-rotate-x {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-rotate-y {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-rotate-z {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-skew-x {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-skew-y {
-  syntax: "*";
-  inherits: false;
-}
 @property --tw-divide-y-reverse {
   syntax: "*";
   inherits: false;
@@ -4793,11 +4812,6 @@
 @layer properties {
   @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
     *, ::before, ::after, ::backdrop {
-      --tw-rotate-x: initial;
-      --tw-rotate-y: initial;
-      --tw-rotate-z: initial;
-      --tw-skew-x: initial;
-      --tw-skew-y: initial;
       --tw-divide-y-reverse: 0;
       --tw-border-style: solid;
       --tw-leading: initial;
