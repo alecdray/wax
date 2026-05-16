@@ -54,28 +54,28 @@ templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 
 templ carouselCardInner(album library.AlbumSummaryDTO) {
 	if album.ImageURL != "" {
-		<div class="avatar">
-			<div class="mask mask-squircle h-24 w-24 flex-shrink-0">
-				<img src={ album.ImageURL } alt={ album.Title }/>
+		<div class="indicator">
+			if !album.InLibrary {
+				if album.OnRadar {
+					<span class="indicator-item text-xs text-muted">
+						@templates.Icon(templates.IconProps{Name: "compass", Style: templates.IconStyleFill})
+					</span>
+				} else {
+					<span class="indicator-item text-xs text-muted">
+						@templates.Icon(templates.IconProps{Name: "compass"})
+					</span>
+				}
+			}
+			<div class="avatar">
+				<div class="mask mask-squircle h-24 w-24 flex-shrink-0">
+					<img src={ album.ImageURL } alt={ album.Title }/>
+				</div>
 			</div>
 		</div>
 	}
-	<div class="flex items-center gap-1 w-full min-w-0">
-		if !album.InLibrary {
-			if album.OnRadar {
-				<div class="shrink-0 text-xs text-subtle">
-					@templates.Icon(templates.IconProps{Name: "compass", Style: templates.IconStyleFill})
-				</div>
-			} else {
-				<div class="shrink-0 text-xs text-subtle">
-					@templates.Icon(templates.IconProps{Name: "compass"})
-				</div>
-			}
-		}
-		<span class="text-xs text-nowrap truncate text-left">{ album.Title }</span>
-	</div>
+	<span class="text-xs text-nowrap truncate w-full text-left">{ album.Title }</span>
 	if album.Artists != "" {
-		<span class="text-xs text-nowrap truncate w-full text-left text-subtle">{ album.Artists }</span>
+		<span class="text-xs text-nowrap truncate w-full text-left text-muted">{ album.Artists }</span>
 	}
 }
 
@@ -99,7 +99,7 @@ templ rerateCarouselStrip(albums []library.RerateAlbumDTO) {
 						}
 						<span class="text-xs text-nowrap truncate w-full text-left">{ album.Title }</span>
 						if album.Artists != "" {
-							<span class="text-xs text-nowrap truncate w-full text-left text-subtle">{ album.Artists }</span>
+							<span class="text-xs text-nowrap truncate w-full text-left text-muted">{ album.Artists }</span>
 						}
 					</a>
 				</div>
@@ -119,7 +119,7 @@ templ CarouselSectionFrag(props CarouselSectionProps) {
 	>
 		<div class="flex items-center gap-3 px-4 pb-1">
 			<button
-				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-default", props.Active == CarouselViewRecentlyPlayed), templ.KV("text-subtle hover:text-muted cursor-pointer", props.Active != CarouselViewRecentlyPlayed) }
+				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-default", props.Active == CarouselViewRecentlyPlayed), templ.KV("text-default hover-fade-in cursor-pointer", props.Active != CarouselViewRecentlyPlayed) }
 				if props.Active != CarouselViewRecentlyPlayed {
 					hx-get="/app/library/dashboard/carousel?view=recently-played"
 					hx-target="#carousel-section"
@@ -129,7 +129,7 @@ templ CarouselSectionFrag(props CarouselSectionProps) {
 			>Recently Spun</button>
 			<span class="text-ghost cursor-default">|</span>
 			<button
-				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-default", props.Active == CarouselViewUnrated), templ.KV("text-subtle hover:text-muted cursor-pointer", props.Active != CarouselViewUnrated) }
+				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-default", props.Active == CarouselViewUnrated), templ.KV("text-default hover-fade-in cursor-pointer", props.Active != CarouselViewUnrated) }
 				if props.Active != CarouselViewUnrated {
 					hx-get="/app/library/dashboard/carousel?view=unrated"
 					hx-target="#carousel-section"
@@ -139,7 +139,7 @@ templ CarouselSectionFrag(props CarouselSectionProps) {
 			>Unrated</button>
 			<span class="text-ghost cursor-default">|</span>
 			<button
-				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-default", props.Active == CarouselViewRerateDue), templ.KV("text-subtle hover:text-muted cursor-pointer", props.Active != CarouselViewRerateDue) }
+				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-default", props.Active == CarouselViewRerateDue), templ.KV("text-default hover-fade-in cursor-pointer", props.Active != CarouselViewRerateDue) }
 				if props.Active != CarouselViewRerateDue {
 					hx-get="/app/library/dashboard/carousel?view=rerate-due"
 					hx-target="#carousel-section"
