@@ -11,7 +11,7 @@ Gaps are tracked here (and not enumerated inside the archetype docs themselves) 
 **Where:**
 
 - `src/internal/review/adapters/http.go` — renders library view components (`AlbumScoreReadout`, `AlbumScoreBadge`, `AlbumRatingHistory`, `AlbumRowTagsSection`) when finalising a rating, to swap the affected library UI back in over HTMX.
-- `src/internal/tags/adapters/http.go` — renders library view components (`AlbumTagsCell`, `AlbumRowTagsSection`) when saving tags, for the same reason.
+- `src/internal/tags/adapters/http.go` — renders library view components (`AlbumTagsFrag`, `AlbumRowTagsSection`) when saving tags, for the same reason.
 
 **Why it exists:** these handlers mutate album state (rating, tags) and then need to update slices of the library UI in the response. Today they call library's templ components directly to do that.
 

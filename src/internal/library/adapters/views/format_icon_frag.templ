@@ -19,6 +19,13 @@ templ releaseFormatIcon(format models.ReleaseFormat) {
 	}
 }
 
+templ formatIconsRow(releases library.ReleaseDTOs) {
+	@formatIcon(releases, models.ReleaseFormatDigital)
+	@formatIcon(releases, models.ReleaseFormatVinyl)
+	@formatIcon(releases, models.ReleaseFormatCD)
+	@formatIcon(releases, models.ReleaseFormatCassette)
+}
+
 templ formatIcon(releases library.ReleaseDTOs, format models.ReleaseFormat) {
 	if release := releases.FindFormat(format); release != nil && release.AddedAt != nil {
 		<div data-testid="format-icon-owned" class="tooltip tooltip-top" data-tip={ string(format) + " - " + release.AddedAt.Format("Jan 2, 2006") }>

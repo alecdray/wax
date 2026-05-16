@@ -11,7 +11,7 @@ func GetAlbumRowTagsSectionID(albumId string) string {
 	return fmt.Sprintf("album-row-tags-section-%s", albumId)
 }
 
-const maxTagsInAlbumTagsCell = 2
+const maxRowTags = 2
 
 func ratingLabelTagClass(album library.AlbumDTO) string {
 	if album.RatingState != nil && album.RatingState.State == "finalized" {
@@ -20,12 +20,12 @@ func ratingLabelTagClass(album library.AlbumDTO) string {
 	return "badge badge-sm badge-soft badge-ghost text-xs text-nowrap text-muted"
 }
 
-templ AlbumRowTagsSectionFrag(album library.AlbumDTO, isOobSwap bool) {
+templ AlbumRowTagsSectionFrag(album library.AlbumDTO, isOOB bool) {
 	<div
 		id={ GetAlbumRowTagsSectionID(album.ID) }
 		data-testid="album-row-tags-section"
 		class="flex items-center gap-2 w-full"
-		if isOobSwap {
+		if isOOB {
 			hx-swap-oob="true"
 		}
 	>
@@ -40,12 +40,12 @@ templ AlbumRowTagsSectionFrag(album library.AlbumDTO, isOobSwap bool) {
 				</span>
 			}
 			for i, tag := range album.Tags {
-				if i < maxTagsInAlbumTagsCell {
+				if i < maxRowTags {
 					<span class="badge badge-sm badge-ghost text-xs text-nowrap text-muted">{ tag.Name }</span>
 				}
 			}
-			if len(album.Tags) > maxTagsInAlbumTagsCell {
-				<span class="badge badge-sm badge-ghost text-xs text-nowrap text-subtle">+{ fmt.Sprintf("%d", len(album.Tags)-maxTagsInAlbumTagsCell) }</span>
+			if len(album.Tags) > maxRowTags {
+				<span class="badge badge-sm badge-ghost text-xs text-nowrap text-subtle">+{ fmt.Sprintf("%d", len(album.Tags)-maxRowTags) }</span>
 			}
 			<button
 				class={ "btn btn-ghost btn-xs text-secondary" }

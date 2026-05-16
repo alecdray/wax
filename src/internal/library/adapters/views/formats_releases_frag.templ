@@ -1,0 +1,53 @@
+package views
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/library"
+)
+
+func formatsReleasesID(albumID string) string {
+	return fmt.Sprintf("album-detail-releases-%s", albumID)
+}
+
+func dashboardReleasesID(albumID string) string {
+	return fmt.Sprintf("dashboard-releases-%s", albumID)
+}
+
+// albumDetailReleasesRegion is the canonical definition of the format icons region on the album detail page.
+// It is rendered both as part of the initial page render (isOOB=false) and as an OOB swap target
+// after a save (isOOB=true). See docs/design/oob-swaps.md.
+templ albumDetailReleasesRegion(albumID string, releases library.ReleaseDTOs, isOOB bool) {
+	<div
+		id={ formatsReleasesID(albumID) }
+		class="flex flex-wrap gap-2 items-center"
+		data-testid="album-detail-page-releases"
+		if isOOB {
+			hx-swap-oob="true"
+		}
+	>
+		@formatIconsRow(releases)
+	</div>
+}
+
+// dashboardReleasesRegion is the canonical definition of the format icons region on the dashboard album row.
+// Rendered initially as part of the row (isOOB=false) and as an OOB swap target after a save (isOOB=true).
+// See docs/design/oob-swaps.md.
+templ dashboardReleasesRegion(albumID string, releases library.ReleaseDTOs, isOOB bool) {
+	<div
+		id={ dashboardReleasesID(albumID) }
+		class="flex flex-col gap-1"
+		if isOOB {
+			hx-swap-oob="true"
+		}
+	>
+		@formatIconsRow(releases)
+	</div>
+}
+
+// FormatsReleasesOOBFrag updates both format-icons regions (album detail + dashboard) after a save.
+// Per the OOB convention, this fragment renders no HTML of its own — it just composes the shared
+// region templs with isOOB=true.
+templ FormatsReleasesOOBFrag(albumID string, releases library.ReleaseDTOs) {
+	@albumDetailReleasesRegion(albumID, releases, true)
+	@dashboardReleasesRegion(albumID, releases, true)
+}

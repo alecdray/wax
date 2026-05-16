@@ -2,7 +2,6 @@ package views
 
 import (
 	"fmt"
-	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/library"
 	"net/url"
 	"slices"
@@ -86,15 +85,7 @@ templ albumListRow(album library.AlbumDTO) {
 			hx-trigger="click"
 			hx-swap="none"
 		>
-			<div
-				id={ dashboardReleasesID(album.ID) }
-				class="flex flex-col gap-2"
-			>
-				@formatIcon(album.Releases, models.ReleaseFormatDigital)
-				@formatIcon(album.Releases, models.ReleaseFormatVinyl)
-				@formatIcon(album.Releases, models.ReleaseFormatCD)
-				@formatIcon(album.Releases, models.ReleaseFormatCassette)
-			</div>
+			@dashboardReleasesRegion(album.ID, album.Releases, false)
 		</button>
 		<a href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) } class="flex-shrink-0">
 			if album.ImageURL != "" {

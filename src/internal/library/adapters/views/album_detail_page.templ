@@ -2,7 +2,6 @@ package views
 
 import (
 	"fmt"
-	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/library"
 )
@@ -64,16 +63,7 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 								hx-trigger="click"
 								hx-swap="none"
 							>
-								<div
-									id={ formatsReleasesID(album.ID) }
-									class="flex flex-wrap gap-2 items-center"
-									data-testid="album-detail-page-releases"
-								>
-									@formatIcon(album.Releases, models.ReleaseFormatDigital)
-									@formatIcon(album.Releases, models.ReleaseFormatVinyl)
-									@formatIcon(album.Releases, models.ReleaseFormatCD)
-									@formatIcon(album.Releases, models.ReleaseFormatCassette)
-								</div>
+								@albumDetailReleasesRegion(album.ID, album.Releases, false)
 							</button>
 						</div>
 						// Dates
@@ -109,7 +99,7 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 							@templates.Icon(templates.IconProps{Name: "tag"})
 						</button>
 					</div>
-					@AlbumTagsCellFrag(album, false)
+					@AlbumTagsFrag(album, false)
 				</div>
 				// Sleeve Notes
 				@SleeveNotesSectionFrag(album, false)

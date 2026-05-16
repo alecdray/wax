@@ -7,16 +7,16 @@ import (
 	"github.com/alecdray/wax/src/internal/review"
 )
 
-templ AlbumRatingHistoryFrag(album library.AlbumDTO, isOobSwap bool) {
+templ AlbumRatingHistoryFrag(album library.AlbumDTO, isOOB bool) {
 	<div
 		class="collapse collapse-arrow"
 		data-testid="album-rating-history"
 		id={ fmt.Sprintf("album-rating-history-%s", album.ID) }
-		if isOobSwap {
+		if isOOB {
 			hx-swap-oob="true"
 		}
 	>
-		<input type="checkbox" checked?={ isOobSwap }/>
+		<input type="checkbox" checked?={ isOOB }/>
 		<div class="collapse-title p-0 min-h-0 flex items-center">
 			<span class="text-xs font-semibold uppercase tracking-wider text-subtle">Rating History</span>
 		</div>

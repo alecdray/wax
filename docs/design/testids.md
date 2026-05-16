@@ -39,7 +39,7 @@ Conditional branches (`if`/`else`/`switch` where exactly one root renders) are n
 
 ## Out-of-band swap targets
 
-A `_oob_frag.templ` that replaces a region owned by another component carries the **target's** testid, not its own component name. The testid identifies what the element *is* in the DOM after the swap, which must match what the page used originally. Document this in the OOB fragment with a brief comment.
+OOB swap fragments don't define their own HTML — they compose a shared region templ. The testid lives on that region in exactly one place, and is inherited by both the initial render and the OOB swap. See [oob-swaps.md](oob-swaps.md).
 
 ## Testids are not runtime selectors
 

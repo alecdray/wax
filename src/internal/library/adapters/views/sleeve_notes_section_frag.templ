@@ -10,12 +10,12 @@ func GetSleeveNotesSectionID(albumId string) string {
 	return fmt.Sprintf("sleeve-notes-%s", albumId)
 }
 
-templ SleeveNotesSectionFrag(album library.AlbumDTO, isOobSwap bool) {
+templ SleeveNotesSectionFrag(album library.AlbumDTO, isOOB bool) {
 	<div
 		id={ GetSleeveNotesSectionID(album.ID) }
 		data-testid="sleeve-notes-section"
 		class="flex flex-col gap-2"
-		if isOobSwap {
+		if isOOB {
 			hx-swap-oob="true"
 		}
 	>
