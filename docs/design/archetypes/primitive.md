@@ -2,7 +2,7 @@
 
 ## Purpose
 
-A primitive is a reusable visual building block that knows nothing about the domain. It takes plain values as parameters, renders HTML, and is consumed by any number of pages and fragments. The shared page layout, the root `<html>` wrapper, modal shells, tooltips, and icons are all primitives.
+A primitive is a reusable visual building block that knows nothing about the domain. It takes plain values as parameters, renders HTML, and is consumed by any number of pages and fragments. The shared page layout, the root `<html>` wrapper, modal shells, and icons are all primitives.
 
 ## Where it lives
 

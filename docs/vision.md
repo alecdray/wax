@@ -18,6 +18,7 @@ Music listeners who want more than play counts and algorithmic recommendations. 
 
 - **Album-first** — albums are the primary unit, not tracks or playlists
 - **Personal over social** — the core value is your own library and annotations, not what others think
+- **Mobile-first** — the primary surface is a phone in hand; desktop is the responsive variant, not the inverse
 - **Progressive enhancement** — server-rendered HTML with targeted interactivity, not a heavy SPA
 - **Depth over breadth** — fewer features done meaningfully, not a feature parity race with streaming platforms
 

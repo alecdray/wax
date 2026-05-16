@@ -2,6 +2,10 @@
 
 Cross-cutting rules that apply to every archetype. These describe what is already true of the codebase — a principle lands here when it lands in the code, not before.
 
+## Mobile-first
+
+The interface is designed for a phone in hand. Base styles target a narrow viewport; Tailwind's `sm:` / `md:` / `lg:` modifiers progressively enhance for larger screens — desktop is the responsive variant, not the default that mobile breaks out of. Concretely: modals anchor to the bottom on mobile and recentre on `sm:` (`modal-bottom sm:modal-middle`), the body sets a narrow `min-w-xs` baseline, and the document carries the iOS web-app meta tags and PWA manifest. New layouts should follow the same pattern: write the mobile layout first, then add `sm:`/`md:` overrides for wider screens.
+
 ## Server renders HTML; HTMX drives interaction
 
 The interaction model is server-rendered HTML over HTMX, not client-rendered components. Forms submit with `hx-post` / `hx-put` and the server responds with an HTML fragment. Page navigation uses `hx-boost` on the body so links morph the relevant region instead of full-page reloading. JavaScript is reserved for genuinely client-only state (Alpine `x-data` for ephemeral UI state); it is not the medium for fetching, validating, or transforming domain data.

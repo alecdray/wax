@@ -38,7 +38,7 @@ Each token has a defined role; reach for the role, not the color that "looks rig
 - **`primary`** — interactive emphasis. Links, brand wordmark, selected/active text states. Reserved; scarcity is the point.
 - **`accent`** — decorative highlights and "glow" moments. Brand flourishes, animated chrome.
 - **`secondary`** — supporting actions and tags-domain affordances. Weighted-but-not-primary.
-- **`neutral`** — chrome that isn't a surface and isn't a brand expression: tooltips, kbd hints, neutral badges.
+- **`neutral`** — chrome that isn't a surface and isn't a brand expression: kbd hints, neutral badges.
 
 Each tone has a paired `-content` token for legible text **on** that color. Always use the pair; never put `text-base-content` on a brand background.
 
