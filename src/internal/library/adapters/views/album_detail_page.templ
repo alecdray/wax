@@ -13,6 +13,14 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 	}) {
 		<div data-testid="album-detail-page" class="w-full flex flex-col">
 			<div class="flex flex-col max-w-2xl mx-auto w-full px-4 py-6 gap-6">
+				<a
+					href="/app/library/dashboard"
+					class="btn btn-ghost btn-sm self-start gap-1 px-2 hover-fade-out"
+					data-testid="album-detail-page-back"
+				>
+					@templates.Icon(templates.IconProps{Name: "arrow-left"})
+					<span>Back</span>
+				</a>
 				// Album header: cover art + title + artists
 				<div class="flex gap-4 items-center">
 					if album.ImageURL != "" {
