@@ -35,7 +35,7 @@ templ FeedsDropdownButtonFrag(feeds []feed.FeedDTO, oob bool) {
 		data-testid="feeds-dropdown-button"
 		tabindex="0"
 		role="button"
-		class="btn btn-ghost btn-xs gap-1.5"
+		class="btn btn-ghost btn-xs gap-1.5 text-base"
 		if oob {
 			hx-swap-oob="true"
 			hx-swap="morph"
@@ -99,21 +99,21 @@ templ FeedsDropdownContentFrag(feeds []feed.FeedDTO) {
 					>
 						<div class="flex items-center gap-2">
 							if f.LastSyncStatus.IsUnsyned() {
-								<div class="text-warning">
+								<div class="text-warning text-base">
 									@templates.Icon(templates.IconProps{Name: "exclamation-triangle"})
 								</div>
 							} else if f.LastSyncStatus.IsSyncing() {
-								<div class="text-info">
+								<div class="text-info text-base">
 									<span class="animate-spin inline-block">
 										@templates.Icon(templates.IconProps{Name: "arrow-repeat"})
 									</span>
 								</div>
 							} else if f.LastSyncStatus == models.FeedSyncStatusFailure {
-								<div class="text-error">
+								<div class="text-error text-base">
 									@templates.Icon(templates.IconProps{Name: "x-circle"})
 								</div>
 							} else if f.LastSyncStatus.IsSynced() {
-								<div class={ templ.KV("text-success", !f.IsSyncStale()), templ.KV("text-warning", f.IsSyncStale()) }>
+								<div class={ "text-base", templ.KV("text-success", !f.IsSyncStale()), templ.KV("text-warning", f.IsSyncStale()) }>
 									@templates.Icon(templates.IconProps{Name: "check-circle"})
 								</div>
 							}

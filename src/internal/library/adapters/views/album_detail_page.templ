@@ -91,7 +91,7 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 						<span class="text-xs font-semibold uppercase tracking-wider text-subtle">Tags</span>
 						<button
 							data-testid="album-detail-page-tags-edit"
-							class="btn btn-ghost btn-xs text-subtle"
+							class="btn btn-ghost btn-xs text-subtle text-base"
 							hx-get={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
 							hx-trigger="click"
 							hx-swap="none"

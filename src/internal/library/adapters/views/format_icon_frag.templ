@@ -29,13 +29,13 @@ templ formatIconsRow(releases library.ReleaseDTOs) {
 templ formatIcon(releases library.ReleaseDTOs, format models.ReleaseFormat) {
 	if release := releases.FindFormat(format); release != nil && release.AddedAt != nil {
 		<div data-testid="format-icon-owned" class="tooltip tooltip-top" data-tip={ string(format) + " - " + release.AddedAt.Format("Jan 2, 2006") }>
-			<div class="text-muted">
+			<div class="text-muted text-base">
 				@releaseFormatIcon(format)
 			</div>
 		</div>
 	} else {
 		<div data-testid="format-icon-missing" class="tooltip tooltip-top" data-tip={ string(format) + " - Not in library" }>
-			<div class="text-ghost">
+			<div class="text-ghost text-base">
 				@releaseFormatIcon(format)
 			</div>
 		</div>
