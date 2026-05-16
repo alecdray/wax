@@ -2,6 +2,14 @@
 
 This directory documents the architectural rules for `src/internal/`. Most directories under `src/internal/` are classified into one of three archetypes; two directories are singletons documented in their own `CLAUDE.md`.
 
+## Shape
+
+Single Go binary backed by SQLite, deployed as one container. Server-rendered HTML via Templ + HTMX; no external database, cache, or message bus. Static assets bundled at build time.
+
+## Data model
+
+Cross-cutting design decisions live in [data-model.md](data-model.md). Per-entity meaning lives in each owning module's `README.md`. The schema itself is the truth — [`db/schema.sql`](../../db/schema.sql).
+
 ## Archetypes
 
 | Archetype | Doc | What it owns |
