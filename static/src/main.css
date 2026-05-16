@@ -52,11 +52,19 @@
     pointer-events: none;
 }
 
-.hover-fade {
+.hover-fade-out {
     transition: opacity 150ms;
 }
-.hover-fade:hover {
+.hover-fade-out:hover {
     opacity: 0.8;
+}
+
+.hover-fade-in {
+    opacity: 0.5;
+    transition: opacity 150ms;
+}
+.hover-fade-in:hover {
+    opacity: 1;
 }
 
 @utility text-default {

@@ -81,7 +81,7 @@ func sortLabel(sortBy string) string {
 templ albumListRow(album library.AlbumDTO) {
 	<li class="list-row items-center" data-testid="album-list-row">
 		<button
-			class="flex flex-col gap-2 cursor-pointer hover-fade"
+			class="flex flex-col gap-2 cursor-pointer hover-fade-out"
 			hx-get={ fmt.Sprintf("/app/library/albums/%s/formats", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"

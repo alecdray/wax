@@ -52,11 +52,10 @@ templ AlbumScoreBadgeFrag(album library.AlbumDTO, isOobSwap bool) {
 			{ fmt.Sprintf("%.1f", *album.Rating.Rating) } - { string(review.GetRatingLabel(*album.Rating.Rating)) }
 		</div>
 	} else {
-		// TODO(design-system): reveal-on-hover pattern not in the new vocabulary — review for follow-up
 		<button
 			id={ GetAlbumScoreBadgeID(album.ID) }
 			data-testid="album-score-badge"
-			class="btn btn-xs btn-ghost opacity-20 hover:opacity-100 cursor-pointer text-nowrap"
+			class="btn btn-xs btn-ghost hover-fade-in cursor-pointer text-nowrap"
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"

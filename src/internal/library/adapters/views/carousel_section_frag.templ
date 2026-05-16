@@ -29,7 +29,7 @@ templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 					if album.InLibrary {
 						<a
 							href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) }
-							class="flex flex-col items-center gap-1 hover-fade w-26"
+							class="flex flex-col items-center gap-1 hover-fade-out w-26"
 							data-testid="carousel-album-card"
 						>
 							@carouselCardInner(album)
@@ -39,7 +39,7 @@ templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 							type="button"
 							hx-get={ fmt.Sprintf("/app/library/discover/album-menu?spotifyId=%s", album.SpotifyID) }
 							hx-swap="none"
-							class="flex flex-col items-center gap-1 hover-fade w-26 cursor-pointer"
+							class="flex flex-col items-center gap-1 hover-fade-out w-26 cursor-pointer"
 							data-testid="carousel-discover-card"
 						>
 							@carouselCardInner(album)
@@ -92,7 +92,7 @@ templ rerateCarouselStrip(albums []library.RerateAlbumDTO) {
 				<div class="carousel-item">
 					<a
 						href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) }
-						class="flex flex-col items-center gap-1 hover-fade w-26"
+						class="flex flex-col items-center gap-1 hover-fade-out w-26"
 					>
 						if album.ImageURL != "" {
 							<div class="avatar">

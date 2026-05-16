@@ -13,7 +13,7 @@ The `[data-theme="wax"]` block in `main.css` defines the semantic color tokens (
 
 ## Element-state utilities
 
-Two utility classes wrap the legitimate uses of raw element opacity. Use the class name in markup; never duplicate the underlying atoms.
+Three utility classes wrap the legitimate uses of raw element opacity. Use the class name in markup; never duplicate the underlying atoms.
 
 ```css
 .is-disabled {
@@ -22,15 +22,23 @@ Two utility classes wrap the legitimate uses of raw element opacity. Use the cla
     pointer-events: none;
 }
 
-.hover-fade {
+.hover-fade-out {
     transition: opacity 150ms;
 }
-.hover-fade:hover {
+.hover-fade-out:hover {
     opacity: 0.8;
+}
+
+.hover-fade-in {
+    opacity: 0.5;
+    transition: opacity 150ms;
+}
+.hover-fade-in:hover {
+    opacity: 1;
 }
 ```
 
-`.is-disabled` is for non-form elements that should appear disabled (form controls use the HTML `disabled` attribute and DaisyUI's existing styles instead). `.hover-fade` is for whole-element click targets (cards, link-wrapped media) where the entire surface should react to hover.
+`.is-disabled` is for non-form elements that should appear disabled (form controls use the HTML `disabled` attribute and DaisyUI's existing styles instead). `.hover-fade-out` is for whole-element click targets (cards, link-wrapped media) where the entire surface should dim subtly on hover. `.hover-fade-in` is for secondary affordances (chip controls, row-scoped actions) that should be de-emphasized at rest and reveal on hover.
 
 ## Text emphasis utilities
 

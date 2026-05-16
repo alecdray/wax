@@ -131,8 +131,7 @@ templ TagsFormFrag(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*t
           <span class="badge badge-soft badge-primary gap-1 text-sm">
             <span x-text="chip.name"></span>
             <span x-show="groupName(chip.groupId)" class="text-xs text-muted" x-text="'(' + groupName(chip.groupId) + ')'"></span>
-            <!-- TODO(design-system): reveal-on-hover pattern not in the new vocabulary — review for follow-up -->
-            <button type="button" class="ml-1 opacity-60 hover:opacity-100" @click="removeChip(i)">✕</button>
+            <button type="button" class="ml-1 hover-fade-in" @click="removeChip(i)">✕</button>
           </span>
         </template>
       </div>
