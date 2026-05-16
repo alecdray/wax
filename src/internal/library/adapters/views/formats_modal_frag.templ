@@ -89,7 +89,7 @@ templ physicalFormatRow(albumID string, defaultSearch string, f library.AlbumFor
 				</button>
 				<button
 					type="button"
-					class="btn btn-ghost btn-xs text-error"
+					class="btn btn-soft btn-error btn-xs"
 					x-show="hasRelease"
 					@click={ fmt.Sprintf("hasRelease = false; document.getElementById('discogs-details-%s').innerHTML=''", string(f.Format)) }
 				>

@@ -15,7 +15,7 @@ templ ConfidenceInterstitialFrag(albumId string, mode review.RatingMode, finalSc
 		</div>
 		<div class="flex flex-col gap-3">
 			<a
-				class="btn btn-ghost"
+				class="btn btn-soft btn-sm"
 				hx-get={ fmt.Sprintf("/app/review/rating-recommender/questions?albumId=%s&mode=%s", albumId, string(mode)) }
 				hx-swap="outerHTML"
 				hx-target={ "#" + ConfidenceInterstitialID }
@@ -28,7 +28,7 @@ templ ConfidenceInterstitialFrag(albumId string, mode review.RatingMode, finalSc
 			>
 				<input type="hidden" name="mode" value={ string(mode) }/>
 				<input type="hidden" name="final_score" value={ strconv.FormatFloat(finalScore, 'f', 2, 64) }/>
-				<button class="btn btn-primary" type="submit" data-testid="confidence-interstitial-proceed">Proceed with { fmt.Sprintf("%.1f", finalScore) }</button>
+				<button class="btn btn-primary btn-sm" type="submit" data-testid="confidence-interstitial-proceed">Proceed with { fmt.Sprintf("%.1f", finalScore) }</button>
 			</form>
 		</div>
 	</div>

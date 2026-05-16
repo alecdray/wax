@@ -21,7 +21,7 @@ templ baseQuestionRadio(q review.BaseQuestion, opt review.QuestionOption) {
 
 templ baseQuestionFieldset(q review.BaseQuestion) {
 	<fieldset data-testid="base-question-fieldset" class="flex flex-col gap-3">
-		<legend class="text-base-content font-medium mb-2">{ q.Question }</legend>
+		<legend class="text-default font-medium mb-2">{ q.Question }</legend>
 		for _, opt := range q.Options {
 			@baseQuestionRadio(q, opt)
 		}
@@ -40,6 +40,6 @@ templ BaseQuestionsFormFrag(albumId string, mode review.RatingMode, questions re
 		for _, q := range questions {
 			@baseQuestionFieldset(q)
 		}
-		<button class="btn btn-primary" type="submit" data-testid="base-questions-form-submit">Next</button>
+		<button class="btn btn-primary btn-sm" type="submit" data-testid="base-questions-form-submit">Next</button>
 	</form>
 }

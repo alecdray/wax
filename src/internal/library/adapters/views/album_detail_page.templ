@@ -15,7 +15,7 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 			<div class="flex flex-col max-w-2xl mx-auto w-full px-4 py-6 gap-6">
 				<a
 					href="/app/library/dashboard"
-					class="btn btn-ghost btn-sm self-start gap-1 px-2 hover-fade-out"
+					class="btn btn-ghost btn-sm self-start"
 					data-testid="album-detail-page-back"
 				>
 					@templates.Icon(templates.IconProps{Name: "arrow-left"})
@@ -35,30 +35,14 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 						</div>
 					}
 					<div class="flex flex-col gap-3 min-w-0 pt-1 justify-center">
-						<div class="flex items-start gap-2">
-							<h1 class="text-xl font-semibold leading-tight" data-testid="album-detail-page-title">{ album.Title }</h1>
-							<a
-								href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", album.SpotifyID)) }
-								target="_blank"
-								rel="noopener noreferrer"
-								class="text-sm text-ghost hover:text-default flex-shrink-0 mt-1"
-								title="Open in Spotify"
-							>
-								@templates.Icon(templates.IconProps{Name: "box-arrow-up-right"})
-							</a>
-						</div>
+						<h1 class="text-xl font-semibold leading-tight" data-testid="album-detail-page-title">{ album.Title }</h1>
 						if len(album.Artists) > 0 {
 							<div class="flex flex-wrap gap-x-2 gap-y-0.5" data-testid="album-detail-page-artists">
 								for i, artist := range album.Artists {
 									if i > 0 {
 										<span class="text-sm text-ghost cursor-default">|</span>
 									}
-									<a
-										href={ templ.URL(fmt.Sprintf("https://open.spotify.com/artist/%s", artist.SpotifyID)) }
-										target="_blank"
-										rel="noopener noreferrer"
-										class="text-sm text-muted hover:text-default"
-									>{ artist.Name }</a>
+									<span class="text-sm text-muted">{ artist.Name }</span>
 								}
 							</div>
 						}
@@ -86,6 +70,16 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 						</div>
 					</div>
 				</div>
+				<a
+					href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", album.SpotifyID)) }
+					target="_blank"
+					rel="noopener noreferrer"
+					class="btn btn-primary w-full"
+					data-testid="album-detail-page-open-spotify"
+				>
+					Open in Spotify
+					@templates.Icon(templates.IconProps{Name: "box-arrow-up-right"})
+				</a>
 				<div
 					data-testid="album-detail-page-rating"
 				>
@@ -127,7 +121,7 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 				}
 			<div class="flex justify-center pt-4 pb-2">
 				<button
-					class="btn btn-ghost btn-sm text-error"
+					class="btn btn-soft btn-error"
 					data-testid="album-detail-page-remove"
 					hx-delete={ fmt.Sprintf("/app/library/albums/%s", album.ID) }
 					hx-confirm="Remove this album from your library?"

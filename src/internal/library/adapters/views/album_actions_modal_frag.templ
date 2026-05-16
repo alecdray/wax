@@ -47,9 +47,12 @@ templ albumActionsModalContent(result library.DiscoverResultDTO) {
                 href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", result.SpotifyID)) }
                 target="_blank"
                 rel="noopener noreferrer"
-                class="btn btn-sm btn-outline"
+                class="btn btn-sm btn-soft"
                 data-testid="album-actions-modal-content-open-spotify"
-            >Open in Spotify</a>
+            >
+                Open in Spotify
+                @templates.Icon(templates.IconProps{Name: "box-arrow-up-right"})
+            </a>
             switch result.State {
                 case library.DiscoverAlbumStateOnRadar:
                     <button
@@ -62,7 +65,7 @@ templ albumActionsModalContent(result library.DiscoverResultDTO) {
                     >Add to library</button>
                     <button
                         type="button"
-                        class="btn btn-sm btn-ghost text-error"
+                        class="btn btn-sm btn-soft btn-error"
                         hx-delete={ fmt.Sprintf("/app/library/albums/%s/radar", result.AlbumID) }
                         hx-swap="none"
                         hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
