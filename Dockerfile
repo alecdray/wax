@@ -1,4 +1,18 @@
-# Build stage
+# CSS build stage
+FROM node:22-bookworm-slim AS css-builder
+
+WORKDIR /build
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Tailwind v4 scans these sources for class usage
+COPY static/src/ ./static/src/
+COPY src/ ./src/
+
+RUN npx @tailwindcss/cli -i ./static/src/main.css -o ./static/public/main.css
+
+# Go build stage
 FROM golang:1.25-bookworm AS builder
 
 WORKDIR /build
@@ -31,6 +45,7 @@ COPY --from=builder /build/bin/app ./bin/app
 
 # Copy static assets and migrations (needed at runtime)
 COPY static/public/ ./static/public/
+COPY --from=css-builder /build/static/public/main.css ./static/public/main.css
 COPY db/migrations/ ./db/migrations/
 
 # Data directory for SQLite database (mount a volume here)
