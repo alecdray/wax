@@ -46,7 +46,7 @@ templ RatingConfirmFormFrag(album library.AlbumDTO, mode review.RatingMode, rati
 					hx-target="closest form"
 					hx-swap="outerHTML"
 				>
-					@templates.QuestionMarkIcon(templates.IconProps{})
+					@templates.Icon(templates.IconProps{Name: "question-circle"})
 				</button>
 			</div>
 		</div>
@@ -90,7 +90,7 @@ templ RatingConfirmFormFrag(album library.AlbumDTO, mode review.RatingMode, rati
 			@ratingConfirmError("")
 		</fieldset>
 		<fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border px-4">
-			<legend class="fieldset-legend">Note <span class="font-normal text-base-content/40">(optional)</span></legend>
+			<legend class="fieldset-legend">Note <span class="font-normal text-subtle">(optional)</span></legend>
 			<textarea
 				name="note"
 				data-testid="rating-note"

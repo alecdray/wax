@@ -12,7 +12,7 @@ func GetAlbumScoreReadoutID(albumId string) string {
 
 func ratingStateClass(album library.AlbumDTO) string {
 	if album.RatingState == nil {
-		return "text-base-content/20 hover:text-base-content/60"
+		return "text-ghost hover:text-muted"
 	}
 	switch album.RatingState.State {
 	case "stalled":
@@ -21,9 +21,9 @@ func ratingStateClass(album library.AlbumDTO) string {
 		return "text-primary hover:text-primary/80"
 	case "provisional":
 		if album.RatingState.IsRerateDue() {
-			return "text-base-content/40 hover:text-base-content/60"
+			return "text-subtle hover:text-muted"
 		}
-		return "text-base-content hover:text-base-content/80"
+		return "text-default hover:text-muted"
 	default:
 		return "text-primary hover:text-primary/80"
 	}
@@ -53,7 +53,7 @@ templ AlbumScoreReadoutFrag(album library.AlbumDTO, isOobSwap bool) {
 		<div
 			id={ GetAlbumScoreReadoutID(album.ID) }
 			data-testid="album-score-readout"
-			class="min-w-14 h-full flex items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none text-base-content/20 hover:text-base-content/60 transition-colors"
+			class="min-w-14 h-full flex items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none text-ghost hover:text-muted transition-colors"
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"

@@ -24,7 +24,7 @@ templ RadarCarouselFrag(albums []library.AlbumDTO, isOobSwap bool) {
                 <div class="carousel-item invisible" aria-hidden="true">
                     @radarCarouselCard(library.AlbumDTO{Title: "·", Artists: []library.ArtistDTO{{Name: "·"}}})
                 </div>
-                <div class="absolute inset-0 flex items-center justify-center px-4 text-xs text-base-content/40" data-testid="radar-empty">
+                <div class="absolute inset-0 flex items-center justify-center px-4 text-xs text-subtle" data-testid="radar-empty">
                     No albums on your radar yet — search below to find some.
                 </div>
             </div>
@@ -44,7 +44,7 @@ templ radarCarouselCard(album library.AlbumDTO) {
     <div class="flex flex-col items-center gap-1 w-26">
         <button
             type="button"
-            class="hover:opacity-80 transition-opacity cursor-pointer"
+            class="hover-fade-out cursor-pointer"
             hx-get={ fmt.Sprintf("/app/library/discover/album-menu?spotifyId=%s", album.SpotifyID) }
             hx-swap="none"
             data-testid="radar-card-cover"
@@ -63,7 +63,7 @@ templ radarCarouselCard(album library.AlbumDTO) {
         </button>
         <span class="text-xs text-nowrap truncate w-full text-left">{ album.Title }</span>
         if len(album.Artists) > 0 {
-            <span class="text-xs text-nowrap truncate w-full text-left text-base-content/40">
+            <span class="text-xs text-nowrap truncate w-full text-left text-subtle">
                 for i, artist := range album.Artists {
                     if i > 0 {
                         { ", " }

@@ -13,9 +13,9 @@ type ReratePromptProps struct {
 
 templ ReratePromptFrag(props ReratePromptProps) {
 	<div data-testid="rerate-prompt" class="flex flex-col gap-4">
-		<p class="text-sm text-base-content/70 truncate">{ props.Album.Title }</p>
+		<p class="text-sm text-muted truncate">{ props.Album.Title }</p>
 		if props.Album.Rating != nil && props.Album.Rating.Rating != nil {
-			<p class="text-xs text-base-content/40">
+			<p class="text-xs text-subtle">
 				Current score: <span class="font-bold tabular-nums">{ fmt.Sprintf("%.1f", *props.Album.Rating.Rating) }</span>
 				if props.Album.RatingState != nil {
 					<span class="badge badge-xs badge-ghost ml-1">{ string(props.Album.RatingState.State) }</span>

@@ -9,26 +9,26 @@ import (
 templ releaseFormatIcon(format models.ReleaseFormat) {
 	switch format {
 		case models.ReleaseFormatVinyl:
-			@templates.VinylIcon(templates.IconProps{})
+			@templates.Icon(templates.IconProps{Name: "vinyl"})
 		case models.ReleaseFormatCD:
-			@templates.CDIcon(templates.IconProps{})
+			@templates.Icon(templates.IconProps{Name: "disc"})
 		case models.ReleaseFormatCassette:
-			@templates.CassetteIcon(templates.IconProps{})
+			@templates.Icon(templates.IconProps{Name: "cassette"})
 		case models.ReleaseFormatDigital:
-			@templates.DigitalIcon(templates.IconProps{})
+			@templates.Icon(templates.IconProps{Name: "file-music"})
 	}
 }
 
 templ formatIcon(releases library.ReleaseDTOs, format models.ReleaseFormat) {
 	if release := releases.FindFormat(format); release != nil && release.AddedAt != nil {
 		<div class="tooltip tooltip-top" data-tip={ string(format) + " - " + release.AddedAt.Format("Jan 2, 2006") }>
-			<div class="opacity-70">
+			<div class="text-muted">
 				@releaseFormatIcon(format)
 			</div>
 		</div>
 	} else {
 		<div class="tooltip tooltip-top" data-tip={ string(format) + " - Not in library" }>
-			<div class="opacity-20">
+			<div class="text-ghost">
 				@releaseFormatIcon(format)
 			</div>
 		</div>

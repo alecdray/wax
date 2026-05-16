@@ -21,3 +21,5 @@ If a templ defines a region that HTMX targets by id, the id-generating helper li
 ## Theme tokens, not raw colors
 
 Styling uses the DaisyUI theme tokens defined in `static/src/main.css` (`bg-base-100`, `text-primary-content`, `border-accent`, etc.), not hex literals or one-off CSS variables in markup. When a new color is needed, it is added to the theme as a semantic token, not embedded inline at the call site.
+
+The text emphasis scale is `text-default`, `text-muted`, `text-subtle`, `text-ghost`; the element-state utilities are `.is-disabled`, `.hover-fade-out`, and `.hover-fade-in`. Raw `text-base-content/NN` and raw `opacity-NN` should not appear in templ markup outside these utilities. See `design-system.md` for the role of each utility and `static/CLAUDE.md` for the definitions.

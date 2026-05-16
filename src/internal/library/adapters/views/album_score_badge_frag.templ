@@ -55,7 +55,7 @@ templ AlbumScoreBadgeFrag(album library.AlbumDTO, isOobSwap bool) {
 		<button
 			id={ GetAlbumScoreBadgeID(album.ID) }
 			data-testid="album-score-badge"
-			class="btn btn-xs btn-ghost opacity-20 hover:opacity-100 cursor-pointer text-nowrap"
+			class="btn btn-xs btn-ghost hover-fade-in cursor-pointer text-nowrap"
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"

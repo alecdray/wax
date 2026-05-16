@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/library"
 )
 
@@ -21,7 +22,7 @@ type CarouselSectionProps struct {
 
 templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 	if len(albums) == 0 {
-		<div class="px-4 py-4 text-xs text-base-content/40">{ emptyMsg }</div>
+		<div class="px-4 py-4 text-xs text-subtle">{ emptyMsg }</div>
 	} else {
 		<div class="carousel carousel-end gap-3 px-4 py-2 w-full overscroll-x-none">
 			for _, album := range albums {
@@ -29,7 +30,7 @@ templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 					if album.InLibrary {
 						<a
 							href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) }
-							class="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity w-26"
+							class="flex flex-col items-center gap-1 hover-fade-out w-26"
 							data-testid="carousel-album-card"
 						>
 							@carouselCardInner(album)
@@ -39,7 +40,7 @@ templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 							type="button"
 							hx-get={ fmt.Sprintf("/app/library/discover/album-menu?spotifyId=%s", album.SpotifyID) }
 							hx-swap="none"
-							class="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity w-26 cursor-pointer"
+							class="flex flex-col items-center gap-1 hover-fade-out w-26 cursor-pointer"
 							data-testid="carousel-discover-card"
 						>
 							@carouselCardInner(album)
@@ -62,37 +63,32 @@ templ carouselCardInner(album library.AlbumSummaryDTO) {
 	<div class="flex items-center gap-1 w-full min-w-0">
 		if !album.InLibrary {
 			if album.OnRadar {
-				<div class="tooltip tooltip-right shrink-0" data-tip="On radar">
-					<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" class="text-base-content/50">
-						<path d="M15.5 8.516a7.5 7.5 0 1 1-9.462-7.24A1 1 0 0 1 7 0h2a1 1 0 0 1 .962.276 7.5 7.5 0 0 1 5.538 8.24m-3.61-3.905L6.94 7.439 4.11 12.39l4.95-2.828 2.828-4.95z"></path>
-					</svg>
+				<div class="tooltip tooltip-right shrink-0 text-xs text-subtle" data-tip="On radar">
+					@templates.Icon(templates.IconProps{Name: "compass", Style: templates.IconStyleFill})
 				</div>
 			} else {
-				<div class="tooltip tooltip-right shrink-0" data-tip="Not in library">
-					<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" class="text-base-content/50">
-						<path d="M8 16.016a7.5 7.5 0 0 0 1.962-14.74A1 1 0 0 0 9 0H7a1 1 0 0 0-.962 1.276A7.5 7.5 0 0 0 8 16.016m6.5-7.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0"></path>
-						<path d="m6.94 7.44 4.95-2.83-2.83 4.95-4.949 2.83z"></path>
-					</svg>
+				<div class="tooltip tooltip-right shrink-0 text-xs text-subtle" data-tip="Not in library">
+					@templates.Icon(templates.IconProps{Name: "compass"})
 				</div>
 			}
 		}
 		<span class="text-xs text-nowrap truncate text-left">{ album.Title }</span>
 	</div>
 	if album.Artists != "" {
-		<span class="text-xs text-nowrap truncate w-full text-left text-base-content/40">{ album.Artists }</span>
+		<span class="text-xs text-nowrap truncate w-full text-left text-subtle">{ album.Artists }</span>
 	}
 }
 
 templ rerateCarouselStrip(albums []library.RerateAlbumDTO) {
 	if len(albums) == 0 {
-		<div class="px-4 py-4 text-xs text-base-content/40">No albums due for rerate</div>
+		<div class="px-4 py-4 text-xs text-subtle">No albums due for rerate</div>
 	} else {
 		<div class="carousel carousel-end gap-3 px-4 py-2 w-full overscroll-x-none">
 			for _, album := range albums {
 				<div class="carousel-item">
 					<a
 						href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) }
-						class="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity w-26"
+						class="flex flex-col items-center gap-1 hover-fade-out w-26"
 					>
 						if album.ImageURL != "" {
 							<div class="avatar">
@@ -103,7 +99,7 @@ templ rerateCarouselStrip(albums []library.RerateAlbumDTO) {
 						}
 						<span class="text-xs text-nowrap truncate w-full text-left">{ album.Title }</span>
 						if album.Artists != "" {
-							<span class="text-xs text-nowrap truncate w-full text-left text-base-content/40">{ album.Artists }</span>
+							<span class="text-xs text-nowrap truncate w-full text-left text-subtle">{ album.Artists }</span>
 						}
 					</a>
 				</div>
@@ -122,7 +118,7 @@ templ CarouselSectionFrag(props CarouselSectionProps) {
 	>
 		<div class="flex items-center gap-3 px-4 pb-1">
 			<button
-				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-base-content", props.Active == CarouselViewRecentlyPlayed), templ.KV("text-base-content/40 hover:text-base-content/70 cursor-pointer", props.Active != CarouselViewRecentlyPlayed) }
+				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-default", props.Active == CarouselViewRecentlyPlayed), templ.KV("text-subtle hover:text-muted cursor-pointer", props.Active != CarouselViewRecentlyPlayed) }
 				if props.Active != CarouselViewRecentlyPlayed {
 					hx-get="/app/library/dashboard/carousel?view=recently-played"
 					hx-target="#carousel-section"
@@ -130,9 +126,9 @@ templ CarouselSectionFrag(props CarouselSectionProps) {
 				}
 				data-testid="carousel-recently-spun-tab"
 			>Recently Spun</button>
-			<span class="text-base-content/20 cursor-default">|</span>
+			<span class="text-ghost cursor-default">|</span>
 			<button
-				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-base-content", props.Active == CarouselViewUnrated), templ.KV("text-base-content/40 hover:text-base-content/70 cursor-pointer", props.Active != CarouselViewUnrated) }
+				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-default", props.Active == CarouselViewUnrated), templ.KV("text-subtle hover:text-muted cursor-pointer", props.Active != CarouselViewUnrated) }
 				if props.Active != CarouselViewUnrated {
 					hx-get="/app/library/dashboard/carousel?view=unrated"
 					hx-target="#carousel-section"
@@ -140,9 +136,9 @@ templ CarouselSectionFrag(props CarouselSectionProps) {
 				}
 				data-testid="carousel-unrated-tab"
 			>Unrated</button>
-			<span class="text-base-content/20 cursor-default">|</span>
+			<span class="text-ghost cursor-default">|</span>
 			<button
-				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-base-content", props.Active == CarouselViewRerateDue), templ.KV("text-base-content/40 hover:text-base-content/70 cursor-pointer", props.Active != CarouselViewRerateDue) }
+				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-default", props.Active == CarouselViewRerateDue), templ.KV("text-subtle hover:text-muted cursor-pointer", props.Active != CarouselViewRerateDue) }
 				if props.Active != CarouselViewRerateDue {
 					hx-get="/app/library/dashboard/carousel?view=rerate-due"
 					hx-target="#carousel-section"

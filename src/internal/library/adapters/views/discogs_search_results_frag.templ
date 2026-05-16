@@ -17,7 +17,7 @@ func firstLabel(item discogs.SearchItem) string {
 // DiscogsSearchResultsFrag is returned by the search endpoint — injected into #discogs-results-{format}.
 templ DiscogsSearchResultsFrag(albumID string, format models.ReleaseFormat, results []discogs.SearchItem) {
 	if len(results) == 0 {
-		<p class="text-xs text-base-content/40">No results</p>
+		<p class="text-xs text-subtle">No results</p>
 	} else {
 		for _, item := range results {
 			<div
@@ -31,7 +31,7 @@ templ DiscogsSearchResultsFrag(albumID string, format models.ReleaseFormat, resu
 				}
 				<div class="flex flex-col min-w-0">
 					<span class="truncate font-medium">{ item.Title }</span>
-					<span class="text-base-content/50 truncate">
+					<span class="text-subtle truncate">
 						if len(item.Label) > 0 {
 							{ item.Label[0] }
 						}

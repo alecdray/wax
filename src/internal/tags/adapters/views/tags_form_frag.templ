@@ -130,8 +130,8 @@ templ TagsFormFrag(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*t
         <template x-for="(chip, i) in chips" :key="i">
           <span class="badge badge-soft badge-primary gap-1 text-sm">
             <span x-text="chip.name"></span>
-            <span x-show="groupName(chip.groupId)" class="text-xs opacity-60" x-text="'(' + groupName(chip.groupId) + ')'"></span>
-            <button type="button" class="ml-1 opacity-60 hover:opacity-100" @click="removeChip(i)">✕</button>
+            <span x-show="groupName(chip.groupId)" class="text-xs text-muted" x-text="'(' + groupName(chip.groupId) + ')'"></span>
+            <button type="button" class="ml-1 hover-fade-in" @click="removeChip(i)">✕</button>
           </span>
         </template>
       </div>
@@ -152,14 +152,14 @@ templ TagsFormFrag(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*t
             @click="addTag(t.name, t.id, t.groupId); query = ''"
           >
             <span x-text="t.name"></span>
-            <span x-show="t.groupId" class="text-xs opacity-50" x-text="'(' + groupName(t.groupId) + ')'"></span>
+            <span x-show="t.groupId" class="text-xs text-subtle" x-text="'(' + groupName(t.groupId) + ')'"></span>
           </button>
         </template>
       </div>
     </div>
     <!-- Discogs genre suggestions -->
     <div x-show="availableSuggestions.length > 0" class="mb-4">
-      <div class="text-xs text-base-content/50 mb-1.5">Suggested (Sound)</div>
+      <div class="text-xs text-subtle mb-1.5">Suggested (Sound)</div>
       <div class="flex flex-wrap gap-1.5">
         <template x-for="s in availableSuggestions" :key="s">
           <button

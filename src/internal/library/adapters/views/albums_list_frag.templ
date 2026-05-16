@@ -81,7 +81,7 @@ func sortLabel(sortBy string) string {
 templ albumListRow(album library.AlbumDTO) {
 	<li class="list-row items-center" data-testid="album-list-row">
 		<button
-			class="flex flex-col gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+			class="flex flex-col gap-2 cursor-pointer hover-fade-out"
 			hx-get={ fmt.Sprintf("/app/library/albums/%s/formats", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"
@@ -113,7 +113,7 @@ templ albumListRow(album library.AlbumDTO) {
 			<a href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) } class="block min-w-0">
 				<div class="font-medium truncate" data-testid="album-row-title-link">{ album.Title }</div>
 				if len(album.Artists) > 0 {
-					<div class="text-sm text-base-content/60 truncate">
+					<div class="text-sm text-muted truncate">
 						for i, artist := range album.Artists {
 							if i > 0 {
 								<span>, </span>
@@ -134,7 +134,7 @@ templ albumListRow(album library.AlbumDTO) {
 templ AlbumsListBodyFrag(albums []library.AlbumDTO, offset int, sortBy string, sortDir string, fp library.FilterParams) {
 	if len(albums) == 0 {
 		if offset == 0 {
-			<li class="py-8 text-center opacity-50 text-sm">No albums match your filters</li>
+			<li class="py-8 text-center text-subtle text-sm">No albums match your filters</li>
 		}
 	} else {
 		for _, album := range albums {
@@ -278,7 +278,7 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 						}
 						<div class="flex gap-3 mb-4">
 							<label class="flex flex-col gap-1 flex-1">
-								<span class="text-xs opacity-60">Min</span>
+								<span class="text-xs text-muted">Min</span>
 								<input
 									type="number"
 									name="minRating"
@@ -293,7 +293,7 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 								/>
 							</label>
 							<label class="flex flex-col gap-1 flex-1">
-								<span class="text-xs opacity-60">Max</span>
+								<span class="text-xs text-muted">Max</span>
 								<input
 									type="number"
 									name="maxRating"
