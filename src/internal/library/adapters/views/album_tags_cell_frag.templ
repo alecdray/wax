@@ -12,6 +12,7 @@ func GetAlbumTagsID(albumId string) string {
 templ AlbumTagsCellFrag(album library.AlbumDTO, isOobSwap bool) {
 	<div
 		id={ GetAlbumTagsID(album.ID) }
+		data-testid="album-tags-cell"
 		class="flex flex-wrap gap-1"
 		if isOobSwap {
 			hx-swap-oob="true"

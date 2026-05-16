@@ -9,7 +9,7 @@ templ UnauthorizedPage() {
     Title: templates.CreatePageTitle("Unauthorized"),
   }) {
     @templates.Redirect("/", unauthorizedRedirectDelaySeconds)
-    <div>
+    <div data-testid="unauthorized-page">
       <h1 class="text-center text-2xl p-5">Unauthorized</h1>
       <p class="text-center">Please log in to access this page.</p>
       <br/>

@@ -102,7 +102,7 @@ func tagsAlpineData(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*
 }
 
 templ TagsFormFrag(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO, suggestions []string) {
-  <div x-data={ tagsAlpineData(album, allTags, tagGroups, suggestions) }>
+  <div data-testid="tags-form" x-data={ tagsAlpineData(album, allTags, tagGroups, suggestions) }>
     <!-- Group selector -->
     if len(tagGroups) > 0 {
       <div class="flex gap-2 mb-3 flex-wrap">
@@ -137,7 +137,7 @@ templ TagsFormFrag(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*t
       </div>
       <input
         type="text"
-        data-testid="tags-input"
+        data-testid="tags-form-input"
         class="input input-sm w-full"
         placeholder="Type a tag and press Enter..."
         x-model="query"
@@ -176,7 +176,7 @@ templ TagsFormFrag(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*t
     </template>
     <button
       type="submit"
-      data-testid="tags-save"
+      data-testid="tags-form-save"
       class="btn btn-primary w-full"
     >Save Tags</button>
   </div>
@@ -184,6 +184,7 @@ templ TagsFormFrag(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*t
 
 templ TagsFormWrapperFrag(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*tags.TagGroupDTO, suggestions []string) {
   <form
+    data-testid="tags-form-wrapper"
     class="flex flex-col gap-2"
     hx-post={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
   >

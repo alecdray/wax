@@ -16,28 +16,31 @@ templ FormatsModalFrag(albumID string, defaultSearch string, formats []library.A
 }
 
 templ formatsModalContent(albumID string, defaultSearch string, formats []library.AlbumFormatDTO) {
-	<h3 class="font-bold text-lg mb-4">Formats</h3>
-	<form
-		hx-put={ fmt.Sprintf("/app/library/albums/%s/formats", albumID) }
-		hx-swap="none"
-	>
-		<div class="flex flex-col gap-3">
-			for _, f := range formats {
-				if f.Format == models.ReleaseFormatDigital {
-					@digitalFormatRow(f)
-				} else {
-					@physicalFormatRow(albumID, defaultSearch, f)
+	<div data-testid="formats-modal-content">
+		<h3 data-testid="formats-modal-content-heading" class="font-bold text-lg mb-4">Formats</h3>
+		<form
+			data-testid="formats-modal-content-form"
+			hx-put={ fmt.Sprintf("/app/library/albums/%s/formats", albumID) }
+			hx-swap="none"
+		>
+			<div class="flex flex-col gap-3">
+				for _, f := range formats {
+					if f.Format == models.ReleaseFormatDigital {
+						@digitalFormatRow(f)
+					} else {
+						@physicalFormatRow(albumID, defaultSearch, f)
+					}
 				}
-			}
-		</div>
-		<div class="modal-action mt-6">
-			<button type="submit" class="btn btn-primary btn-sm">Save</button>
-		</div>
-	</form>
+			</div>
+			<div class="modal-action mt-6">
+				<button type="submit" class="btn btn-primary btn-sm">Save</button>
+			</div>
+		</form>
+	</div>
 }
 
 templ digitalFormatRow(f library.AlbumFormatDTO) {
-	<div class="flex items-center gap-3 py-2 is-disabled">
+	<div data-testid="digital-format-row" class="flex items-center gap-3 py-2 is-disabled">
 		<div class="w-5 h-5 flex items-center justify-center">
 			@releaseFormatIcon(f.Format)
 		</div>
@@ -48,6 +51,7 @@ templ digitalFormatRow(f library.AlbumFormatDTO) {
 
 templ physicalFormatRow(albumID string, defaultSearch string, f library.AlbumFormatDTO) {
 	<div
+		data-testid="physical-format-row"
 		x-data={ fmt.Sprintf(`{owned: %t, showDiscogs: false, hasRelease: %t}`, f.Owned, f.DiscogsID != "") }
 		class="flex flex-col gap-2 py-2 border-b border-base-200 last:border-0"
 		@htmx:after-swap={ fmt.Sprintf("if ($event.detail.target.id === 'discogs-details-%s') hasRelease = true", string(f.Format)) }
@@ -100,7 +104,7 @@ templ physicalFormatRow(albumID string, defaultSearch string, f library.AlbumFor
 }
 
 templ discogsAttachedDetails(f library.AlbumFormatDTO) {
-	<div class="text-xs text-muted flex flex-col gap-0.5" id={ fmt.Sprintf("discogs-details-%s", string(f.Format)) }>
+	<div data-testid="discogs-attached-details" class="text-xs text-muted flex flex-col gap-0.5" id={ fmt.Sprintf("discogs-details-%s", string(f.Format)) }>
 		if f.Label != "" {
 			<span>{ f.Label }</span>
 		}
@@ -120,7 +124,7 @@ templ discogsAttachedDetails(f library.AlbumFormatDTO) {
 }
 
 templ discogsSearchSection(albumID string, defaultSearch string, format models.ReleaseFormat, currentDiscogsID string) {
-	<div class="flex flex-col gap-2">
+	<div data-testid="discogs-search-section" class="flex flex-col gap-2">
 		<div class="flex gap-2">
 			<input
 				type="text"

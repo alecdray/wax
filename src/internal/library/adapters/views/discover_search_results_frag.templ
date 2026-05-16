@@ -7,15 +7,15 @@ import (
 
 templ DiscoverSearchResultsFrag(results []library.DiscoverResultDTO, query string) {
     if query == "" {
-        <div class="text-sm text-subtle px-1 py-2" data-testid="discover-results-empty">
+        <div class="text-sm text-subtle px-1 py-2" data-testid="discover-search-results-empty-query">
             Start typing to search Spotify.
         </div>
     } else if len(results) == 0 {
-        <div class="text-sm text-subtle px-1 py-2" data-testid="discover-results-no-hits">
+        <div class="text-sm text-subtle px-1 py-2" data-testid="discover-search-results-no-hits">
             No results.
         </div>
     } else {
-        <ul class="list">
+        <ul class="list" data-testid="discover-search-results">
             for _, result := range results {
                 @discoverSearchResultRow(result)
             }
@@ -27,7 +27,7 @@ templ discoverSearchResultRow(result library.DiscoverResultDTO) {
     <li
         class="list-row items-center cursor-pointer hover:bg-base-200/50 transition-colors"
         data-spotify-id={ result.SpotifyID }
-        data-testid="discover-result-row"
+        data-testid="discover-search-result-row"
         tabindex="0"
         aria-label={ result.Title }
         hx-trigger="click, keyup[key=='Enter']"
@@ -55,7 +55,7 @@ templ discoverSearchResultRow(result library.DiscoverResultDTO) {
             </div>
         }
         <div class="list-col-grow flex flex-col justify-center min-w-0 gap-1">
-            <div class="font-medium truncate" data-testid="discover-result-title">{ result.Title }</div>
+            <div class="font-medium truncate" data-testid="discover-search-result-row-title">{ result.Title }</div>
             if len(result.Artists) > 0 {
                 <div class="text-sm text-muted truncate">
                     for i, a := range result.Artists {
@@ -76,12 +76,12 @@ templ discoverSearchResultRow(result library.DiscoverResultDTO) {
 templ discoverResultStateBadge(state library.DiscoverAlbumState) {
     switch state {
         case library.DiscoverAlbumStateInLibrary:
-            <span class="badge badge-soft badge-primary" data-testid="discover-badge-in-library">In library</span>
+            <span class="badge badge-soft badge-primary" data-testid="discover-result-state-badge-in-library">In library</span>
         case library.DiscoverAlbumStateOnRadar:
-            <span class="badge badge-soft badge-accent" data-testid="discover-badge-on-radar">On radar</span>
+            <span class="badge badge-soft badge-accent" data-testid="discover-result-state-badge-on-radar">On radar</span>
         case library.DiscoverAlbumStateRemoved:
-            <span class="badge badge-soft badge-error" data-testid="discover-badge-removed">Removed</span>
+            <span class="badge badge-soft badge-error" data-testid="discover-result-state-badge-removed">Removed</span>
         default:
-            <span class="badge badge-soft" data-testid="discover-badge-new">New</span>
+            <span class="badge badge-soft" data-testid="discover-result-state-badge-new">New</span>
     }
 }

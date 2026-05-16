@@ -5,7 +5,7 @@ type ToolTipProps struct {
 }
 
 templ ToolTip(props ToolTipProps) {
-  <div class="tooltip">
+  <div data-testid="tool-tip" class="tooltip">
     <div class="tooltip-content">
       @props.Content
     </div>

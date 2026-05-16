@@ -111,7 +111,7 @@ templ albumListRow(album library.AlbumDTO) {
 		</a>
 		<div class="list-col-grow flex flex-col justify-between min-w-0 h-full pt-2 gap-2">
 			<a href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) } class="block min-w-0">
-				<div class="font-medium truncate" data-testid="album-row-title-link">{ album.Title }</div>
+				<div class="font-medium truncate" data-testid="album-list-row-title-link">{ album.Title }</div>
 				if len(album.Artists) > 0 {
 					<div class="text-sm text-muted truncate">
 						for i, artist := range album.Artists {
@@ -151,13 +151,13 @@ templ AlbumsListBodyFrag(albums []library.AlbumDTO, offset int, sortBy string, s
 }
 
 templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []library.ArtistDTO) {
-	<div class="flex gap-2 px-4 py-2 overflow-x-auto flex-shrink-0">
+	<div data-testid="filter-chip-bar" class="flex gap-2 px-4 py-2 overflow-x-auto flex-shrink-0">
 		// Sort chip
 		<div x-data>
 			<button
 				class="btn btn-sm btn-primary"
 				@click="$refs.sortDialog.showModal()"
-				data-testid="sort-chip"
+				data-testid="filter-chip-bar-sort"
 			>
 				{ sortLabel(sortBy) }
 				if sortDir == "asc" {
@@ -234,7 +234,7 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 			<button
 				class={ templ.KV("btn btn-sm btn-primary", fp.MinRating != nil || fp.MaxRating != nil || fp.Rated != ""), templ.KV("btn btn-sm btn-ghost btn-outline", fp.MinRating == nil && fp.MaxRating == nil && fp.Rated == "") }
 				@click="$refs.ratingDialog.showModal()"
-				data-testid="rating-chip"
+				data-testid="filter-chip-bar-rating"
 			>
 				if fp.Rated == "unrated" {
 					Unrated
@@ -333,7 +333,7 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 			<button
 				class={ templ.KV("btn btn-sm btn-primary", len(fp.Formats) > 0), templ.KV("btn btn-sm btn-ghost btn-outline", len(fp.Formats) == 0) }
 				@click="$refs.formatDialog.showModal()"
-				data-testid="format-chip"
+				data-testid="filter-chip-bar-format"
 			>
 				if len(fp.Formats) > 0 {
 					<span class="capitalize">{ string(fp.Formats[0]) }</span>
@@ -403,7 +403,7 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 				<button
 					class={ templ.KV("btn btn-sm btn-primary", len(fp.ArtistIDs) > 0), templ.KV("btn btn-sm btn-ghost btn-outline", len(fp.ArtistIDs) == 0) }
 					@click="$refs.artistDialog.showModal()"
-					data-testid="artist-chip"
+					data-testid="filter-chip-bar-artist"
 				>
 					if len(fp.ArtistIDs) == 1 {
 						1 Artist

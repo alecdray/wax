@@ -26,6 +26,7 @@ The `views/` sub-package contains every `.templ` in a module and is its own Go p
 
 - **[principles.md](principles.md)** — design rules that apply across every archetype (HTMX-first interaction, fragments over pages, error handling, theme tokens).
 - **[design-system.md](design-system.md)** — the visual vocabulary: theme tokens, typography, animations, client-side libraries.
+- **[testids.md](testids.md)** — `data-testid` naming convention for templ roots and descendants.
 
 ## Singletons
 

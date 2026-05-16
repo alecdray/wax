@@ -22,16 +22,16 @@ type CarouselSectionProps struct {
 
 templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 	if len(albums) == 0 {
-		<div class="px-4 py-4 text-xs text-subtle">{ emptyMsg }</div>
+		<div data-testid="carousel-strip-empty" class="px-4 py-4 text-xs text-subtle">{ emptyMsg }</div>
 	} else {
-		<div class="carousel carousel-end gap-3 px-4 py-2 w-full overscroll-x-none">
+		<div data-testid="carousel-strip" class="carousel carousel-end gap-3 px-4 py-2 w-full overscroll-x-none">
 			for _, album := range albums {
 				<div class="carousel-item">
 					if album.InLibrary {
 						<a
 							href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) }
 							class="flex flex-col items-center gap-1 hover-fade-out w-26"
-							data-testid="carousel-album-card"
+							data-testid="carousel-strip-album-card"
 						>
 							@carouselCardInner(album)
 						</a>
@@ -41,7 +41,7 @@ templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 							hx-get={ fmt.Sprintf("/app/library/discover/album-menu?spotifyId=%s", album.SpotifyID) }
 							hx-swap="none"
 							class="flex flex-col items-center gap-1 hover-fade-out w-26 cursor-pointer"
-							data-testid="carousel-discover-card"
+							data-testid="carousel-strip-discover-card"
 						>
 							@carouselCardInner(album)
 						</button>
@@ -81,9 +81,9 @@ templ carouselCardInner(album library.AlbumSummaryDTO) {
 
 templ rerateCarouselStrip(albums []library.RerateAlbumDTO) {
 	if len(albums) == 0 {
-		<div class="px-4 py-4 text-xs text-subtle">No albums due for rerate</div>
+		<div data-testid="rerate-carousel-strip-empty" class="px-4 py-4 text-xs text-subtle">No albums due for rerate</div>
 	} else {
-		<div class="carousel carousel-end gap-3 px-4 py-2 w-full overscroll-x-none">
+		<div data-testid="rerate-carousel-strip" class="carousel carousel-end gap-3 px-4 py-2 w-full overscroll-x-none">
 			for _, album := range albums {
 				<div class="carousel-item">
 					<a
@@ -111,6 +111,7 @@ templ rerateCarouselStrip(albums []library.RerateAlbumDTO) {
 templ CarouselSectionFrag(props CarouselSectionProps) {
 	<div
 		id="carousel-section"
+		data-testid="carousel-section"
 		class="w-full flex-shrink-0"
 		hx-get="/app/library/dashboard/carousel"
 		hx-trigger="libraryUpdated from:body"
@@ -124,7 +125,7 @@ templ CarouselSectionFrag(props CarouselSectionProps) {
 					hx-target="#carousel-section"
 					hx-swap="outerHTML"
 				}
-				data-testid="carousel-recently-spun-tab"
+				data-testid="carousel-section-recently-spun-tab"
 			>Recently Spun</button>
 			<span class="text-ghost cursor-default">|</span>
 			<button
@@ -134,7 +135,7 @@ templ CarouselSectionFrag(props CarouselSectionProps) {
 					hx-target="#carousel-section"
 					hx-swap="outerHTML"
 				}
-				data-testid="carousel-unrated-tab"
+				data-testid="carousel-section-unrated-tab"
 			>Unrated</button>
 			<span class="text-ghost cursor-default">|</span>
 			<button
@@ -144,7 +145,7 @@ templ CarouselSectionFrag(props CarouselSectionProps) {
 					hx-target="#carousel-section"
 					hx-swap="outerHTML"
 				}
-				data-testid="carousel-rerate-due-tab"
+				data-testid="carousel-section-rerate-due-tab"
 			>Rerate Due</button>
 		</div>
 		switch props.Active {

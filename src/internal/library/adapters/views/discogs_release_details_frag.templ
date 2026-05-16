@@ -8,7 +8,7 @@ import (
 
 // DiscogsReleaseDetailsFrag is returned by the release detail endpoint — replaces #discogs-details-{format}.
 templ DiscogsReleaseDetailsFrag(format models.ReleaseFormat, item discogs.SearchItem) {
-	<div class="text-xs text-muted flex flex-col gap-0.5" id={ fmt.Sprintf("discogs-details-%s", string(format)) }>
+	<div data-testid="discogs-release-details" class="text-xs text-muted flex flex-col gap-0.5" id={ fmt.Sprintf("discogs-details-%s", string(format)) }>
 		if len(item.Label) > 0 {
 			<span>{ item.Label[0] }</span>
 		}

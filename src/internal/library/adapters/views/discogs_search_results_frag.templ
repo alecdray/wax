@@ -17,10 +17,11 @@ func firstLabel(item discogs.SearchItem) string {
 // DiscogsSearchResultsFrag is returned by the search endpoint — injected into #discogs-results-{format}.
 templ DiscogsSearchResultsFrag(albumID string, format models.ReleaseFormat, results []discogs.SearchItem) {
 	if len(results) == 0 {
-		<p class="text-xs text-subtle">No results</p>
+		<p data-testid="discogs-search-results-empty" class="text-xs text-subtle">No results</p>
 	} else {
 		for _, item := range results {
 			<div
+				data-testid="discogs-search-results-row"
 				class="flex items-center gap-2 p-1.5 rounded hover:bg-base-200 cursor-pointer text-xs"
 				hx-get={ fmt.Sprintf("/app/library/albums/%s/formats/%s/discogs/releases/%d?label=%s&year=%s", albumID, string(format), item.ID, url.QueryEscape(firstLabel(item)), url.QueryEscape(item.Year)) }
 				hx-target={ fmt.Sprintf("#discogs-details-%s", string(format)) }

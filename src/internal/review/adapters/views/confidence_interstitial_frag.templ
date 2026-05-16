@@ -6,8 +6,10 @@ import (
 	"strconv"
 )
 
+const ConfidenceInterstitialID = "confidence-interstitial"
+
 templ ConfidenceInterstitialFrag(albumId string, mode review.RatingMode, finalScore float64, formValues map[string]string) {
-	<div data-testid="rating-confidence" class="flex flex-col gap-6">
+	<div id={ ConfidenceInterstitialID } data-testid="confidence-interstitial" class="flex flex-col gap-6">
 		<div class="alert alert-warning">
 			<p class="text-sm">Your answers contain some contradictions. Would you like to review them, or proceed with the calculated score?</p>
 		</div>
@@ -16,8 +18,8 @@ templ ConfidenceInterstitialFrag(albumId string, mode review.RatingMode, finalSc
 				class="btn btn-ghost"
 				hx-get={ fmt.Sprintf("/app/review/rating-recommender/questions?albumId=%s&mode=%s", albumId, string(mode)) }
 				hx-swap="outerHTML"
-				hx-target="closest [data-testid='rating-confidence']"
-				data-testid="rating-confidence-review"
+				hx-target={ "#" + ConfidenceInterstitialID }
+				data-testid="confidence-interstitial-review"
 			>Review answers</a>
 			<form
 				hx-post={ fmt.Sprintf("/app/review/rating-recommender/confirm?albumId=%s", albumId) }
@@ -26,7 +28,7 @@ templ ConfidenceInterstitialFrag(albumId string, mode review.RatingMode, finalSc
 			>
 				<input type="hidden" name="mode" value={ string(mode) }/>
 				<input type="hidden" name="final_score" value={ strconv.FormatFloat(finalScore, 'f', 2, 64) }/>
-				<button class="btn btn-primary" type="submit" data-testid="rating-confidence-proceed">Proceed with { fmt.Sprintf("%.1f", finalScore) }</button>
+				<button class="btn btn-primary" type="submit" data-testid="confidence-interstitial-proceed">Proceed with { fmt.Sprintf("%.1f", finalScore) }</button>
 			</form>
 		</div>
 	</div>

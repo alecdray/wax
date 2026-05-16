@@ -12,24 +12,24 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 		Title:  templates.CreatePageTitle(album.Title),
 		Navbar: LibraryHeaderBarFrag(HeaderBarProps{Active: "library"}),
 	}) {
-		<div class="w-full flex flex-col">
+		<div data-testid="album-detail-page" class="w-full flex flex-col">
 			<div class="flex flex-col max-w-2xl mx-auto w-full px-4 py-6 gap-6">
 				// Album header: cover art + title + artists
 				<div class="flex gap-4 items-center">
 					if album.ImageURL != "" {
-						<div class="avatar flex-shrink-0" data-testid="album-detail-cover">
+						<div class="avatar flex-shrink-0" data-testid="album-detail-page-cover">
 							<div class="mask mask-squircle h-28 w-28">
 								<img src={ album.ImageURL } alt={ album.Title }/>
 							</div>
 						</div>
 					} else {
-						<div class="avatar avatar-placeholder flex-shrink-0" data-testid="album-detail-cover">
+						<div class="avatar avatar-placeholder flex-shrink-0" data-testid="album-detail-page-cover">
 							<div class="mask mask-squircle h-28 w-28 bg-base-300"></div>
 						</div>
 					}
 					<div class="flex flex-col gap-3 min-w-0 pt-1 justify-center">
 						<div class="flex items-start gap-2">
-							<h1 class="text-xl font-semibold leading-tight" data-testid="album-detail-title">{ album.Title }</h1>
+							<h1 class="text-xl font-semibold leading-tight" data-testid="album-detail-page-title">{ album.Title }</h1>
 							<a
 								href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", album.SpotifyID)) }
 								target="_blank"
@@ -41,7 +41,7 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 							</a>
 						</div>
 						if len(album.Artists) > 0 {
-							<div class="flex flex-wrap gap-x-2 gap-y-0.5" data-testid="album-detail-artists">
+							<div class="flex flex-wrap gap-x-2 gap-y-0.5" data-testid="album-detail-page-artists">
 								for i, artist := range album.Artists {
 									if i > 0 {
 										<span class="text-sm text-ghost cursor-default">|</span>
@@ -59,7 +59,7 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 						<div class="flex flex-col gap-2">
 							<button
 								class="flex flex-wrap gap-2 items-center cursor-pointer hover-fade-out"
-								data-testid="album-detail-releases-btn"
+								data-testid="album-detail-page-releases-btn"
 								hx-get={ fmt.Sprintf("/app/library/albums/%s/formats", album.ID) }
 								hx-trigger="click"
 								hx-swap="none"
@@ -67,7 +67,7 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 								<div
 									id={ formatsReleasesID(album.ID) }
 									class="flex flex-wrap gap-2 items-center"
-									data-testid="album-detail-releases"
+									data-testid="album-detail-page-releases"
 								>
 									@formatIcon(album.Releases, models.ReleaseFormatDigital)
 									@formatIcon(album.Releases, models.ReleaseFormatVinyl)
@@ -83,24 +83,24 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 							}
 							if album.LastPlayedAt != nil {
 								<span class="text-ghost cursor-default">|</span>
-								<span class="text-xs text-subtle" data-testid="album-detail-last-played">Last played { album.LastPlayedAt.Format("Jan 2, 2006") }</span>
+								<span class="text-xs text-subtle" data-testid="album-detail-page-last-played">Last played { album.LastPlayedAt.Format("Jan 2, 2006") }</span>
 							}
 						</div>
 					</div>
 				</div>
 				<div
-					data-testid="album-detail-rating"
+					data-testid="album-detail-page-rating"
 				>
 					@AlbumScoreBadgeFrag(album, false)
 				</div>
 				// Rating History
 				@AlbumRatingHistoryFrag(album, false)
 				// Tags
-				<div class="flex flex-col gap-2" data-testid="album-detail-tags">
+				<div class="flex flex-col gap-2" data-testid="album-detail-page-tags">
 					<div class="flex items-center justify-start gap-2">
 						<span class="text-xs font-semibold uppercase tracking-wider text-subtle">Tags</span>
 						<button
-							data-testid="album-detail-tags-edit"
+							data-testid="album-detail-page-tags-edit"
 							class="btn btn-ghost btn-xs text-subtle"
 							hx-get={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
 							hx-trigger="click"
@@ -130,7 +130,7 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 			<div class="flex justify-center pt-4 pb-2">
 				<button
 					class="btn btn-ghost btn-sm text-error"
-					data-testid="album-detail-remove"
+					data-testid="album-detail-page-remove"
 					hx-delete={ fmt.Sprintf("/app/library/albums/%s", album.ID) }
 					hx-confirm="Remove this album from your library?"
 					hx-swap="none"

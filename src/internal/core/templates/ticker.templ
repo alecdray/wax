@@ -1,7 +1,7 @@
 package templates
 
 templ Ticker(id string) {
-  <div class="w-full bg-base-200 border-b border-base-300 h-10 flex-shrink-0 overflow-hidden flex items-center ticker-container">
+  <div data-testid="ticker" class="w-full bg-base-200 border-b border-base-300 h-10 flex-shrink-0 overflow-hidden flex items-center ticker-container">
     <div id={ id } class="ticker-track flex items-center">
       { children... }
     </div>

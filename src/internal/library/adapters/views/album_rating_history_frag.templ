@@ -10,7 +10,7 @@ import (
 templ AlbumRatingHistoryFrag(album library.AlbumDTO, isOobSwap bool) {
 	<div
 		class="collapse collapse-arrow"
-		data-testid="album-detail-rating-history"
+		data-testid="album-rating-history"
 		id={ fmt.Sprintf("album-rating-history-%s", album.ID) }
 		if isOobSwap {
 			hx-swap-oob="true"
@@ -26,22 +26,22 @@ templ AlbumRatingHistoryFrag(album library.AlbumDTO, isOobSwap bool) {
 			} else {
 				<div class="flex flex-col divide-y divide-base-300">
 					for _, entry := range album.RatingLog {
-						<div class="flex items-start justify-between py-3 gap-2" data-testid="rating-history-entry">
+						<div class="flex items-start justify-between py-3 gap-2" data-testid="album-rating-history-entry">
 							<div class="flex flex-col gap-1 min-w-0">
 								<div class="flex items-center gap-2">
-									<span class="badge badge-soft badge-primary text-nowrap" data-testid="rating-history-score">{ fmt.Sprintf("%.4g", *entry.Rating) } - { string(review.GetRatingLabel(*entry.Rating)) }</span>
+									<span class="badge badge-soft badge-primary text-nowrap" data-testid="album-rating-history-score">{ fmt.Sprintf("%.4g", *entry.Rating) } - { string(review.GetRatingLabel(*entry.Rating)) }</span>
 									if entry.State != nil {
 										<span class="badge badge-xs badge-ghost text-nowrap">{ string(*entry.State) }</span>
 									}
 									<span class="text-xs text-subtle">{ entry.CreatedAt.Format("Jan 2, 2006") }</span>
 								</div>
 								if entry.Note != nil {
-									<p class="text-sm text-muted whitespace-pre-wrap" data-testid="rating-history-note">{ *entry.Note }</p>
+									<p class="text-sm text-muted whitespace-pre-wrap" data-testid="album-rating-history-note">{ *entry.Note }</p>
 								}
 							</div>
 							<button
 								class="btn btn-ghost btn-xs btn-square text-error flex-shrink-0"
-								data-testid="rating-history-delete"
+								data-testid="album-rating-history-delete"
 								hx-delete={ fmt.Sprintf("/app/review/rating-log/%s?albumId=%s", entry.ID, album.ID) }
 								hx-swap="none"
 							>
