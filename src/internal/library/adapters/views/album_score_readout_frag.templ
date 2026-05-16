@@ -19,7 +19,7 @@ func ratingStateClass(album library.AlbumDTO) string {
 	case "stalled":
 		return "text-warning"
 	case "finalized":
-		return "text-primary"
+		return "text-primary hover-fade-out"
 	case "provisional":
 		if album.RatingState.IsRerateDue() {
 			return "text-default hover-fade-in"
