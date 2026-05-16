@@ -5,14 +5,14 @@ import (
     "github.com/alecdray/wax/src/internal/library"
 )
 
-templ RadarCarouselFrag(albums []library.AlbumDTO, isOobSwap bool) {
+templ RadarCarouselFrag(albums []library.AlbumDTO, isOOB bool) {
     <div
         id="radar-carousel"
         class="w-full flex-shrink-0"
         hx-get="/app/library/discover/radar"
         hx-trigger="radarUpdated from:body"
         hx-swap="outerHTML"
-        if isOobSwap {
+        if isOOB {
             hx-swap-oob="true"
         }
         data-testid="radar-carousel"

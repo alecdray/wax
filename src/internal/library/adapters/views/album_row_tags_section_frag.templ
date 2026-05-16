@@ -20,12 +20,12 @@ func ratingLabelTagClass(album library.AlbumDTO) string {
 	return "badge badge-sm badge-soft badge-ghost text-xs text-nowrap text-muted"
 }
 
-templ AlbumRowTagsSectionFrag(album library.AlbumDTO, isOobSwap bool) {
+templ AlbumRowTagsSectionFrag(album library.AlbumDTO, isOOB bool) {
 	<div
 		id={ GetAlbumRowTagsSectionID(album.ID) }
 		data-testid="album-row-tags-section"
 		class="flex items-center gap-2 w-full"
-		if isOobSwap {
+		if isOOB {
 			hx-swap-oob="true"
 		}
 	>

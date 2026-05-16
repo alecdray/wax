@@ -31,7 +31,7 @@ func ratingStateClass(album library.AlbumDTO) string {
 
 // AlbumScoreReadoutFrag renders the score readout used in the list view.
 // Shows the score as a large prominent number, clickable to open the rating modal.
-templ AlbumScoreReadoutFrag(album library.AlbumDTO, isOobSwap bool) {
+templ AlbumScoreReadoutFrag(album library.AlbumDTO, isOOB bool) {
 	if album.Rating != nil && album.Rating.Rating != nil {
 		<div
 			id={ GetAlbumScoreReadoutID(album.ID) }
@@ -40,7 +40,7 @@ templ AlbumScoreReadoutFrag(album library.AlbumDTO, isOobSwap bool) {
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"
-			if isOobSwap {
+			if isOOB {
 				hx-swap-oob="true"
 			}
 		>
@@ -57,7 +57,7 @@ templ AlbumScoreReadoutFrag(album library.AlbumDTO, isOobSwap bool) {
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"
-			if isOobSwap {
+			if isOOB {
 				hx-swap-oob="true"
 			}
 		>

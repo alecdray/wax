@@ -33,7 +33,7 @@ func ratingBadgeClass(album library.AlbumDTO) string {
 
 // AlbumScoreBadgeFrag renders the score badge used in the detail panel.
 // Shows "score - label" (e.g. "7.3 - Staff Pick"), clickable to open the rating modal.
-templ AlbumScoreBadgeFrag(album library.AlbumDTO, isOobSwap bool) {
+templ AlbumScoreBadgeFrag(album library.AlbumDTO, isOOB bool) {
 	if album.Rating != nil && album.Rating.Rating != nil {
 		<div
 			id={ GetAlbumScoreBadgeID(album.ID) }
@@ -42,7 +42,7 @@ templ AlbumScoreBadgeFrag(album library.AlbumDTO, isOobSwap bool) {
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"
-			if isOobSwap {
+			if isOOB {
 				hx-swap-oob="true"
 			}
 		>
@@ -59,7 +59,7 @@ templ AlbumScoreBadgeFrag(album library.AlbumDTO, isOobSwap bool) {
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"
-			if isOobSwap {
+			if isOOB {
 				hx-swap-oob="true"
 			}
 		>
