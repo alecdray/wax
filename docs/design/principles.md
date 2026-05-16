@@ -22,6 +22,10 @@ If a templ defines a region that HTMX targets by id, the id-generating helper li
 
 Every templ component's top-level root element carries a `data-testid` derived from the component name. The testid is the stable selector for tests, for `hx-target="closest [data-testid='...']"`, and for ad-hoc tooling — it does not depend on Tailwind classes that change with styling. The naming rules and the OOB/dual-use cases are in [testids.md](testids.md).
 
+## OOB swap regions are defined once
+
+A region that is the target of an OOB swap is defined in exactly one shared templ component. Both the initial render and the OOB response render through that component, with the OOB caller setting `hx-swap-oob="true"` via an `isOOB` parameter. This keeps the region's id, class, testid, and structure single-sourced — drift between the two render paths is otherwise invisible until the moment of the swap. The mechanics and the OOB-only-element case are in [oob-swaps.md](oob-swaps.md).
+
 ## Theme tokens, not raw colors
 
 Styling uses the DaisyUI theme tokens defined in `static/src/main.css` (`bg-base-100`, `text-primary-content`, `border-accent`, etc.), not hex literals or one-off CSS variables in markup. When a new color is needed, it is added to the theme as a semantic token, not embedded inline at the call site.

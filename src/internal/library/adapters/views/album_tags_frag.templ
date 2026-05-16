@@ -9,12 +9,12 @@ func GetAlbumTagsID(albumId string) string {
 	return fmt.Sprintf("album-tags-%s", albumId)
 }
 
-templ AlbumTagsCellFrag(album library.AlbumDTO, isOobSwap bool) {
+templ AlbumTagsFrag(album library.AlbumDTO, isOOB bool) {
 	<div
 		id={ GetAlbumTagsID(album.ID) }
-		data-testid="album-tags-cell"
+		data-testid="album-tags"
 		class="flex flex-wrap gap-1"
-		if isOobSwap {
+		if isOOB {
 			hx-swap-oob="true"
 		}
 	>
