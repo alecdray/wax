@@ -18,28 +18,24 @@ templ LibraryHeaderBarFrag(props HeaderBarProps) {
 				<a href="/" class="text-lg text-accent font-brand">wax</a>
 				<div class="h-4 w-px bg-base-300"></div>
 				<div class="flex items-center gap-1">
-					<div class="tooltip tooltip-bottom" data-tip="Library">
-						if props.Active == "library" {
-							<div class="btn btn-ghost btn-xs btn-square text-base is-disabled" data-testid="library-header-bar-library-icon-active">
-								@templates.Icon(templates.IconProps{Name: "collection", Style: templates.IconStyleFill})
-							</div>
-						} else {
-							<a href="/app/library/dashboard" class="btn btn-ghost btn-xs btn-square text-base" data-testid="library-header-bar-library-icon">
-								@templates.Icon(templates.IconProps{Name: "collection", Style: templates.IconStyleOutline})
-							</a>
-						}
-					</div>
-					<div class="tooltip tooltip-bottom" data-tip="Discover">
-						if props.Active == "discover" {
-							<div class="btn btn-ghost btn-xs btn-square text-base is-disabled" data-testid="library-header-bar-discover-icon-active">
-								@templates.Icon(templates.IconProps{Name: "compass", Style: templates.IconStyleFill})
-							</div>
-						} else {
-							<a href="/app/library/discover" class="btn btn-ghost btn-xs btn-square text-base" data-testid="library-header-bar-discover-icon">
-								@templates.Icon(templates.IconProps{Name: "compass", Style: templates.IconStyleOutline})
-							</a>
-						}
-					</div>
+					if props.Active == "library" {
+						<div class="btn btn-ghost btn-xs btn-square text-base is-disabled" data-testid="library-header-bar-library-icon-active">
+							@templates.Icon(templates.IconProps{Name: "collection", Style: templates.IconStyleFill})
+						</div>
+					} else {
+						<a href="/app/library/dashboard" class="btn btn-ghost btn-xs btn-square text-base" data-testid="library-header-bar-library-icon">
+							@templates.Icon(templates.IconProps{Name: "collection", Style: templates.IconStyleOutline})
+						</a>
+					}
+					if props.Active == "discover" {
+						<div class="btn btn-ghost btn-xs btn-square text-base is-disabled" data-testid="library-header-bar-discover-icon-active">
+							@templates.Icon(templates.IconProps{Name: "compass", Style: templates.IconStyleFill})
+						</div>
+					} else {
+						<a href="/app/library/discover" class="btn btn-ghost btn-xs btn-square text-base" data-testid="library-header-bar-discover-icon">
+							@templates.Icon(templates.IconProps{Name: "compass", Style: templates.IconStyleOutline})
+						</a>
+					}
 				</div>
 			</div>
 			<div class="flex items-center gap-2">

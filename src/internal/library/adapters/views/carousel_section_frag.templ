@@ -63,11 +63,11 @@ templ carouselCardInner(album library.AlbumSummaryDTO) {
 	<div class="flex items-center gap-1 w-full min-w-0">
 		if !album.InLibrary {
 			if album.OnRadar {
-				<div class="tooltip tooltip-right shrink-0 text-xs text-subtle" data-tip="On radar">
+				<div class="shrink-0 text-xs text-subtle">
 					@templates.Icon(templates.IconProps{Name: "compass", Style: templates.IconStyleFill})
 				</div>
 			} else {
-				<div class="tooltip tooltip-right shrink-0 text-xs text-subtle" data-tip="Not in library">
+				<div class="shrink-0 text-xs text-subtle">
 					@templates.Icon(templates.IconProps{Name: "compass"})
 				</div>
 			}
