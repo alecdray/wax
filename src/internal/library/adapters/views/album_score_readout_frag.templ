@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/library"
 )
 
@@ -12,21 +13,60 @@ func GetAlbumScoreReadoutID(albumId string) string {
 
 func ratingStateClass(album library.AlbumDTO) string {
 	if album.RatingState == nil {
-		return "text-ghost hover:text-muted"
+		return "text-default hover-fade-in"
 	}
 	switch album.RatingState.State {
 	case "stalled":
 		return "text-warning"
 	case "finalized":
-		return "text-primary"
+		return "text-primary hover-fade-out"
 	case "provisional":
 		if album.RatingState.IsRerateDue() {
-			return "text-subtle hover:text-muted"
+			return "text-default hover-fade-in"
 		}
-		return "text-default hover:text-muted"
+		return "text-default hover-fade-out"
 	default:
 		return "text-primary"
 	}
+}
+
+// ratingStateIcon returns the Bootstrap Icon name and style for the album's rating
+// state, or empty name if no icon should be rendered. Paired with the colored
+// number so state survives colorblind viewing.
+func ratingStateIcon(album library.AlbumDTO) (string, templates.IconStyle) {
+	if album.RatingState == nil {
+		return "", templates.IconStyleOutline
+	}
+	switch album.RatingState.State {
+	case "finalized":
+		return "check-circle", templates.IconStyleFill
+	case "stalled":
+		return "exclamation-triangle", templates.IconStyleFill
+	case "provisional":
+		if album.RatingState.IsRerateDue() {
+			return "arrow-repeat", templates.IconStyleOutline
+		}
+	}
+	return "", templates.IconStyleOutline
+}
+
+// ratingStateLabel returns the human-readable label for the icon's tooltip,
+// since the icon alone won't tell a new user which state it represents.
+func ratingStateLabel(album library.AlbumDTO) string {
+	if album.RatingState == nil {
+		return ""
+	}
+	switch album.RatingState.State {
+	case "finalized":
+		return "Finalized"
+	case "stalled":
+		return "Stalled"
+	case "provisional":
+		if album.RatingState.IsRerateDue() {
+			return "Re-rate due"
+		}
+	}
+	return ""
 }
 
 // AlbumScoreReadoutFrag renders the score readout used in the list view.
@@ -36,7 +76,7 @@ templ AlbumScoreReadoutFrag(album library.AlbumDTO, isOOB bool) {
 		<div
 			id={ GetAlbumScoreReadoutID(album.ID) }
 			data-testid="album-score-readout-rated"
-			class={ "min-w-14 h-full flex flex-col items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none transition-colors", ratingStateClass(album) }
+			class={ "min-w-28 h-fit p-3 flex items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none transition-colors", ratingStateClass(album) }
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"
@@ -44,16 +84,24 @@ templ AlbumScoreReadoutFrag(album library.AlbumDTO, isOOB bool) {
 				hx-swap-oob="true"
 			}
 		>
-			{ fmt.Sprintf("%.1f", *album.Rating.Rating) }
-			if album.RatingState != nil && album.RatingState.State == "stalled" {
-				<span class="text-xs font-normal badge badge-xs badge-warning badge-soft">Stalled</span>
-			}
+			<div class="relative">
+				{ fmt.Sprintf("%.1f", *album.Rating.Rating) }
+				if iconName, iconStyle := ratingStateIcon(album); iconName != "" {
+					<span
+						class="absolute -top-2 -right-4 text-sm font-normal leading-none"
+						data-testid="album-score-readout-state-icon"
+						title={ ratingStateLabel(album) }
+					>
+						@templates.Icon(templates.IconProps{Name: iconName, Style: iconStyle})
+					</span>
+				}
+			</div>
 		</div>
 	} else {
 		<div
 			id={ GetAlbumScoreReadoutID(album.ID) }
 			data-testid="album-score-readout-unrated"
-			class="min-w-14 h-full flex items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none text-ghost hover:text-muted transition-colors"
+			class="min-w-28 h-fit p-3 flex items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none text-muted hover-fade-in transition-colors"
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"
