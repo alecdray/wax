@@ -35,18 +35,18 @@ Stratified by elevation:
 
 Each token has a defined role; reach for the role, not the color that "looks right" in isolation.
 
-- **`primary`** — interactive emphasis. Links, brand wordmark, selected/active text states. Reserved; scarcity is the point.
-- **`accent`** — decorative highlights and "glow" moments. Brand flourishes, animated chrome.
-- **`secondary`** — supporting actions and tags-domain affordances. Weighted-but-not-primary.
-- **`neutral`** — chrome that isn't a surface and isn't a brand expression: kbd hints, neutral badges.
+- **`primary`** — the brand color. Appears on the wordmark and as the one CTA per context (filled, soft, or selected-state). Reserved beyond that; scarcity is the point.
+- **`accent`** — decorative highlights and "glow" moments — animated chrome. Used sparingly.
+- **`secondary`** — an alternate brand tone, used when `primary` is taken or carries the wrong weight. Currently has no in-app uses; reserved in the theme.
+- **`neutral`** — non-surface, non-brand chrome. Currently has no in-app uses; reserved in the theme.
 
 Each tone has a paired `-content` token for legible text **on** that color. Always use the pair; never put `text-base-content` on a brand background.
 
 ### Semantic (status only)
 
-- `info` — neutral informational status.
+- `info` — informational accents: status indicators that aren't success/warning/error, and in-content links.
 - `success` — completed actions, positive validation.
-- `warning` — recoverable problems.
+- `warning` — recoverable problems or degraded states.
 - `error` — failed actions, validation errors, **and destructive actions** (delete buttons, remove-tag, irreversible CTAs).
 
 ### Text emphasis scale
@@ -71,6 +71,49 @@ Three narrow roles, each wrapped as a utility class. Raw `opacity-NN` on a whole
 - `.hover-fade-in` — reveal-on-hover for secondary affordances (small buttons, ✕ controls on chips, row-scoped actions). Dim → fully visible on hover. Use when an action should be present but de-emphasized at rest.
 
 See `static/CLAUDE.md` for the verbatim CSS definitions.
+
+## Button hierarchy
+
+Buttons decompose into three orthogonal axes: a **variant** (how much visual weight the button carries), a **color** (what intent it signals), and a **size** (matched to how much breathing room the surrounding surface has). Pair one from each based on what the button does and where it sits.
+
+### Variant (visual weight)
+
+| Class | Visual | Use |
+|---|---|---|
+| (none) | Solid filled | The single CTA in a context |
+| `btn-soft` | Filled, subtle | Peer action with real visual weight (cancel, alternate flow) |
+| `btn-outline` | Bordered, transparent | Selectable chip-bar option at rest |
+| `btn-ghost` | Transparent | Low-emphasis chrome — icon affordances, dense row controls, quiet navigation |
+
+### Color (intent)
+
+| Class | Tone | Use |
+|---|---|---|
+| (none) | Neutral | Cancel, generic peer action, chrome |
+| `btn-primary` | Brand amber | Primary CTAs, active/selected state |
+| `btn-error` | Red | Destructive actions |
+
+### Size (surface density)
+
+| Class | Use |
+|---|---|
+| (none) | Buttons on a page-level open area |
+| `btn-sm` | Buttons in compact contexts — modals, section editors, chip bars, navigation chrome |
+| `btn-xs` | Dense row-level controls — list rows, icon clusters, in-content micro-actions |
+
+Size is decided by **where the button sits**, not by what role it plays. A secondary action on a page surface is still page-sized; "soft" or "ghost" carries the not-the-main-action signal, not a smaller size.
+
+### Canonical pairings
+
+- **Primary CTA** (Save, Apply, Lock in) — `btn-primary`
+- **Peer action / cancel** — `btn-soft`
+- **Active filter chip** — `btn-soft btn-primary`
+- **Inactive filter chip** — `btn-outline`
+- **Labeled destructive action** — `btn-soft btn-error`
+- **Icon-only chrome** (✕, edit pencil, nav icons) — `btn-ghost`
+- **Destructive icon in a dense row** — `btn-ghost btn-error`
+
+External links (anything that opens off-site) carry a trailing `box-arrow-up-right` icon and pick their variant by role, not by being external. An external link that's the page's main CTA uses the same `btn-primary` as any other main CTA; an external link that's a peer action uses `btn-soft`. The icon marks destination; the variant marks hierarchy.
 
 ## Typography
 

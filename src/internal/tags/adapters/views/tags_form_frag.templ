@@ -164,7 +164,7 @@ templ TagsFormFrag(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*t
         <template x-for="s in availableSuggestions" :key="s">
           <button
             type="button"
-            class="badge badge-outline badge-sm cursor-pointer hover:badge-primary text-sm py-3"
+            class="btn btn-xs btn-outline rounded-badge text-sm"
             @click="addTag(s, '', soundGroupId)"
           >+ <span x-text="s"></span></button>
         </template>
@@ -177,7 +177,7 @@ templ TagsFormFrag(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*t
     <button
       type="submit"
       data-testid="tags-form-save"
-      class="btn btn-primary w-full"
+      class="btn btn-primary btn-sm w-full"
     >Save Tags</button>
   </div>
 }

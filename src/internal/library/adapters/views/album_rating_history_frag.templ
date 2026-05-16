@@ -40,7 +40,7 @@ templ AlbumRatingHistoryFrag(album library.AlbumDTO, isOOB bool) {
 								}
 							</div>
 							<button
-								class="btn btn-ghost btn-xs btn-square text-error text-base flex-shrink-0"
+								class="btn btn-ghost btn-error btn-xs btn-square text-base flex-shrink-0"
 								data-testid="album-rating-history-delete"
 								hx-delete={ fmt.Sprintf("/app/review/rating-log/%s?albumId=%s", entry.ID, album.ID) }
 								hx-swap="none"

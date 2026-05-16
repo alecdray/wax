@@ -146,7 +146,7 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 		// Sort chip
 		<div x-data>
 			<button
-				class="btn btn-sm btn-primary"
+				class="btn btn-sm btn-soft btn-primary"
 				@click="$refs.sortDialog.showModal()"
 				data-testid="filter-chip-bar-sort"
 			>
@@ -223,7 +223,7 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 		// Rating chip
 		<div x-data>
 			<button
-				class={ templ.KV("btn btn-sm btn-primary", fp.MinRating != nil || fp.MaxRating != nil || fp.Rated != ""), templ.KV("btn btn-sm btn-ghost btn-outline", fp.MinRating == nil && fp.MaxRating == nil && fp.Rated == "") }
+				class={ templ.KV("btn btn-sm btn-soft btn-primary", fp.MinRating != nil || fp.MaxRating != nil || fp.Rated != ""), templ.KV("btn btn-sm btn-outline", fp.MinRating == nil && fp.MaxRating == nil && fp.Rated == "") }
 				@click="$refs.ratingDialog.showModal()"
 				data-testid="filter-chip-bar-rating"
 			>
@@ -322,7 +322,7 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 		// Format chip
 		<div x-data>
 			<button
-				class={ templ.KV("btn btn-sm btn-primary", len(fp.Formats) > 0), templ.KV("btn btn-sm btn-ghost btn-outline", len(fp.Formats) == 0) }
+				class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.Formats) > 0), templ.KV("btn btn-sm btn-outline", len(fp.Formats) == 0) }
 				@click="$refs.formatDialog.showModal()"
 				data-testid="filter-chip-bar-format"
 			>
@@ -392,7 +392,7 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 		if len(artists) > 0 {
 			<div x-data>
 				<button
-					class={ templ.KV("btn btn-sm btn-primary", len(fp.ArtistIDs) > 0), templ.KV("btn btn-sm btn-ghost btn-outline", len(fp.ArtistIDs) == 0) }
+					class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.ArtistIDs) > 0), templ.KV("btn btn-sm btn-outline", len(fp.ArtistIDs) == 0) }
 					@click="$refs.artistDialog.showModal()"
 					data-testid="filter-chip-bar-artist"
 				>

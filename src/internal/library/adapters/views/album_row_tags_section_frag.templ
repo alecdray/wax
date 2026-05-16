@@ -31,7 +31,7 @@ templ AlbumRowTagsSectionFrag(album library.AlbumDTO, isOOB bool) {
 	>
 		<div class="flex flex-wrap items-center gap-1">
 			<button
-				class={ "btn btn-ghost btn-xs text-secondary text-base" }
+				class={ "btn btn-ghost btn-xs text-base" }
 				hx-get={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
 				hx-trigger="click"
 				hx-swap="none"

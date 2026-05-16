@@ -34,7 +34,7 @@ templ SleeveNotesEditorFrag(album library.AlbumDTO, errMsg string) {
 				<button type="submit" class="btn btn-sm btn-primary" data-testid="sleeve-notes-editor-save">Save</button>
 				<button
 					type="button"
-					class="btn btn-sm btn-ghost"
+					class="btn btn-sm btn-soft"
 					hx-get={ fmt.Sprintf("/app/library/albums/%s/sleeve-notes/view", album.ID) }
 					hx-target={ "#" + GetSleeveNotesSectionID(album.ID) }
 					hx-swap="outerHTML"

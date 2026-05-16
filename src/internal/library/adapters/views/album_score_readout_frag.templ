@@ -16,16 +16,16 @@ func ratingStateClass(album library.AlbumDTO) string {
 	}
 	switch album.RatingState.State {
 	case "stalled":
-		return "text-error/50 hover:text-error/70"
+		return "text-warning"
 	case "finalized":
-		return "text-primary hover:text-primary/80"
+		return "text-primary"
 	case "provisional":
 		if album.RatingState.IsRerateDue() {
 			return "text-subtle hover:text-muted"
 		}
 		return "text-default hover:text-muted"
 	default:
-		return "text-primary hover:text-primary/80"
+		return "text-primary"
 	}
 }
 
@@ -46,7 +46,7 @@ templ AlbumScoreReadoutFrag(album library.AlbumDTO, isOOB bool) {
 		>
 			{ fmt.Sprintf("%.1f", *album.Rating.Rating) }
 			if album.RatingState != nil && album.RatingState.State == "stalled" {
-				<span class="text-xs font-normal badge badge-xs badge-error badge-soft">Stalled</span>
+				<span class="text-xs font-normal badge badge-xs badge-warning badge-soft">Stalled</span>
 			}
 		</div>
 	} else {
