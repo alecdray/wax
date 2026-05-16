@@ -19,20 +19,20 @@ templ LibraryHeaderBarFrag(props HeaderBarProps) {
 				<div class="h-4 w-px bg-base-300"></div>
 				<div class="flex items-center gap-1">
 					if props.Active == "library" {
-						<div class="btn btn-ghost btn-xs btn-square text-base is-disabled" data-testid="library-header-bar-library-icon-active">
+						<div class="btn btn-ghost btn-xs btn-square text-base pointer-events-none" data-testid="library-header-bar-library-icon-active">
 							@templates.Icon(templates.IconProps{Name: "collection", Style: templates.IconStyleFill})
 						</div>
 					} else {
-						<a href="/app/library/dashboard" class="btn btn-ghost btn-xs btn-square text-base" data-testid="library-header-bar-library-icon">
+						<a href="/app/library/dashboard" class="btn btn-ghost btn-xs btn-square text-base hover-fade-in" data-testid="library-header-bar-library-icon">
 							@templates.Icon(templates.IconProps{Name: "collection", Style: templates.IconStyleOutline})
 						</a>
 					}
 					if props.Active == "discover" {
-						<div class="btn btn-ghost btn-xs btn-square text-base is-disabled" data-testid="library-header-bar-discover-icon-active">
+						<div class="btn btn-ghost btn-xs btn-square text-base pointer-events-none" data-testid="library-header-bar-discover-icon-active">
 							@templates.Icon(templates.IconProps{Name: "compass", Style: templates.IconStyleFill})
 						</div>
 					} else {
-						<a href="/app/library/discover" class="btn btn-ghost btn-xs btn-square text-base" data-testid="library-header-bar-discover-icon">
+						<a href="/app/library/discover" class="btn btn-ghost btn-xs btn-square text-base hover-fade-in" data-testid="library-header-bar-discover-icon">
 							@templates.Icon(templates.IconProps{Name: "compass", Style: templates.IconStyleOutline})
 						</a>
 					}
