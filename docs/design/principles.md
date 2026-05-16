@@ -18,6 +18,10 @@ When a request fails in a way the user can recover from, the server returns an e
 
 If a templ defines a region that HTMX targets by id, the id-generating helper lives next to that templ (same file or its `.go` sibling). Callers obtain the id by calling the helper, not by hard-coding the string. The templ stays the single source of truth for what its swap target is named.
 
+## Every templ root carries a testid
+
+Every templ component's top-level root element carries a `data-testid` derived from the component name. The testid is the stable selector for tests, for `hx-target="closest [data-testid='...']"`, and for ad-hoc tooling — it does not depend on Tailwind classes that change with styling. The naming rules and the OOB/dual-use cases are in [testids.md](testids.md).
+
 ## Theme tokens, not raw colors
 
 Styling uses the DaisyUI theme tokens defined in `static/src/main.css` (`bg-base-100`, `text-primary-content`, `border-accent`, etc.), not hex literals or one-off CSS variables in markup. When a new color is needed, it is added to the theme as a semantic token, not embedded inline at the call site.

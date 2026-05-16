@@ -16,7 +16,7 @@ templ DiscoverPage(props DiscoverPageProps) {
         Title:  templates.CreatePageTitle("Discover"),
         Navbar: LibraryHeaderBarFrag(HeaderBarProps{Active: "discover"}),
     }) {
-        <div class="w-full h-dvh flex flex-col" hx-history="false">
+        <div data-testid="discover-page" class="w-full h-dvh flex flex-col" hx-history="false">
             <div class="flex flex-col py-4 gap-6 items-center w-full flex-1 min-h-0">
                 <div class="w-full flex flex-col gap-1 flex-shrink-0 px-4">
                     <span class="text-xs font-semibold uppercase tracking-widest text-base-content px-1">On Radar</span>
@@ -35,12 +35,12 @@ templ DiscoverPage(props DiscoverPageProps) {
                         hx-trigger="keyup changed delay:300ms, search"
                         hx-target="#discover-results"
                         hx-swap="innerHTML scroll:#discover-results:top"
-                        data-testid="discover-search-input"
+                        data-testid="discover-page-search-input"
                     />
                     <div
                         id="discover-results"
                         class="flex-1 min-h-0 overflow-y-auto"
-                        data-testid="discover-results"
+                        data-testid="discover-page-results"
                         hx-get="/app/library/discover/search"
                         hx-include="#discover-search-input"
                         hx-trigger="radarUpdated from:body, libraryUpdated from:body"

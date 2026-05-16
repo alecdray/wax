@@ -35,7 +35,7 @@ templ AlbumScoreReadoutFrag(album library.AlbumDTO, isOobSwap bool) {
 	if album.Rating != nil && album.Rating.Rating != nil {
 		<div
 			id={ GetAlbumScoreReadoutID(album.ID) }
-			data-testid="album-score-readout"
+			data-testid="album-score-readout-rated"
 			class={ "min-w-14 h-full flex flex-col items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none transition-colors", ratingStateClass(album) }
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
@@ -52,7 +52,7 @@ templ AlbumScoreReadoutFrag(album library.AlbumDTO, isOobSwap bool) {
 	} else {
 		<div
 			id={ GetAlbumScoreReadoutID(album.ID) }
-			data-testid="album-score-readout"
+			data-testid="album-score-readout-unrated"
 			class="min-w-14 h-full flex items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none text-ghost hover:text-muted transition-colors"
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"

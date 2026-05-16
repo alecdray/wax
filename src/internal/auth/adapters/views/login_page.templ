@@ -11,13 +11,14 @@ templ LoginPage(props LoginPageProps) {
     Title: templates.CreatePageTitle("Login"),
   }) {
     <div
+      data-testid="login-page"
       class="flex flex-col flex-grow justify-around items-center"
     >
       <div class="flex flex-col items-start">
         <h1 class="text-9xl font-brand m-0 p-0">wax</h1>
       </div>
-      <a data-testid="login-link" href={ props.AuthURL }>
-        <button data-testid="login-button" class="btn btn-primary">Login</button>
+      <a data-testid="login-page-link" href={ props.AuthURL }>
+        <button data-testid="login-page-button" class="btn btn-primary">Login</button>
       </a>
     </div>
   }

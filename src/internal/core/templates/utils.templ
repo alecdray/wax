@@ -4,6 +4,7 @@ import "fmt"
 
 templ Redirect(path string, delaySeconds int) {
   <div
+    data-testid="redirect"
     hx-get={ path }
     hx-trigger={ fmt.Sprintf("load delay:%ds", delaySeconds) }
     hx-target="body"

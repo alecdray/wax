@@ -15,11 +15,13 @@ func dashboardReleasesID(albumID string) string {
 }
 
 // FormatsReleasesOOBFrag updates the format icons on the album detail page and dashboard after a save.
+// The data-testid on the first div matches AlbumDetailPage's releases element (the OOB swap target),
+// per the testid convention for OOB swap targets.
 templ FormatsReleasesOOBFrag(albumID string, releases library.ReleaseDTOs) {
 	<div
 		id={ formatsReleasesID(albumID) }
 		class="flex flex-wrap gap-2 items-center"
-		data-testid="album-detail-releases"
+		data-testid="album-detail-page-releases"
 		hx-swap-oob="true"
 	>
 		@formatIcon(releases, models.ReleaseFormatDigital)

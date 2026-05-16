@@ -15,7 +15,7 @@ templ AlbumActionsModalFrag(result library.DiscoverResultDTO) {
 }
 
 templ albumActionsModalContent(result library.DiscoverResultDTO) {
-    <div class="flex flex-col gap-4">
+    <div data-testid="album-actions-modal-content" class="flex flex-col gap-4">
         <div class="flex items-center gap-3 min-w-0">
             if result.ImageURL != "" {
                 <div class="avatar">
@@ -48,7 +48,7 @@ templ albumActionsModalContent(result library.DiscoverResultDTO) {
                 target="_blank"
                 rel="noopener noreferrer"
                 class="btn btn-sm btn-outline"
-                data-testid="album-modal-open-spotify"
+                data-testid="album-actions-modal-content-open-spotify"
             >Open in Spotify</a>
             switch result.State {
                 case library.DiscoverAlbumStateOnRadar:
@@ -58,7 +58,7 @@ templ albumActionsModalContent(result library.DiscoverResultDTO) {
                         hx-post={ fmt.Sprintf("/app/library/albums/%s/library", result.AlbumID) }
                         hx-swap="none"
                         hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
-                        data-testid="album-modal-add-to-library"
+                        data-testid="album-actions-modal-content-add-to-library"
                     >Add to library</button>
                     <button
                         type="button"
@@ -66,7 +66,7 @@ templ albumActionsModalContent(result library.DiscoverResultDTO) {
                         hx-delete={ fmt.Sprintf("/app/library/albums/%s/radar", result.AlbumID) }
                         hx-swap="none"
                         hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
-                        data-testid="album-modal-remove-radar"
+                        data-testid="album-actions-modal-content-remove-radar"
                     >Remove from radar</button>
                 case library.DiscoverAlbumStateRemoved:
                     <button
@@ -75,7 +75,7 @@ templ albumActionsModalContent(result library.DiscoverResultDTO) {
                         hx-post={ fmt.Sprintf("/app/library/albums/%s/library", result.AlbumID) }
                         hx-swap="none"
                         hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
-                        data-testid="album-modal-reacquire"
+                        data-testid="album-actions-modal-content-reacquire"
                     >Re-acquire</button>
                 default:
                     <button
@@ -84,7 +84,7 @@ templ albumActionsModalContent(result library.DiscoverResultDTO) {
                         hx-post={ fmt.Sprintf("/app/library/discover/radar?spotifyId=%s", result.SpotifyID) }
                         hx-swap="none"
                         hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
-                        data-testid="album-modal-add-radar"
+                        data-testid="album-actions-modal-content-add-radar"
                     >Add to radar</button>
             }
         </div>

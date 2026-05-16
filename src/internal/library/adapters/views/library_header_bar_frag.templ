@@ -12,7 +12,7 @@ type HeaderBarProps struct {
 }
 
 templ LibraryHeaderBarFrag(props HeaderBarProps) {
-	<div class="bg-base-100 border-b border-base-300 h-11 w-full flex-shrink-0 sticky top-0 z-10">
+	<div data-testid="library-header-bar" class="bg-base-100 border-b border-base-300 h-11 w-full flex-shrink-0 sticky top-0 z-10">
 		<div class="h-full flex items-center justify-between px-6">
 			<div class="flex items-center gap-4">
 				<a href="/" class="text-lg text-accent font-brand">wax</a>
@@ -20,22 +20,22 @@ templ LibraryHeaderBarFrag(props HeaderBarProps) {
 				<div class="flex items-center gap-1">
 					<div class="tooltip tooltip-bottom" data-tip="Library">
 						if props.Active == "library" {
-							<div class="btn btn-ghost btn-xs btn-square is-disabled" data-testid="header-library-icon-active">
+							<div class="btn btn-ghost btn-xs btn-square is-disabled" data-testid="library-header-bar-library-icon-active">
 								@templates.Icon(templates.IconProps{Name: "collection", Style: templates.IconStyleFill})
 							</div>
 						} else {
-							<a href="/app/library/dashboard" class="btn btn-ghost btn-xs btn-square" data-testid="header-library-icon">
+							<a href="/app/library/dashboard" class="btn btn-ghost btn-xs btn-square" data-testid="library-header-bar-library-icon">
 								@templates.Icon(templates.IconProps{Name: "collection", Style: templates.IconStyleOutline})
 							</a>
 						}
 					</div>
 					<div class="tooltip tooltip-bottom" data-tip="Discover">
 						if props.Active == "discover" {
-							<div class="btn btn-ghost btn-xs btn-square is-disabled" data-testid="header-discover-icon-active">
+							<div class="btn btn-ghost btn-xs btn-square is-disabled" data-testid="library-header-bar-discover-icon-active">
 								@templates.Icon(templates.IconProps{Name: "compass", Style: templates.IconStyleFill})
 							</div>
 						} else {
-							<a href="/app/library/discover" class="btn btn-ghost btn-xs btn-square" data-testid="header-discover-icon">
+							<a href="/app/library/discover" class="btn btn-ghost btn-xs btn-square" data-testid="library-header-bar-discover-icon">
 								@templates.Icon(templates.IconProps{Name: "compass", Style: templates.IconStyleOutline})
 							</a>
 						}

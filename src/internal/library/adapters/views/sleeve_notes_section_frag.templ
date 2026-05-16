@@ -13,6 +13,7 @@ func GetSleeveNotesSectionID(albumId string) string {
 templ SleeveNotesSectionFrag(album library.AlbumDTO, isOobSwap bool) {
 	<div
 		id={ GetSleeveNotesSectionID(album.ID) }
+		data-testid="sleeve-notes-section"
 		class="flex flex-col gap-2"
 		if isOobSwap {
 			hx-swap-oob="true"
@@ -27,37 +28,41 @@ templ SleeveNotesSectionFrag(album library.AlbumDTO, isOobSwap bool) {
 }
 
 templ sleeveNotesDisplay(album library.AlbumDTO) {
-	<div class="flex items-center justify-start gap-2">
-		<span class="text-xs font-semibold uppercase tracking-wider text-subtle">Sleeve Notes</span>
-		<button
-			data-testid="sleeve-notes-edit"
-			class="btn btn-ghost btn-xs text-subtle"
-			hx-get={ fmt.Sprintf("/app/library/albums/%s/sleeve-notes/editor", album.ID) }
-			hx-trigger="click"
-			hx-target={ "#" + GetSleeveNotesSectionID(album.ID) }
-			hx-swap="innerHTML"
-		>
-			Edit
-		</button>
-	</div>
-	<div class="text-sm text-muted [&_p]:mb-2 [&_a]:text-info [&_a]:underline [&_a:hover]:text-info/70 [&_ul]:!list-disc [&_ul]:pl-5 [&_ol]:!list-decimal [&_ol]:pl-5 [&_li]:my-0.5" data-testid="sleeve-notes-content">
-		@templ.Raw(string(notes.RenderMarkdown(album.SleeveNote.Content)))
+	<div data-testid="sleeve-notes-display" class="flex flex-col gap-2">
+		<div data-testid="sleeve-notes-display-header" class="flex items-center justify-start gap-2">
+			<span class="text-xs font-semibold uppercase tracking-wider text-subtle">Sleeve Notes</span>
+			<button
+				data-testid="sleeve-notes-display-edit"
+				class="btn btn-ghost btn-xs text-subtle"
+				hx-get={ fmt.Sprintf("/app/library/albums/%s/sleeve-notes/editor", album.ID) }
+				hx-trigger="click"
+				hx-target={ "#" + GetSleeveNotesSectionID(album.ID) }
+				hx-swap="innerHTML"
+			>
+				Edit
+			</button>
+		</div>
+		<div class="text-sm text-muted [&_p]:mb-2 [&_a]:text-info [&_a]:underline [&_a:hover]:text-info/70 [&_ul]:!list-disc [&_ul]:pl-5 [&_ol]:!list-decimal [&_ol]:pl-5 [&_li]:my-0.5" data-testid="sleeve-notes-display-content">
+			@templ.Raw(string(notes.RenderMarkdown(album.SleeveNote.Content)))
+		</div>
 	</div>
 }
 
 templ sleeveNotesEmpty(album library.AlbumDTO) {
-	<div class="flex items-center justify-start gap-2">
-		<span class="text-xs font-semibold uppercase tracking-wider text-subtle">Sleeve Notes</span>
-		<button
-			data-testid="sleeve-notes-edit"
-			class="btn btn-ghost btn-xs text-subtle"
-			hx-get={ fmt.Sprintf("/app/library/albums/%s/sleeve-notes/editor", album.ID) }
-			hx-trigger="click"
-			hx-target={ "#" + GetSleeveNotesSectionID(album.ID) }
-			hx-swap="innerHTML"
-		>
-			Add
-		</button>
+	<div data-testid="sleeve-notes-empty" class="flex flex-col gap-2">
+		<div data-testid="sleeve-notes-empty-header" class="flex items-center justify-start gap-2">
+			<span class="text-xs font-semibold uppercase tracking-wider text-subtle">Sleeve Notes</span>
+			<button
+				data-testid="sleeve-notes-empty-edit"
+				class="btn btn-ghost btn-xs text-subtle"
+				hx-get={ fmt.Sprintf("/app/library/albums/%s/sleeve-notes/editor", album.ID) }
+				hx-trigger="click"
+				hx-target={ "#" + GetSleeveNotesSectionID(album.ID) }
+				hx-swap="innerHTML"
+			>
+				Add
+			</button>
+		</div>
+		<span data-testid="sleeve-notes-empty-message" class="text-xs text-ghost">No notes yet</span>
 	</div>
-	<span class="text-xs text-ghost">No notes yet</span>
 }

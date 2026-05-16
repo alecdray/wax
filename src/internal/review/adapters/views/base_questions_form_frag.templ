@@ -7,7 +7,7 @@ import (
 )
 
 templ baseQuestionRadio(q review.BaseQuestion, opt review.QuestionOption) {
-	<label class="flex items-center gap-3 cursor-pointer">
+	<label data-testid="base-question-radio" class="flex items-center gap-3 cursor-pointer">
 		<input
 			type="radio"
 			name={ string(q.Key) }
@@ -20,7 +20,7 @@ templ baseQuestionRadio(q review.BaseQuestion, opt review.QuestionOption) {
 }
 
 templ baseQuestionFieldset(q review.BaseQuestion) {
-	<fieldset class="flex flex-col gap-3">
+	<fieldset data-testid="base-question-fieldset" class="flex flex-col gap-3">
 		<legend class="text-base-content font-medium mb-2">{ q.Question }</legend>
 		for _, opt := range q.Options {
 			@baseQuestionRadio(q, opt)
@@ -32,7 +32,7 @@ templ baseQuestionFieldset(q review.BaseQuestion) {
 // mode is "provisional" or "finalized". albumId identifies the album.
 templ BaseQuestionsFormFrag(albumId string, mode review.RatingMode, questions review.BaseQuestions) {
 	<form
-		data-testid="rating-questionnaire"
+		data-testid="base-questions-form"
 		hx-post={ fmt.Sprintf("/app/review/rating-recommender/questions?albumId=%s&mode=%s", albumId, string(mode)) }
 		hx-swap="outerHTML"
 		class="flex flex-col gap-8"
@@ -40,6 +40,6 @@ templ BaseQuestionsFormFrag(albumId string, mode review.RatingMode, questions re
 		for _, q := range questions {
 			@baseQuestionFieldset(q)
 		}
-		<button class="btn btn-primary" type="submit" data-testid="rating-calculate">Next</button>
+		<button class="btn btn-primary" type="submit" data-testid="base-questions-form-submit">Next</button>
 	</form>
 }

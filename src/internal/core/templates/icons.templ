@@ -13,5 +13,5 @@ type IconProps struct {
 }
 
 templ Icon(props IconProps) {
-	<i class={ "bi bi-" + props.Name + iconStyleSuffix(props.Style) }></i>
+	<i data-testid="icon" class={ "bi bi-" + props.Name + iconStyleSuffix(props.Style) }></i>
 }

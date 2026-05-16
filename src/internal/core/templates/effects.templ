@@ -51,6 +51,7 @@ templ NeonTextEffect(color NeonColor, hoverEffect NeonHoverEffect, classes ...st
 
   </style>
   <span
+    data-testid="neon-text-effect"
     class={ templ.Classes(templ.KV("neon-text-effect", hoverEffect == NeonHoverEffectNone), templ.KV("neon-text-effect-dim", hoverEffect == NeonHoverEffectDim), templ.Class(strings.Join(classes, " "))) }
     style={ templ.SafeCSS("--neon-text-effect-color: var(" + color + ");") }
   >
@@ -86,6 +87,7 @@ templ NeonEffect(color NeonColor, hoverEffect NeonHoverEffect, classes ...string
     }
   </style>
   <span
+    data-testid="neon-effect"
     class={ templ.Classes(templ.KV("neon-effect", hoverEffect == NeonHoverEffectNone), templ.KV("neon-effect-dim", hoverEffect == NeonHoverEffectDim), templ.Class(strings.Join(classes, " "))) }
     style={ templ.SafeCSS("--neon-effect-color: var(" + color + ");") }
   >

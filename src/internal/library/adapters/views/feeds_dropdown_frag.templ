@@ -32,6 +32,7 @@ func getFeedsDropdownButtonIndicatorColor(feeds []feed.FeedDTO) templates.NeonCo
 templ FeedsDropdownButtonFrag(feeds []feed.FeedDTO, oob bool) {
 	<div
 		id="feeds-dropdown-button"
+		data-testid="feeds-dropdown-button"
 		tabindex="0"
 		role="button"
 		class="btn btn-ghost btn-xs gap-1.5"
@@ -53,7 +54,7 @@ templ FeedsDropdownButtonFrag(feeds []feed.FeedDTO, oob bool) {
 }
 
 templ feedsDropdown(feeds []feed.FeedDTO) {
-	<div class="dropdown dropdown-end" hx-ext="morph">
+	<div data-testid="feeds-dropdown" class="dropdown dropdown-end" hx-ext="morph">
 		@FeedsDropdownButtonFrag(feeds, false)
 		<div tabindex="0" class="dropdown-content z-[1] card card-compact bg-base-100 shadow-xl border border-base-300 mt-1">
 			@FeedsDropdownContentFrag(feeds)
@@ -64,6 +65,7 @@ templ feedsDropdown(feeds []feed.FeedDTO) {
 templ FeedsDropdownContentFrag(feeds []feed.FeedDTO) {
 	<div
 		id="feeds-dropdown-content"
+		data-testid="feeds-dropdown-content"
 		tabindex="0"
 		class="menu menu-compact w-56 p-2"
 		hx-on:htmx:after-swap="this.focus()"

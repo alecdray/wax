@@ -21,13 +21,13 @@ templ releaseFormatIcon(format models.ReleaseFormat) {
 
 templ formatIcon(releases library.ReleaseDTOs, format models.ReleaseFormat) {
 	if release := releases.FindFormat(format); release != nil && release.AddedAt != nil {
-		<div class="tooltip tooltip-top" data-tip={ string(format) + " - " + release.AddedAt.Format("Jan 2, 2006") }>
+		<div data-testid="format-icon-owned" class="tooltip tooltip-top" data-tip={ string(format) + " - " + release.AddedAt.Format("Jan 2, 2006") }>
 			<div class="text-muted">
 				@releaseFormatIcon(format)
 			</div>
 		</div>
 	} else {
-		<div class="tooltip tooltip-top" data-tip={ string(format) + " - Not in library" }>
+		<div data-testid="format-icon-missing" class="tooltip tooltip-top" data-tip={ string(format) + " - Not in library" }>
 			<div class="text-ghost">
 				@releaseFormatIcon(format)
 			</div>
