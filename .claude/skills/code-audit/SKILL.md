@@ -1,6 +1,6 @@
 ---
 name: code-audit
-description: Pre-merge audit of implementation code for violations of the project's architecture and design rules. Read-only — reports findings; does not edit. Keywords: code audit, audit code, architecture violations, design violations, archetype compliance, rule check.
+description: Audits implementation code for violations of the project's architecture and design rules. Read-only — reports findings; does not edit. Use only when the user explicitly wants a code-only audit; for any pre-merge / before-push check, use the `audit` skill instead so docs are covered too. Keywords: code audit, audit code, architecture violations, design violations, archetype compliance, rule check.
 context: fork
 agent: Explore
 argument-hint: "[optional: module name, file path, directory, or 'diff' to scope to changed files]"
