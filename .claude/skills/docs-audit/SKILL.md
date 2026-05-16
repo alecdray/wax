@@ -1,6 +1,6 @@
 ---
 name: docs-audit
-description: Pre-merge audit of project documentation for rot-prone content, drift against the codebase, and structural violations. Read-only — reports findings; does not edit. Keywords: docs audit, audit docs, doc rot, doc drift, pre-merge check, documentation audit.
+description: Audits project documentation for rot-prone content, drift against the codebase, and structural violations. Read-only — reports findings; does not edit. Use only when the user explicitly wants a docs-only audit; for any pre-merge / before-push check, use the `audit` skill instead so code is covered too. Keywords: docs audit, audit docs, doc rot, doc drift, documentation audit.
 context: fork
 agent: Explore
 argument-hint: "[optional: file path, directory, or 'diff' to scope to changed files]"
