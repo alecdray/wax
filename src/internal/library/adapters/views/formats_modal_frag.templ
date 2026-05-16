@@ -41,7 +41,7 @@ templ formatsModalContent(albumID string, defaultSearch string, formats []librar
 
 templ digitalFormatRow(f library.AlbumFormatDTO) {
 	<div data-testid="digital-format-row" class="flex items-center gap-3 py-2 is-disabled">
-		<div class="w-5 h-5 flex items-center justify-center">
+		<div class="w-5 h-5 flex items-center justify-center text-base">
 			@releaseFormatIcon(f.Format)
 		</div>
 		<span class="text-sm capitalize flex-1">{ string(f.Format) }</span>
@@ -57,7 +57,7 @@ templ physicalFormatRow(albumID string, defaultSearch string, f library.AlbumFor
 		@htmx:after-swap={ fmt.Sprintf("if ($event.detail.target.id === 'discogs-details-%s') hasRelease = true", string(f.Format)) }
 	>
 		<div class="flex items-center gap-3">
-			<div class="w-5 h-5 flex items-center justify-center" :class="owned ? 'text-muted' : 'text-ghost'">
+			<div class="w-5 h-5 flex items-center justify-center text-base" :class="owned ? 'text-muted' : 'text-ghost'">
 				@releaseFormatIcon(f.Format)
 			</div>
 			<span class="text-sm capitalize flex-1">{ string(f.Format) }</span>
