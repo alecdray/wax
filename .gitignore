@@ -46,3 +46,11 @@ static/public/main.css
 
 # Brainstorm mockups (superpowers visual companion)
 .superpowers/
+
+# Working artifacts from skills (/build, /to-issues, etc.) — never commit.
+# Fold persistent learnings into docs/architecture/, docs/design/,
+# module READMEs, or docs/adr/ when the work merges.
+docs/specs/
+docs/superpowers/
+tmp/specs/
+tmp/plans/
