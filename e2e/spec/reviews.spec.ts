@@ -1,39 +1,22 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../helpers/auth';
+import { resetAlbumRating, seedRatingLogEntry, setRatingStateValue } from '../helpers/db';
 
 // Scenarios from e2e/feat/reviews.feature
 
 const userId = process.env.E2E_TEST_USER_ID;
 const albumId = process.env.E2E_TEST_ALBUM_ID;
 
-// Open the rating modal and navigate to the rating confirmation form.
-// The modal may open to the questionnaire, the rerate prompt, or the
-// confirmation form depending on the album's rating state; this helper
-// drives whichever entry point appears to the confirmation form.
-async function openConfirmForm(page: any) {
-  const trigger = page.locator('[data-testid="album-score-badge-rated"], [data-testid="album-score-badge-unrated"]').first();
+// Open the rating modal. The modal always opens to the score-entry form,
+// regardless of the album's rating state.
+async function openModal(page: any) {
+  const trigger = page
+    .locator('[data-testid="album-score-badge-rated"], [data-testid="album-score-badge-unrated"]')
+    .first();
   await trigger.click();
 
   const dialog = page.locator('dialog[open]');
   await expect(dialog).toBeVisible();
-
-  // Wait for one of the three possible modal entry points to render.
-  await expect(
-    dialog.locator(
-      '[data-testid="rerate-prompt"], [data-testid="base-questions-form"], [data-testid="rating-confirm-form"]',
-    ),
-  ).toBeVisible();
-
-  if (await dialog.getByTestId('rerate-prompt').isVisible().catch(() => false)) {
-    await dialog.getByTestId('rerate-prompt-rate-now').click();
-    await expect(dialog.getByTestId('base-questions-form')).toBeVisible();
-  }
-
-  if (await dialog.getByTestId('base-questions-form').isVisible().catch(() => false)) {
-    await answerQuestionnaire(page);
-    await dialog.getByTestId('base-questions-form-submit').click();
-  }
-
   await expect(dialog.getByTestId('rating-confirm-form')).toBeVisible();
 }
 
@@ -43,20 +26,26 @@ async function answerQuestionnaire(page: any) {
   const fieldsets = page.locator('dialog[open] [data-testid="base-question-fieldset"]');
   const count = await fieldsets.count();
   for (let i = 0; i < count; i++) {
-    // base-question-radio testid is on the wrapping label; clicking the label
-    // selects its child radio input.
     await fieldsets.nth(i).getByTestId('base-question-radio').first().click();
   }
 }
 
 async function submitRating(page: any, score: string, note?: string) {
-  await openConfirmForm(page);
+  await openModal(page);
   const dialog = page.locator('dialog[open]');
   await dialog.getByTestId('rating-confirm-form-input').fill(score);
   if (note !== undefined) {
     await dialog.getByTestId('rating-confirm-form-note').fill(note);
   }
   await dialog.getByTestId('rating-confirm-form-lock-in').click();
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+}
+
+async function finalizeRating(page: any, score: string) {
+  await openModal(page);
+  const dialog = page.locator('dialog[open]');
+  await dialog.getByTestId('rating-confirm-form-input').fill(score);
+  await dialog.getByTestId('rating-confirm-form-finalize').click();
   await expect(page.locator('dialog[open]')).toHaveCount(0);
 }
 
@@ -87,33 +76,123 @@ async function clearAllEntries(page: any) {
   }
 }
 
-test('Completing the questionnaire produces a score', async ({ context, page }) => {
+// Resets the album to a fully-unrated shape (no log entries, no state row).
+// Forces a page reload so the in-DOM badges / readouts pick up the new state.
+async function resetToUnrated(page: any) {
+  resetAlbumRating(userId!, albumId!);
+  await page.reload();
+}
+
+// Leaves the album with a provisional state row and one rating-log entry,
+// dated comfortably in the past so any in-test save reads unambiguously as
+// the new latest entry.
+async function setupProvisional(page: any, score: string) {
+  resetAlbumRating(userId!, albumId!);
+  seedRatingLogEntry(userId!, albumId!, parseFloat(score));
+  setRatingStateValue(userId!, albumId!, 'provisional');
+  await page.reload();
+}
+
+// Leaves the album with a finalized state row and one rating-log entry,
+// dated in the past for the same reason.
+async function setupFinalized(page: any, score: string) {
+  resetAlbumRating(userId!, albumId!);
+  seedRatingLogEntry(userId!, albumId!, parseFloat(score));
+  setRatingStateValue(userId!, albumId!, 'finalized');
+  await page.reload();
+}
+
+test('Modal opens to the score-entry form for an unrated album', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
   expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
+  await resetToUnrated(page);
 
-  const trigger = page.locator('[data-testid="album-score-badge-rated"], [data-testid="album-score-badge-unrated"]').first();
-  await trigger.click();
+  await openModal(page);
 
   const dialog = page.locator('dialog[open]');
-  await expect(dialog).toBeVisible();
+  await expect(dialog.getByTestId('rating-confirm-form')).toBeVisible();
+  // Neither legacy modal entry point appears as the first view.
+  await expect(dialog.getByTestId('rerate-prompt')).toHaveCount(0);
+  await expect(dialog.getByTestId('base-questions-form')).toHaveCount(0);
+  // No prior log entry, so the input opens empty.
+  await expect(dialog.getByTestId('rating-confirm-form-input')).toHaveValue('');
+});
 
-  if (await dialog.getByTestId('rerate-prompt').isVisible().catch(() => false)) {
-    await dialog.getByTestId('rerate-prompt-rate-now').click();
-  }
-  if (await dialog.getByTestId('rating-confirm-form').isVisible().catch(() => false)) {
-    // Already on confirm form (album was previously finalized); navigate back to the questionnaire.
-    await dialog.getByTestId('rating-confirm-form-back-to-questions').click();
-  }
+test('Score-entry form pre-fills with the latest rating for a provisional album', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
 
+  await loginAs(context, userId!);
+  await page.goto(`/app/library/albums/${albumId}`);
+  await setupProvisional(page, '6.5');
+
+  await openModal(page);
+
+  const dialog = page.locator('dialog[open]');
+  await expect(dialog.getByTestId('rating-confirm-form')).toBeVisible();
+  await expect(dialog.getByTestId('rating-confirm-form-input')).toHaveValue('6.5');
+});
+
+test('Score-entry form pre-fills with the latest rating for a finalized album', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto(`/app/library/albums/${albumId}`);
+  await setupFinalized(page, '8.1');
+
+  await openModal(page);
+
+  const dialog = page.locator('dialog[open]');
+  await expect(dialog.getByTestId('rating-confirm-form')).toBeVisible();
+  await expect(dialog.getByTestId('rating-confirm-form-input')).toHaveValue('8.1');
+});
+
+test("Opening the questionnaire from the score-entry form pre-fills the score after submit", async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto(`/app/library/albums/${albumId}`);
+  await resetToUnrated(page);
+
+  await openModal(page);
+  const dialog = page.locator('dialog[open]');
+
+  await dialog.getByTestId('rating-confirm-form-open-questionnaire').click();
   await expect(dialog.getByTestId('base-questions-form')).toBeVisible();
+
   await answerQuestionnaire(page);
   await dialog.getByTestId('base-questions-form-submit').click();
 
   await expect(dialog.getByTestId('rating-confirm-form')).toBeVisible();
+  // Computed score is now in the input (some non-empty value).
   await expect(dialog.getByTestId('rating-confirm-form-input')).not.toHaveValue('');
+});
+
+test('Dismissing the questionnaire preserves the prior pre-fill', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto(`/app/library/albums/${albumId}`);
+  await setupProvisional(page, '7.3');
+
+  await openModal(page);
+  const dialog = page.locator('dialog[open]');
+  await expect(dialog.getByTestId('rating-confirm-form-input')).toHaveValue('7.3');
+
+  await dialog.getByTestId('rating-confirm-form-open-questionnaire').click();
+  await expect(dialog.getByTestId('base-questions-form')).toBeVisible();
+
+  // Dismiss without answering or submitting.
+  await dialog.getByTestId('base-questions-form-dismiss').click();
+
+  await expect(dialog.getByTestId('rating-confirm-form')).toBeVisible();
+  await expect(dialog.getByTestId('rating-confirm-form-input')).toHaveValue('7.3');
 });
 
 test('Saving a rating', async ({ context, page }) => {
@@ -138,6 +217,93 @@ test('Saving a rating with a note', async ({ context, page }) => {
   await expect(page.getByTestId('album-rating-history-note').first()).toContainText('A great listen.');
 });
 
+test('Saving on a finalized album keeps it finalized in one submission', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto(`/app/library/albums/${albumId}`);
+  await setupFinalized(page, '7.0');
+
+  // Save a different score on the now-finalized album — single submission, no
+  // confirmation prompt, no extra round-trip.
+  await openModal(page);
+  const dialog = page.locator('dialog[open]');
+  await dialog.getByTestId('rating-confirm-form-input').fill('7.5');
+  await dialog.getByTestId('rating-confirm-form-lock-in').click();
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+
+  // Reopen the modal and confirm the album is still finalized: opening it
+  // again must not show the Finalize button (only provisional albums do).
+  await openModal(page);
+  const dialog2 = page.locator('dialog[open]');
+  await expect(dialog2.getByTestId('rating-confirm-form-finalize')).toHaveCount(0);
+  await expect(dialog2.getByTestId('rating-confirm-form-input')).toHaveValue('7.5');
+});
+
+test('Finalize button is visible on the score-entry form for a provisional album', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto(`/app/library/albums/${albumId}`);
+  await setupProvisional(page, '6.0');
+
+  await openModal(page);
+  const dialog = page.locator('dialog[open]');
+  await expect(dialog.getByTestId('rating-confirm-form-finalize')).toBeVisible();
+});
+
+test('Finalize button is hidden on the score-entry form for an unrated album', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto(`/app/library/albums/${albumId}`);
+  await resetToUnrated(page);
+
+  await openModal(page);
+  const dialog = page.locator('dialog[open]');
+  await expect(dialog.getByTestId('rating-confirm-form-finalize')).toHaveCount(0);
+});
+
+test('Finalize button is hidden on the score-entry form for a finalized album', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto(`/app/library/albums/${albumId}`);
+  await setupFinalized(page, '8.0');
+
+  await openModal(page);
+  const dialog = page.locator('dialog[open]');
+  await expect(dialog.getByTestId('rating-confirm-form-finalize')).toHaveCount(0);
+});
+
+test('Clicking Finalize promotes the album in one submission', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto(`/app/library/albums/${albumId}`);
+  await setupProvisional(page, '6.0');
+
+  await openRatingHistory(page);
+  const beforeCount = await page.getByTestId('album-rating-history-entry').count();
+
+  await finalizeRating(page, '8.0');
+
+  // History grew by one entry, recording the score we submitted via Finalize.
+  await openRatingHistory(page);
+  await expect(page.getByTestId('album-rating-history-entry')).toHaveCount(beforeCount + 1);
+  const scores = await page.getByTestId('album-rating-history-score').allTextContents();
+  expect(scores.some((s) => s.startsWith('8'))).toBe(true);
+
+  // Album is now finalized: reopening the modal hides the Finalize button.
+  await openModal(page);
+  await expect(page.locator('dialog[open]').getByTestId('rating-confirm-form-finalize')).toHaveCount(0);
+});
+
 test('No delete button in the rating modal', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
   expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
@@ -145,14 +311,13 @@ test('No delete button in the rating modal', async ({ context, page }) => {
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  const trigger = page.locator('[data-testid="album-score-badge-rated"], [data-testid="album-score-badge-unrated"]').first();
+  const trigger = page
+    .locator('[data-testid="album-score-badge-rated"], [data-testid="album-score-badge-unrated"]')
+    .first();
   await trigger.click();
 
   const dialog = page.locator('dialog[open]');
   await expect(dialog).toBeVisible();
-  // Semantic absence: the rating modal exposes no button accessible as "Delete".
-  // The only delete affordance for ratings lives in the album-rating-history
-  // section on the album detail page, outside the modal.
   await expect(dialog.getByRole('button', { name: /delete/i })).toHaveCount(0);
 });
 
@@ -236,4 +401,3 @@ test('Deleting the only rating entry clears the album rating', async ({ context,
 
   await expect(page.getByTestId('album-rating-history-entry')).toHaveCount(0);
 });
-

@@ -106,6 +106,7 @@ func (r *Repo) GetLatestUserAlbumRatings(ctx context.Context, userID string) (ma
 	rows, err := r.q.GetLatestUserAlbumRatings(ctx, sqlc.GetLatestUserAlbumRatingsParams{
 		UserID:   userID,
 		UserID_2: userID,
+		UserID_3: userID,
 	})
 	if err != nil {
 		return nil, err

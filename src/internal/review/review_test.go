@@ -1,8 +1,17 @@
 package review
 
 import (
+	"context"
+	"database/sql"
+	"errors"
 	"math"
+	"path/filepath"
 	"testing"
+
+	"github.com/alecdray/wax/src/internal/core/db"
+	"github.com/pressly/goose/v3"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // --- BaseQuestions.Score ---
@@ -181,10 +190,132 @@ func TestRatingStateLogLabel(t *testing.T) {
 	}
 }
 
+// --- FinalizeWithRating ---
+
+func TestFinalizeWithRating_PromotesProvisionalAndWritesLog(t *testing.T) {
+	svc, sqlDB := newTestService(t)
+	ctx := context.Background()
+
+	seedUserAndAlbum(t, sqlDB, "user-1", "album-1")
+	if _, err := svc.CreateRatingState(ctx, "user-1", "album-1"); err != nil {
+		t.Fatalf("seed provisional state: %v", err)
+	}
+
+	logEntry, newState, err := svc.FinalizeWithRating(ctx, "user-1", "album-1", 7.4, "")
+	if err != nil {
+		t.Fatalf("FinalizeWithRating: %v", err)
+	}
+	if logEntry == nil || logEntry.Rating == nil || *logEntry.Rating != 7.4 {
+		t.Fatalf("expected log entry with rating 7.4, got %+v", logEntry)
+	}
+	if newState == nil || newState.State != RatingStateFinalized {
+		t.Fatalf("expected state to be finalized, got %+v", newState)
+	}
+
+	log, err := svc.GetRatingLog(ctx, "user-1", "album-1")
+	if err != nil {
+		t.Fatalf("read log: %v", err)
+	}
+	if len(log) != 1 {
+		t.Fatalf("expected exactly one log row, got %d", len(log))
+	}
+
+	st, err := svc.GetRatingState(ctx, "user-1", "album-1")
+	if err != nil {
+		t.Fatalf("read state: %v", err)
+	}
+	if st == nil || st.State != RatingStateFinalized {
+		t.Fatalf("expected finalized state, got %+v", st)
+	}
+}
+
+func TestFinalizeWithRating_RejectsUnratedAlbum(t *testing.T) {
+	svc, sqlDB := newTestService(t)
+	ctx := context.Background()
+
+	seedUserAndAlbum(t, sqlDB, "user-1", "album-1")
+
+	_, _, err := svc.FinalizeWithRating(ctx, "user-1", "album-1", 5.0, "")
+	if !errors.Is(err, ErrFinalizeRequiresProvisional) {
+		t.Fatalf("expected ErrFinalizeRequiresProvisional, got %v", err)
+	}
+
+	log, err := svc.GetRatingLog(ctx, "user-1", "album-1")
+	if err != nil {
+		t.Fatalf("read log: %v", err)
+	}
+	if len(log) != 0 {
+		t.Fatalf("expected no log rows written on rejected finalize, got %d", len(log))
+	}
+}
+
+func TestFinalizeWithRating_RejectsAlreadyFinalizedAlbum(t *testing.T) {
+	svc, sqlDB := newTestService(t)
+	ctx := context.Background()
+
+	seedUserAndAlbum(t, sqlDB, "user-1", "album-1")
+	if _, err := svc.CreateRatingState(ctx, "user-1", "album-1"); err != nil {
+		t.Fatalf("seed provisional state: %v", err)
+	}
+	if _, err := svc.FinalizeRating(ctx, "user-1", "album-1"); err != nil {
+		t.Fatalf("promote to finalized: %v", err)
+	}
+
+	_, _, err := svc.FinalizeWithRating(ctx, "user-1", "album-1", 8.0, "")
+	if !errors.Is(err, ErrFinalizeRequiresProvisional) {
+		t.Fatalf("expected ErrFinalizeRequiresProvisional, got %v", err)
+	}
+
+	log, err := svc.GetRatingLog(ctx, "user-1", "album-1")
+	if err != nil {
+		t.Fatalf("read log: %v", err)
+	}
+	if len(log) != 0 {
+		t.Fatalf("expected no log rows written on rejected finalize, got %d", len(log))
+	}
+}
+
 // helpers
 
 func allQuestions() BaseQuestions {
 	qs := make(BaseQuestions, len(AllBaseQuestions))
 	copy(qs, AllBaseQuestions)
 	return qs
+}
+
+// newTestService opens a fresh sqlite DB, applies every migration in the repo,
+// and returns a Service plus the raw *sql.DB for fixture seeding.
+func newTestService(t *testing.T) (*Service, *sql.DB) {
+	t.Helper()
+
+	migrationsDir, err := filepath.Abs("../../../db/migrations")
+	if err != nil {
+		t.Fatalf("resolve migrations dir: %v", err)
+	}
+
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	sqlDB, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	t.Cleanup(func() { sqlDB.Close() })
+
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		t.Fatalf("set dialect: %v", err)
+	}
+	if err := goose.Up(sqlDB, migrationsDir); err != nil {
+		t.Fatalf("goose up: %v", err)
+	}
+
+	return NewService(db.WrapSqlDB(sqlDB)), sqlDB
+}
+
+func seedUserAndAlbum(t *testing.T, sqlDB *sql.DB, userID, albumID string) {
+	t.Helper()
+	if _, err := sqlDB.Exec(`INSERT INTO users (id, spotify_id) VALUES (?, ?)`, userID, "spotify-"+userID); err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
+	if _, err := sqlDB.Exec(`INSERT INTO albums (id, spotify_id, title) VALUES (?, ?, ?)`, albumID, "spotify-"+albumID, "Album "+albumID); err != nil {
+		t.Fatalf("seed album: %v", err)
+	}
 }

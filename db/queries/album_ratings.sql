@@ -10,23 +10,29 @@ WHERE id = ? AND user_id = ?;
 -- name: GetLatestUserAlbumRating :one
 SELECT * FROM album_rating_log
 WHERE user_id = ? AND album_id = ?
-ORDER BY created_at DESC
+ORDER BY created_at DESC, id DESC
 LIMIT 1;
 
 -- name: GetLatestUserAlbumRatings :many
 SELECT arl.* FROM album_rating_log arl
 JOIN (
-    SELECT arl2.album_id, MAX(arl2.created_at) AS max_created_at
+    SELECT arl2.album_id, MAX(arl2.id) AS max_id
     FROM album_rating_log arl2
     WHERE arl2.user_id = ?
+      AND (arl2.album_id, arl2.created_at) IN (
+          SELECT arl3.album_id, MAX(arl3.created_at)
+          FROM album_rating_log arl3
+          WHERE arl3.user_id = ?
+          GROUP BY arl3.album_id
+      )
     GROUP BY arl2.album_id
-) latest ON arl.album_id = latest.album_id AND arl.created_at = latest.max_created_at
+) latest ON arl.album_id = latest.album_id AND arl.id = latest.max_id
 WHERE arl.user_id = ?;
 
 -- name: GetUserAlbumRatingLog :many
 SELECT * FROM album_rating_log
 WHERE user_id = ? AND album_id = ?
-ORDER BY created_at DESC;
+ORDER BY created_at DESC, id DESC;
 
 -- name: GetUnratedAlbums :many
 SELECT albums.*,
