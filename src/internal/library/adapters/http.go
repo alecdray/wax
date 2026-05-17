@@ -96,7 +96,7 @@ func (h *HttpHandler) GetDashboardPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Honor URL query params on initial render so deep links + reloads
-	// reproduce the same view as HTMX-driven interactions (Task 1.5 / PC2).
+	// reproduce the same view as HTMX-driven interactions.
 	sortBy := r.URL.Query().Get("sortBy")
 	dir := r.URL.Query().Get("dir")
 	ascending := dir == "asc"
