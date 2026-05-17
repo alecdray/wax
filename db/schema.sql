@@ -145,21 +145,6 @@ CREATE TABLE album_tags (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, album_id, tag_id)
 );
-CREATE TABLE album_rating_state (
-    id             TEXT PRIMARY KEY,
-    user_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    album_id       TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
-    state          TEXT NOT NULL CHECK(state IN ('provisional', 'finalized', 'stalled')),
-    snooze_count   INTEGER NOT NULL DEFAULT 0,
-    next_rerate_at DATETIME CHECK(
-        (state = 'stalled' AND next_rerate_at IS NULL)
-        OR
-        (state != 'stalled' AND next_rerate_at IS NOT NULL)
-    ),
-    created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, album_id)
-);
 CREATE TABLE IF NOT EXISTS "user_releases" (
     id                 TEXT PRIMARY KEY,
     user_id            TEXT NOT NULL REFERENCES users(id)    ON DELETE CASCADE,
@@ -176,5 +161,14 @@ CREATE TABLE user_album_radar (
     user_id    TEXT NOT NULL REFERENCES users(id)  ON DELETE CASCADE,
     album_id   TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, album_id)
+);
+CREATE TABLE IF NOT EXISTS "album_rating_state" (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    album_id   TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+    state      TEXT NOT NULL CHECK(state IN ('provisional', 'finalized')),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, album_id)
 );

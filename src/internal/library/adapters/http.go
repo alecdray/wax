@@ -160,13 +160,13 @@ func (h *HttpHandler) GetCarousel(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		props.RegularAlbums = albums
-	case views.CarouselViewRerateDue:
-		albums, err := h.libraryService.GetRerateQueue(ctx, userId)
+	case views.CarouselViewProvisional:
+		albums, err := h.libraryService.GetProvisionalAlbums(ctx, userId)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		props.RerateAlbums = albums
+		props.ProvisionalAlbums = albums
 	default:
 		props.Active = views.CarouselViewRecentlyPlayed
 		albums, err := h.libraryService.GetRecentlyPlayedAlbums(ctx, userId)

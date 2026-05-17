@@ -38,6 +38,21 @@ func (h *HttpHandler) getAlbum(ctx contextx.ContextX, w http.ResponseWriter, use
 	return album, true
 }
 
+// scoreEntryPrefill returns the score to pre-fill on the score-entry form for
+// an album. The pre-fill comes from the most-recent rating-log entry; an album
+// with no log entries opens the form empty.
+func scoreEntryPrefill(album library.AlbumDTO) *float64 {
+	if album.Rating != nil && album.Rating.Rating != nil {
+		v := *album.Rating.Rating
+		return &v
+	}
+	return nil
+}
+
+// GetRatingRecommender opens the rating modal directly to the score-entry
+// form, regardless of the album's rating state. The score input is pre-filled
+// from the most-recent rating-log entry when one exists, or left empty for an
+// unrated album.
 func (h *HttpHandler) GetRatingRecommender(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())
 
@@ -58,21 +73,9 @@ func (h *HttpHandler) GetRatingRecommender(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	props := views.RatingModalProps{Album: *album}
-
-	if album.RatingState == nil {
-		props.ContentType = views.RatingModalContentQuestions
-		props.Mode = review.RatingModeProvisional
-	} else if album.RatingState.State == review.RatingStateFinalized {
-		props.ContentType = views.RatingModalContentConfirm
-		props.Mode = review.RatingModeFinalized
-		if album.Rating != nil {
-			props.Rating = album.Rating.Rating
-		}
-	} else {
-		props.ContentType = views.RatingModalContentReratePrompt
-		props.RerateIsDue = album.RatingState.IsRerateDue()
-		props.RerateIsStalled = album.RatingState.State == review.RatingStateStalled
+	props := views.RatingModalProps{
+		Album:  *album,
+		Rating: scoreEntryPrefill(*album),
 	}
 
 	if err := views.RatingModalFrag(props).Render(ctx, w); err != nil {
@@ -80,6 +83,9 @@ func (h *HttpHandler) GetRatingRecommender(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// GetRatingRecommenderQuestions renders the questionnaire fragment. The
+// optional priorRating query param carries the value currently sitting in the
+// score-entry form so dismissing the questionnaire can restore it.
 func (h *HttpHandler) GetRatingRecommenderQuestions(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())
 
@@ -94,7 +100,9 @@ func (h *HttpHandler) GetRatingRecommenderQuestions(w http.ResponseWriter, r *ht
 		mode = review.RatingModeProvisional
 	}
 
-	if err := views.BaseQuestionsFormFrag(albumID, mode, review.AllBaseQuestions).Render(ctx, w); err != nil {
+	priorRating := optionalFloatParam(r.URL.Query().Get("priorRating"))
+
+	if err := views.BaseQuestionsFormFrag(albumID, mode, review.AllBaseQuestions, priorRating).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }
@@ -162,6 +170,9 @@ func (h *HttpHandler) SubmitRatingRecommenderQuestions(w http.ResponseWriter, r 
 	}
 }
 
+// GetRatingConfirm re-renders the score-entry form with the supplied score
+// pre-filled. Used by the questionnaire's dismiss affordance (to restore the
+// prior pre-fill) and by the contradiction interstitial's proceed action.
 func (h *HttpHandler) GetRatingConfirm(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())
 
@@ -183,10 +194,15 @@ func (h *HttpHandler) GetRatingConfirm(w http.ResponseWriter, r *http.Request) {
 		mode = review.RatingModeProvisional
 	}
 
-	finalScore, err := strconv.ParseFloat(r.Form.Get("final_score"), 64)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("invalid final_score: %w", err)})
-		return
+	rawScore := r.Form.Get("final_score")
+	var ratingPtr *float64
+	if rawScore != "" {
+		v, err := strconv.ParseFloat(rawScore, 64)
+		if err != nil {
+			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("invalid final_score: %w", err)})
+			return
+		}
+		ratingPtr = &v
 	}
 
 	album, ok := h.getAlbum(ctx, w, userID, albumID)
@@ -194,11 +210,15 @@ func (h *HttpHandler) GetRatingConfirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := views.RatingConfirmFormFrag(*album, mode, &finalScore).Render(ctx, w); err != nil {
+	if err := views.RatingConfirmFormFrag(*album, mode, ratingPtr).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }
 
+// SubmitRatingRecommenderRating saves a new rating-log entry and leaves the
+// rating-state row's lifecycle value untouched. An unrated album implicitly
+// gets a provisional state row created on its first save; provisional and
+// finalized albums keep their current state value.
 func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())
 
@@ -219,9 +239,65 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 		return
 	}
 
-	mode := review.RatingMode(r.Form.Get("mode"))
-	if mode != review.RatingModeProvisional && mode != review.RatingModeFinalized {
-		mode = review.RatingModeProvisional
+	ratingVal, err := strconv.ParseFloat(r.Form.Get("rating"), 64)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("invalid rating: %w", err)})
+		return
+	}
+
+	note := r.Form.Get("note")
+	if len(note) > 2000 {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: errors.New("note exceeds 2000 character limit")})
+		return
+	}
+
+	currentState, err := h.reviewService.GetRatingState(ctx, userID, albumID)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
+		return
+	}
+
+	logState := review.RatingStateProvisional
+	if currentState != nil {
+		logState = currentState.State
+	}
+
+	if _, err := h.reviewService.AddRating(ctx, userID, albumID, ratingVal, note, logState); err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("failed to add rating: %w", err)})
+		return
+	}
+
+	if currentState == nil {
+		if _, err := h.reviewService.CreateRatingState(ctx, userID, albumID); err != nil {
+			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
+			return
+		}
+	}
+
+	h.renderRatingSaveResponse(ctx, w, userID, albumID)
+}
+
+// SubmitRatingRecommenderFinalize promotes a provisional album to finalized
+// in the same submission that saves the score from the score-entry form. The
+// route rejects calls on albums that are not currently provisional.
+func (h *HttpHandler) SubmitRatingRecommenderFinalize(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+
+	userID, err := ctx.UserId()
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: err})
+		return
+	}
+
+	albumID := r.URL.Query().Get("albumId")
+	if albumID == "" {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: errors.New("missing album ID")})
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: err})
+		return
 	}
 
 	ratingVal, err := strconv.ParseFloat(r.Form.Get("rating"), 64)
@@ -236,42 +312,21 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 		return
 	}
 
-	logState := review.RatingStateProvisional
-	if mode == review.RatingModeFinalized {
-		logState = review.RatingStateFinalized
-	}
-
-	albumRating, err := h.reviewService.AddRating(ctx, userID, albumID, ratingVal, note, logState)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("failed to add rating: %w", err)})
-		return
-	}
-	_ = albumRating
-
-	currentState, err := h.reviewService.GetRatingState(ctx, userID, albumID)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
+	if _, _, err := h.reviewService.FinalizeWithRating(ctx, userID, albumID, ratingVal, note); err != nil {
+		if errors.Is(err, review.ErrFinalizeRequiresProvisional) {
+			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: err})
+			return
+		}
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: fmt.Errorf("failed to finalize: %w", err)})
 		return
 	}
 
-	if mode == review.RatingModeFinalized {
-		if currentState == nil {
-			if _, err := h.reviewService.CreateRatingState(ctx, userID, albumID); err != nil {
-				httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-				return
-			}
-		}
-		if _, err := h.reviewService.FinalizeRating(ctx, userID, albumID, currentState); err != nil {
-			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-			return
-		}
-	} else if mode == review.RatingModeProvisional && currentState == nil {
-		if _, err := h.reviewService.CreateRatingState(ctx, userID, albumID); err != nil {
-			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-			return
-		}
-	}
+	h.renderRatingSaveResponse(ctx, w, userID, albumID)
+}
 
+// renderRatingSaveResponse emits the post-save OOB swap payload: close the
+// modal, then refresh every album surface that depends on the rating state.
+func (h *HttpHandler) renderRatingSaveResponse(ctx contextx.ContextX, w http.ResponseWriter, userID, albumID string) {
 	album, err := h.libraryService.GetAlbumInLibrary(ctx, userID, albumID)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("failed to get album: %w", err)})
@@ -295,42 +350,6 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 		return
 	}
 	if err := libViews.AlbumRowTagsSectionFrag(*album, true).Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-		return
-	}
-}
-
-func (h *HttpHandler) SnoozeRating(w http.ResponseWriter, r *http.Request) {
-	ctx := contextx.NewContextX(r.Context())
-
-	userID, err := ctx.UserId()
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: err})
-		return
-	}
-
-	albumID := r.URL.Query().Get("albumId")
-	if albumID == "" {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: errors.New("missing album ID")})
-		return
-	}
-
-	if _, err := h.reviewService.SnoozeRating(ctx, userID, albumID); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: fmt.Errorf("failed to snooze: %w", err)})
-		return
-	}
-
-	album, err := h.libraryService.GetAlbumInLibrary(ctx, userID, albumID)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: err})
-		return
-	}
-
-	if err := views.CloseRatingModalFrag().Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-		return
-	}
-	if err := libViews.AlbumScoreReadoutFrag(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
@@ -384,4 +403,17 @@ func (h *HttpHandler) DeleteRatingLogEntry(w http.ResponseWriter, r *http.Reques
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
+}
+
+// optionalFloatParam parses a query-string float that may be absent or empty;
+// returns nil when no value is supplied or the value fails to parse.
+func optionalFloatParam(raw string) *float64 {
+	if raw == "" {
+		return nil
+	}
+	v, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return nil
+	}
+	return &v
 }

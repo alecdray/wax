@@ -61,14 +61,12 @@ type AlbumRatingLog struct {
 }
 
 type AlbumRatingState struct {
-	ID           string
-	UserID       string
-	AlbumID      string
-	State        string
-	SnoozeCount  int64
-	NextRerateAt sql.NullTime
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID        string
+	UserID    string
+	AlbumID   string
+	State     string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type AlbumTag struct {

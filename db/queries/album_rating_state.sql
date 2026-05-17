@@ -1,11 +1,11 @@
 -- name: InsertAlbumRatingState :one
-INSERT INTO album_rating_state (id, user_id, album_id, state, snooze_count, next_rerate_at, created_at, updated_at)
-VALUES (?, ?, ?, ?, 0, ?, current_timestamp, current_timestamp)
+INSERT INTO album_rating_state (id, user_id, album_id, state, created_at, updated_at)
+VALUES (?, ?, ?, ?, current_timestamp, current_timestamp)
 RETURNING *;
 
 -- name: UpdateAlbumRatingState :one
 UPDATE album_rating_state
-SET state = ?, snooze_count = ?, next_rerate_at = ?, updated_at = current_timestamp
+SET state = ?, updated_at = current_timestamp
 WHERE user_id = ? AND album_id = ?
 RETURNING *;
 
@@ -17,7 +17,7 @@ WHERE user_id = ? AND album_id = ?;
 SELECT * FROM album_rating_state
 WHERE user_id = ?;
 
--- name: GetRerateQueueAlbums :many
+-- name: GetProvisionalAlbums :many
 SELECT
     albums.id,
     albums.spotify_id,
@@ -43,9 +43,5 @@ LEFT JOIN (
     WHERE arl2.user_id = ?
 ) arl ON arl.album_id = ars.album_id
 WHERE ars.user_id = ?
-  AND (
-    (ars.state = 'provisional' AND ars.next_rerate_at <= current_timestamp)
-    OR ars.state = 'stalled'
-  )
-ORDER BY CASE ars.state WHEN 'stalled' THEN 0 WHEN 'provisional' THEN 1 ELSE 2 END,
-         ars.next_rerate_at ASC;
+  AND ars.state = 'provisional'
+ORDER BY ars.updated_at ASC;

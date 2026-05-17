@@ -43,6 +43,12 @@ func NewDB(filepath string) (*DB, error) {
 	return db, nil
 }
 
+// WrapSqlDB builds a *DB around an already-open *sql.DB without running
+// migrations. Intended for tests that manage their own migration lifecycle.
+func WrapSqlDB(sqlDB *sql.DB) *DB {
+	return &DB{sql: sqlDB, queries: sqlc.New(sqlDB)}
+}
+
 func newDBWithTx(db DB, tx *sql.Tx) *DB {
 	queries := sqlc.New(tx)
 	db.queries = queries

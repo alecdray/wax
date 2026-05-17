@@ -323,9 +323,10 @@ func (r *Repo) GetUnratedAlbums(ctx context.Context, userID string) ([]AlbumSumm
 	return out, nil
 }
 
-// GetRerateQueue returns albums ready to be re-rated.
-func (r *Repo) GetRerateQueue(ctx context.Context, userID string) ([]RerateAlbumDTO, error) {
-	rows, err := r.q.GetRerateQueueAlbums(ctx, sqlc.GetRerateQueueAlbumsParams{
+// GetProvisionalAlbums returns every album in the user's library whose
+// rating-state row is currently `provisional`.
+func (r *Repo) GetProvisionalAlbums(ctx context.Context, userID string) ([]ProvisionalAlbumDTO, error) {
+	rows, err := r.q.GetProvisionalAlbums(ctx, sqlc.GetProvisionalAlbumsParams{
 		UserID:   userID,
 		UserID_2: userID,
 		UserID_3: userID,
@@ -333,9 +334,9 @@ func (r *Repo) GetRerateQueue(ctx context.Context, userID string) ([]RerateAlbum
 	if err != nil {
 		return nil, err
 	}
-	out := make([]RerateAlbumDTO, 0, len(rows))
+	out := make([]ProvisionalAlbumDTO, 0, len(rows))
 	for _, row := range rows {
-		dto := RerateAlbumDTO{
+		dto := ProvisionalAlbumDTO{
 			ID:          row.ID,
 			SpotifyID:   row.SpotifyID,
 			Title:       row.Title,

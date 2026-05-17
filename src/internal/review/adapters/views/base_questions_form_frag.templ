@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/review"
 	"strconv"
 )
@@ -28,18 +29,43 @@ templ baseQuestionFieldset(q review.BaseQuestion) {
 	</fieldset>
 }
 
-// BaseQuestionsFormFrag renders the base questions step.
-// mode is "provisional" or "finalized". albumId identifies the album.
-templ BaseQuestionsFormFrag(albumId string, mode review.RatingMode, questions review.BaseQuestions) {
+// dismissQuestionnaireHref returns to the score-entry form with the prior
+// pre-fill value restored. When the questionnaire was opened from an empty
+// score input, no value travels through and the form re-opens empty.
+func dismissQuestionnaireHref(albumId string, mode review.RatingMode, priorRating *float64) string {
+	if priorRating != nil {
+		return fmt.Sprintf("/app/review/rating-recommender/confirm?albumId=%s&mode=%s&final_score=%s", albumId, string(mode), strconv.FormatFloat(*priorRating, 'f', -1, 64))
+	}
+	return fmt.Sprintf("/app/review/rating-recommender/confirm?albumId=%s&mode=%s", albumId, string(mode))
+}
+
+// BaseQuestionsFormFrag renders the base questions step. priorRating carries
+// whatever value was sitting in the score-entry form when the questionnaire
+// was opened, so dismissing without submitting can restore it.
+templ BaseQuestionsFormFrag(albumId string, mode review.RatingMode, questions review.BaseQuestions, priorRating *float64) {
 	<form
 		data-testid="base-questions-form"
 		hx-post={ fmt.Sprintf("/app/review/rating-recommender/questions?albumId=%s&mode=%s", albumId, string(mode)) }
 		hx-swap="outerHTML"
 		class="flex flex-col gap-8"
 	>
+		<div class="flex justify-end">
+			<button
+				data-testid="base-questions-form-dismiss"
+				class="btn btn-ghost btn-sm btn-square text-base"
+				type="button"
+				title="Back to score entry"
+				hx-get={ dismissQuestionnaireHref(albumId, mode, priorRating) }
+				hx-target="closest form"
+				hx-swap="outerHTML"
+			>
+				@templates.Icon(templates.IconProps{Name: "arrow-left"})
+			</button>
+		</div>
 		for _, q := range questions {
 			@baseQuestionFieldset(q)
 		}
 		<button class="btn btn-primary btn-sm" type="submit" data-testid="base-questions-form-submit">Next</button>
 	</form>
 }
+

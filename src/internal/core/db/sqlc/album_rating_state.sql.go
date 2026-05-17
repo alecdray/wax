@@ -11,7 +11,7 @@ import (
 )
 
 const getAlbumRatingState = `-- name: GetAlbumRatingState :one
-SELECT id, user_id, album_id, state, snooze_count, next_rerate_at, created_at, updated_at FROM album_rating_state
+SELECT id, user_id, album_id, state, created_at, updated_at FROM album_rating_state
 WHERE user_id = ? AND album_id = ?
 `
 
@@ -28,8 +28,6 @@ func (q *Queries) GetAlbumRatingState(ctx context.Context, arg GetAlbumRatingSta
 		&i.UserID,
 		&i.AlbumID,
 		&i.State,
-		&i.SnoozeCount,
-		&i.NextRerateAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -37,7 +35,7 @@ func (q *Queries) GetAlbumRatingState(ctx context.Context, arg GetAlbumRatingSta
 }
 
 const getAllAlbumRatingStates = `-- name: GetAllAlbumRatingStates :many
-SELECT id, user_id, album_id, state, snooze_count, next_rerate_at, created_at, updated_at FROM album_rating_state
+SELECT id, user_id, album_id, state, created_at, updated_at FROM album_rating_state
 WHERE user_id = ?
 `
 
@@ -55,8 +53,6 @@ func (q *Queries) GetAllAlbumRatingStates(ctx context.Context, userID string) ([
 			&i.UserID,
 			&i.AlbumID,
 			&i.State,
-			&i.SnoozeCount,
-			&i.NextRerateAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -73,7 +69,7 @@ func (q *Queries) GetAllAlbumRatingStates(ctx context.Context, userID string) ([
 	return items, nil
 }
 
-const getRerateQueueAlbums = `-- name: GetRerateQueueAlbums :many
+const getProvisionalAlbums = `-- name: GetProvisionalAlbums :many
 SELECT
     albums.id,
     albums.spotify_id,
@@ -99,21 +95,17 @@ LEFT JOIN (
     WHERE arl2.user_id = ?
 ) arl ON arl.album_id = ars.album_id
 WHERE ars.user_id = ?
-  AND (
-    (ars.state = 'provisional' AND ars.next_rerate_at <= current_timestamp)
-    OR ars.state = 'stalled'
-  )
-ORDER BY CASE ars.state WHEN 'stalled' THEN 0 WHEN 'provisional' THEN 1 ELSE 2 END,
-         ars.next_rerate_at ASC
+  AND ars.state = 'provisional'
+ORDER BY ars.updated_at ASC
 `
 
-type GetRerateQueueAlbumsParams struct {
+type GetProvisionalAlbumsParams struct {
 	UserID   string
 	UserID_2 string
 	UserID_3 string
 }
 
-type GetRerateQueueAlbumsRow struct {
+type GetProvisionalAlbumsRow struct {
 	ID          string
 	SpotifyID   string
 	Title       string
@@ -123,15 +115,15 @@ type GetRerateQueueAlbumsRow struct {
 	Rating      float64
 }
 
-func (q *Queries) GetRerateQueueAlbums(ctx context.Context, arg GetRerateQueueAlbumsParams) ([]GetRerateQueueAlbumsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getRerateQueueAlbums, arg.UserID, arg.UserID_2, arg.UserID_3)
+func (q *Queries) GetProvisionalAlbums(ctx context.Context, arg GetProvisionalAlbumsParams) ([]GetProvisionalAlbumsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getProvisionalAlbums, arg.UserID, arg.UserID_2, arg.UserID_3)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetRerateQueueAlbumsRow
+	var items []GetProvisionalAlbumsRow
 	for rows.Next() {
-		var i GetRerateQueueAlbumsRow
+		var i GetProvisionalAlbumsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.SpotifyID,
@@ -155,17 +147,16 @@ func (q *Queries) GetRerateQueueAlbums(ctx context.Context, arg GetRerateQueueAl
 }
 
 const insertAlbumRatingState = `-- name: InsertAlbumRatingState :one
-INSERT INTO album_rating_state (id, user_id, album_id, state, snooze_count, next_rerate_at, created_at, updated_at)
-VALUES (?, ?, ?, ?, 0, ?, current_timestamp, current_timestamp)
-RETURNING id, user_id, album_id, state, snooze_count, next_rerate_at, created_at, updated_at
+INSERT INTO album_rating_state (id, user_id, album_id, state, created_at, updated_at)
+VALUES (?, ?, ?, ?, current_timestamp, current_timestamp)
+RETURNING id, user_id, album_id, state, created_at, updated_at
 `
 
 type InsertAlbumRatingStateParams struct {
-	ID           string
-	UserID       string
-	AlbumID      string
-	State        string
-	NextRerateAt sql.NullTime
+	ID      string
+	UserID  string
+	AlbumID string
+	State   string
 }
 
 func (q *Queries) InsertAlbumRatingState(ctx context.Context, arg InsertAlbumRatingStateParams) (AlbumRatingState, error) {
@@ -174,7 +165,6 @@ func (q *Queries) InsertAlbumRatingState(ctx context.Context, arg InsertAlbumRat
 		arg.UserID,
 		arg.AlbumID,
 		arg.State,
-		arg.NextRerateAt,
 	)
 	var i AlbumRatingState
 	err := row.Scan(
@@ -182,8 +172,6 @@ func (q *Queries) InsertAlbumRatingState(ctx context.Context, arg InsertAlbumRat
 		&i.UserID,
 		&i.AlbumID,
 		&i.State,
-		&i.SnoozeCount,
-		&i.NextRerateAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -192,35 +180,25 @@ func (q *Queries) InsertAlbumRatingState(ctx context.Context, arg InsertAlbumRat
 
 const updateAlbumRatingState = `-- name: UpdateAlbumRatingState :one
 UPDATE album_rating_state
-SET state = ?, snooze_count = ?, next_rerate_at = ?, updated_at = current_timestamp
+SET state = ?, updated_at = current_timestamp
 WHERE user_id = ? AND album_id = ?
-RETURNING id, user_id, album_id, state, snooze_count, next_rerate_at, created_at, updated_at
+RETURNING id, user_id, album_id, state, created_at, updated_at
 `
 
 type UpdateAlbumRatingStateParams struct {
-	State        string
-	SnoozeCount  int64
-	NextRerateAt sql.NullTime
-	UserID       string
-	AlbumID      string
+	State   string
+	UserID  string
+	AlbumID string
 }
 
 func (q *Queries) UpdateAlbumRatingState(ctx context.Context, arg UpdateAlbumRatingStateParams) (AlbumRatingState, error) {
-	row := q.db.QueryRowContext(ctx, updateAlbumRatingState,
-		arg.State,
-		arg.SnoozeCount,
-		arg.NextRerateAt,
-		arg.UserID,
-		arg.AlbumID,
-	)
+	row := q.db.QueryRowContext(ctx, updateAlbumRatingState, arg.State, arg.UserID, arg.AlbumID)
 	var i AlbumRatingState
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.AlbumID,
 		&i.State,
-		&i.SnoozeCount,
-		&i.NextRerateAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

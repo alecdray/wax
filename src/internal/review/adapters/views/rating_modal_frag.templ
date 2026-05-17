@@ -8,42 +8,19 @@ import (
 
 const RatingModalId = "rating-modal"
 
-type RatingModalContent int
-
-const (
-	RatingModalContentQuestions    RatingModalContent = iota
-	RatingModalContentReratePrompt RatingModalContent = iota
-	RatingModalContentConfirm      RatingModalContent = iota
-)
-
+// RatingModalProps is the input to the modal entry-point. The modal always
+// opens to the score-entry form; Rating carries the value to pre-fill on the
+// score input (nil for an unrated album).
 type RatingModalProps struct {
-	Album           library.AlbumDTO
-	Mode            review.RatingMode
-	Rating          *float64
-	ContentType     RatingModalContent
-	RerateIsDue     bool
-	RerateIsStalled bool
+	Album  library.AlbumDTO
+	Mode   review.RatingMode
+	Rating *float64
 }
 
 templ RatingModalFrag(props RatingModalProps) {
-	switch props.ContentType {
-	case RatingModalContentQuestions:
-		@templates.Modal(RatingModalId, templates.ModalProps{
-			ModalContent: BaseQuestionsFormFrag(props.Album.ID, props.Mode, review.AllBaseQuestions),
-		})
-	case RatingModalContentReratePrompt:
-		@templates.Modal(RatingModalId, templates.ModalProps{
-			ModalContent: ReratePromptFrag(ReratePromptProps{
-				Album:     props.Album,
-				IsDue:     props.RerateIsDue,
-				IsStalled: props.RerateIsStalled,
-			}),
-		})
-	default:
-		@templates.Modal(RatingModalId, templates.ModalProps{
-			ModalContent: RatingConfirmFormFrag(props.Album, props.Mode, props.Rating),
-		})
-	}
+	@templates.Modal(RatingModalId, templates.ModalProps{
+		ModalContent: RatingConfirmFormFrag(props.Album, props.Mode, props.Rating),
+	})
 }
 
 templ CloseRatingModalFrag() {

@@ -17,7 +17,7 @@ func ratingLabelTagClass(album library.AlbumDTO) string {
 	if album.RatingState != nil && album.RatingState.State == "finalized" {
 		return "badge badge-sm badge-soft badge-primary text-xs text-nowrap"
 	}
-	return "badge badge-sm badge-soft badge-ghost text-xs text-nowrap text-muted"
+	return "badge badge-sm badge-soft badge-ghost text-xs text-nowrap"
 }
 
 templ AlbumRowTagsSectionFrag(album library.AlbumDTO, isOOB bool) {

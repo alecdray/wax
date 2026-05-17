@@ -11,13 +11,13 @@ type CarouselView string
 const (
 	CarouselViewRecentlyPlayed CarouselView = "recently-played"
 	CarouselViewUnrated        CarouselView = "unrated"
-	CarouselViewRerateDue      CarouselView = "rerate-due"
+	CarouselViewProvisional    CarouselView = "provisional"
 )
 
 type CarouselSectionProps struct {
-	RegularAlbums []library.AlbumSummaryDTO
-	RerateAlbums  []library.RerateAlbumDTO
-	Active        CarouselView
+	RegularAlbums     []library.AlbumSummaryDTO
+	ProvisionalAlbums []library.ProvisionalAlbumDTO
+	Active            CarouselView
 }
 
 templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
@@ -79,16 +79,18 @@ templ carouselCardInner(album library.AlbumSummaryDTO) {
 	}
 }
 
-templ rerateCarouselStrip(albums []library.RerateAlbumDTO) {
+templ provisionalCarouselStrip(albums []library.ProvisionalAlbumDTO) {
 	if len(albums) == 0 {
-		<div data-testid="rerate-carousel-strip-empty" class="px-4 py-4 text-xs text-subtle">No albums due for rerate</div>
+		<div data-testid="provisional-carousel-strip-empty" class="px-4 py-4 text-xs text-subtle">No provisional albums</div>
 	} else {
-		<div data-testid="rerate-carousel-strip" class="carousel carousel-end gap-3 px-4 py-2 w-full overscroll-x-none">
+		<div data-testid="provisional-carousel-strip" class="carousel carousel-end gap-3 px-4 py-2 w-full overscroll-x-none">
 			for _, album := range albums {
 				<div class="carousel-item">
 					<a
 						href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) }
 						class="flex flex-col items-center gap-1 hover-fade-out w-26"
+						data-testid="provisional-carousel-strip-album-card"
+						data-album-id={ album.ID }
 					>
 						if album.ImageURL != "" {
 							<div class="avatar">
@@ -139,20 +141,20 @@ templ CarouselSectionFrag(props CarouselSectionProps) {
 			>Unrated</button>
 			<span class="text-ghost cursor-default">|</span>
 			<button
-				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-default", props.Active == CarouselViewRerateDue), templ.KV("text-default hover-fade-in cursor-pointer", props.Active != CarouselViewRerateDue) }
-				if props.Active != CarouselViewRerateDue {
-					hx-get="/app/library/dashboard/carousel?view=rerate-due"
+				class={ "text-xs font-semibold uppercase tracking-widest transition-colors", templ.KV("text-default", props.Active == CarouselViewProvisional), templ.KV("text-default hover-fade-in cursor-pointer", props.Active != CarouselViewProvisional) }
+				if props.Active != CarouselViewProvisional {
+					hx-get="/app/library/dashboard/carousel?view=provisional"
 					hx-target="#carousel-section"
 					hx-swap="outerHTML"
 				}
-				data-testid="carousel-section-rerate-due-tab"
-			>Rerate Due</button>
+				data-testid="carousel-section-provisional-tab"
+			>Provisional</button>
 		</div>
 		switch props.Active {
 		case CarouselViewUnrated:
 			@carouselStrip(props.RegularAlbums, "No unrated albums in your library")
-		case CarouselViewRerateDue:
-			@rerateCarouselStrip(props.RerateAlbums)
+		case CarouselViewProvisional:
+			@provisionalCarouselStrip(props.ProvisionalAlbums)
 		default:
 			@carouselStrip(props.RegularAlbums, "No recently played albums")
 		}

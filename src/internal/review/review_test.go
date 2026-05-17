@@ -1,9 +1,17 @@
 package review
 
 import (
+	"context"
+	"database/sql"
+	"errors"
 	"math"
+	"path/filepath"
 	"testing"
-	"time"
+
+	"github.com/alecdray/wax/src/internal/core/db"
+	"github.com/pressly/goose/v3"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // --- BaseQuestions.Score ---
@@ -163,118 +171,108 @@ func TestGetRatingLabel_MidRangeFloat_NoGap(t *testing.T) {
 	}
 }
 
-// --- RatingStateDTO.IsRerateDue ---
+// --- RatingStateLogLabel ---
 
-func TestIsRerateDue(t *testing.T) {
-	now := time.Now()
-
-	t.Run("returns true when NextRerateAt is in the past", func(t *testing.T) {
-		past := now.Add(-1 * time.Hour)
-		state := RatingStateDTO{
-			NextRerateAt: &past,
+func TestRatingStateLogLabel(t *testing.T) {
+	cases := []struct {
+		in   RatingState
+		want string
+	}{
+		{RatingStateProvisional, "Provisional"},
+		{RatingStateFinalized, "Finalized"},
+		{"stalled", "Stalled"},
+	}
+	for _, tc := range cases {
+		got := RatingStateLogLabel(tc.in)
+		if got != tc.want {
+			t.Errorf("RatingStateLogLabel(%q) = %q, want %q", tc.in, got, tc.want)
 		}
-		if !state.IsRerateDue() {
-			t.Error("expected true, got false")
-		}
-	})
-
-	t.Run("returns false when NextRerateAt is nil", func(t *testing.T) {
-		state := RatingStateDTO{
-			NextRerateAt: nil,
-		}
-		if state.IsRerateDue() {
-			t.Error("expected false, got true")
-		}
-	})
-
-	t.Run("returns false when NextRerateAt is in the future", func(t *testing.T) {
-		future := now.Add(1 * time.Hour)
-		state := RatingStateDTO{
-			NextRerateAt: &future,
-		}
-		if state.IsRerateDue() {
-			t.Error("expected false, got true")
-		}
-	})
+	}
 }
 
-// --- NextRerateTime ---
+// --- FinalizeWithRating ---
 
-func TestNextRerateTime(t *testing.T) {
-	t.Run("returns nil when snoozeCount >= MaxSnoozeCount", func(t *testing.T) {
-		for snoozeCount := MaxSnoozeCount; snoozeCount <= MaxSnoozeCount+2; snoozeCount++ {
-			result := NextRerateTime(snoozeCount)
-			if result != nil {
-				t.Errorf("snoozeCount=%d: expected nil, got %v", snoozeCount, result)
-			}
-		}
-	})
+func TestFinalizeWithRating_PromotesProvisionalAndWritesLog(t *testing.T) {
+	svc, sqlDB := newTestService(t)
+	ctx := context.Background()
 
-	t.Run("returns non-nil time for counts less than MaxSnoozeCount", func(t *testing.T) {
-		for snoozeCount := 0; snoozeCount < MaxSnoozeCount; snoozeCount++ {
-			result := NextRerateTime(snoozeCount)
-			if result == nil {
-				t.Errorf("snoozeCount=%d: expected non-nil, got nil", snoozeCount)
-			}
-		}
-	})
+	seedUserAndAlbum(t, sqlDB, "user-1", "album-1")
+	if _, err := svc.CreateRatingState(ctx, "user-1", "album-1"); err != nil {
+		t.Fatalf("seed provisional state: %v", err)
+	}
 
-	t.Run("returned time is approximately RerateCycleDuration in the future", func(t *testing.T) {
-		before := time.Now()
-		result := NextRerateTime(0)
-		after := time.Now()
+	logEntry, newState, err := svc.FinalizeWithRating(ctx, "user-1", "album-1", 7.4, "")
+	if err != nil {
+		t.Fatalf("FinalizeWithRating: %v", err)
+	}
+	if logEntry == nil || logEntry.Rating == nil || *logEntry.Rating != 7.4 {
+		t.Fatalf("expected log entry with rating 7.4, got %+v", logEntry)
+	}
+	if newState == nil || newState.State != RatingStateFinalized {
+		t.Fatalf("expected state to be finalized, got %+v", newState)
+	}
 
-		if result == nil {
-			t.Fatal("expected non-nil result")
-		}
+	log, err := svc.GetRatingLog(ctx, "user-1", "album-1")
+	if err != nil {
+		t.Fatalf("read log: %v", err)
+	}
+	if len(log) != 1 {
+		t.Fatalf("expected exactly one log row, got %d", len(log))
+	}
 
-		expectedMin := before.Add(RerateCycleDuration)
-		expectedMax := after.Add(RerateCycleDuration)
-
-		if result.Before(expectedMin) || result.After(expectedMax) {
-			t.Errorf("returned time %v not in expected range [%v, %v]", result, expectedMin, expectedMax)
-		}
-	})
+	st, err := svc.GetRatingState(ctx, "user-1", "album-1")
+	if err != nil {
+		t.Fatalf("read state: %v", err)
+	}
+	if st == nil || st.State != RatingStateFinalized {
+		t.Fatalf("expected finalized state, got %+v", st)
+	}
 }
 
-// --- StateAfterSnooze ---
+func TestFinalizeWithRating_RejectsUnratedAlbum(t *testing.T) {
+	svc, sqlDB := newTestService(t)
+	ctx := context.Background()
 
-func TestStateAfterSnooze(t *testing.T) {
-	t.Run("returns Stalled when snooze would hit max", func(t *testing.T) {
-		state := RatingStateDTO{
-			State:       RatingStateProvisional,
-			SnoozeCount: MaxSnoozeCount - 1,
-		}
-		result := StateAfterSnooze(state)
-		if result != RatingStateStalled {
-			t.Errorf("expected %q, got %q", RatingStateStalled, result)
-		}
-	})
+	seedUserAndAlbum(t, sqlDB, "user-1", "album-1")
 
-	t.Run("returns same state when below snooze threshold", func(t *testing.T) {
-		tests := []struct {
-			name        string
-			state       RatingState
-			snoozeCount int
-		}{
-			{"Provisional with count 0", RatingStateProvisional, 0},
-			{"Provisional with count 1", RatingStateProvisional, 1},
-			{"Finalized with count 0", RatingStateFinalized, 0},
-			{"Finalized with count 1", RatingStateFinalized, 1},
-		}
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				state := RatingStateDTO{
-					State:       tt.state,
-					SnoozeCount: tt.snoozeCount,
-				}
-				result := StateAfterSnooze(state)
-				if result != tt.state {
-					t.Errorf("expected %q, got %q", tt.state, result)
-				}
-			})
-		}
-	})
+	_, _, err := svc.FinalizeWithRating(ctx, "user-1", "album-1", 5.0, "")
+	if !errors.Is(err, ErrFinalizeRequiresProvisional) {
+		t.Fatalf("expected ErrFinalizeRequiresProvisional, got %v", err)
+	}
+
+	log, err := svc.GetRatingLog(ctx, "user-1", "album-1")
+	if err != nil {
+		t.Fatalf("read log: %v", err)
+	}
+	if len(log) != 0 {
+		t.Fatalf("expected no log rows written on rejected finalize, got %d", len(log))
+	}
+}
+
+func TestFinalizeWithRating_RejectsAlreadyFinalizedAlbum(t *testing.T) {
+	svc, sqlDB := newTestService(t)
+	ctx := context.Background()
+
+	seedUserAndAlbum(t, sqlDB, "user-1", "album-1")
+	if _, err := svc.CreateRatingState(ctx, "user-1", "album-1"); err != nil {
+		t.Fatalf("seed provisional state: %v", err)
+	}
+	if _, err := svc.FinalizeRating(ctx, "user-1", "album-1"); err != nil {
+		t.Fatalf("promote to finalized: %v", err)
+	}
+
+	_, _, err := svc.FinalizeWithRating(ctx, "user-1", "album-1", 8.0, "")
+	if !errors.Is(err, ErrFinalizeRequiresProvisional) {
+		t.Fatalf("expected ErrFinalizeRequiresProvisional, got %v", err)
+	}
+
+	log, err := svc.GetRatingLog(ctx, "user-1", "album-1")
+	if err != nil {
+		t.Fatalf("read log: %v", err)
+	}
+	if len(log) != 0 {
+		t.Fatalf("expected no log rows written on rejected finalize, got %d", len(log))
+	}
 }
 
 // helpers
@@ -283,4 +281,41 @@ func allQuestions() BaseQuestions {
 	qs := make(BaseQuestions, len(AllBaseQuestions))
 	copy(qs, AllBaseQuestions)
 	return qs
+}
+
+// newTestService opens a fresh sqlite DB, applies every migration in the repo,
+// and returns a Service plus the raw *sql.DB for fixture seeding.
+func newTestService(t *testing.T) (*Service, *sql.DB) {
+	t.Helper()
+
+	migrationsDir, err := filepath.Abs("../../../db/migrations")
+	if err != nil {
+		t.Fatalf("resolve migrations dir: %v", err)
+	}
+
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	sqlDB, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	t.Cleanup(func() { sqlDB.Close() })
+
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		t.Fatalf("set dialect: %v", err)
+	}
+	if err := goose.Up(sqlDB, migrationsDir); err != nil {
+		t.Fatalf("goose up: %v", err)
+	}
+
+	return NewService(db.WrapSqlDB(sqlDB)), sqlDB
+}
+
+func seedUserAndAlbum(t *testing.T, sqlDB *sql.DB, userID, albumID string) {
+	t.Helper()
+	if _, err := sqlDB.Exec(`INSERT INTO users (id, spotify_id) VALUES (?, ?)`, userID, "spotify-"+userID); err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
+	if _, err := sqlDB.Exec(`INSERT INTO albums (id, spotify_id, title) VALUES (?, ?, ?)`, albumID, "spotify-"+albumID, "Album "+albumID); err != nil {
+		t.Fatalf("seed album: %v", err)
+	}
 }
