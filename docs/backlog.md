@@ -14,11 +14,11 @@ Drop the time-based aspects of the review flow — let the user manually move an
 
 Next: spec the state transitions (including what happens to any existing time-based metadata) and decide whether the Q-and-A path is removed entirely or kept as opt-in.
 
-## Add a clear button to discover search bar
+## Discover results panel doesn't actually scroll
 
-The discover search bar has no one-click clear, so resetting the query means manually deleting characters.
+The Discover results panel (`#discover-results` in `src/internal/library/adapters/views/discover_page.templ`) is wrapped in a flex chain (`h-dvh` ancestor + nested `flex-1 min-h-0 overflow-y-auto`) that computes to `overflow: visible` with `scrollHeight === clientHeight` at every viewport tested — so the whole page scrolls instead of the panel. The htmx `hx-swap="innerHTML scroll:#discover-results:top"` directive still runs and sets `scrollTop = 0` on the target (PR #28's PC1 scenario forces overflow inline-style to verify this wire contract), but the user-visible effect is masked. Surfaced during the search-clear build's integration tests.
 
-Next: add a clear (×) affordance inside the search input that empties the query and re-runs the search.
+Next: pick one — either fix the flex chain so the panel actually scrolls within the viewport, or drop the `scroll:#discover-results:top` directive (and the corresponding PC1 scenario) since it's a no-op today.
 
 ## Rethink tagging system
 
