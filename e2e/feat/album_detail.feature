@@ -41,5 +41,5 @@ Feature: Album Detail Page
 
   Scenario: Back navigation to the dashboard
     Given a logged-in user on an album detail page
-    When they click the back link in the header
+    When they click the back link
     Then they are returned to the library dashboard
