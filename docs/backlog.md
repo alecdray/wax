@@ -14,12 +14,6 @@ Drop the time-based aspects of the review flow — let the user manually move an
 
 Next: spec the state transitions (including what happens to any existing time-based metadata) and decide whether the Q-and-A path is removed entirely or kept as opt-in.
 
-## Add a clear button to discover search bar
-
-The discover search bar has no one-click clear, so resetting the query means manually deleting characters.
-
-Next: add a clear (×) affordance inside the search input that empties the query and re-runs the search.
-
 ## Rethink tagging system
 
 The current tagging system isn't pulling its weight and needs a rethink. No replacement design yet — fully open.
