@@ -37,6 +37,7 @@ Full rules: [`docs/design/`](../docs/design/).
 - Worktrees don't have a `.env` — copy from the main project: `cp /Users/shmoopy/workshop/projects/wax/.env .env`
 - Also run `npm install` in the worktree before `task dev` if `node_modules` is missing
 - Copy the DB from the main project to avoid 500s from missing users: `cp /Users/shmoopy/workshop/projects/wax/tmp/db.sql ./tmp/db.sql`
+- `main` is protected — direct pushes are rejected. All changes (including docs-only) must land via PR. Use `/gh-pr` after committing.
 
 ## Testing
 
