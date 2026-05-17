@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../helpers/auth';
+import {
+  clearAllRatingStates,
+  getLibraryAlbumIds,
+  setRatingStateValue,
+} from '../helpers/db';
 
 // Scenarios from e2e/feat/library.feature
 
@@ -62,6 +67,66 @@ test('Switching the carousel to Unrated', async ({ context, page }) => {
 
   // After the HTMX swap the unrated tab becomes active (loses its hx-get trigger)
   await expect(page.getByTestId('carousel-section-unrated-tab')).not.toHaveAttribute('hx-get');
+});
+
+test('Switching the carousel to Provisional lists only provisional albums', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  // Position the user's library so exactly one album is provisional and one is
+  // finalized — the Provisional tab must list the first and not the second.
+  const albumIds = getLibraryAlbumIds(userId!);
+  expect(albumIds.length, 'fixture user must own at least two albums').toBeGreaterThanOrEqual(2);
+  const provisionalId = albumIds[0];
+  const finalizedId = albumIds[1];
+
+  clearAllRatingStates(userId!);
+  setRatingStateValue(userId!, provisionalId, 'provisional');
+  setRatingStateValue(userId!, finalizedId, 'finalized');
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/dashboard');
+
+  await page.getByTestId('carousel-section-provisional-tab').click();
+  // Active tab loses its hx-get trigger after the swap.
+  await expect(page.getByTestId('carousel-section-provisional-tab')).not.toHaveAttribute('hx-get');
+
+  // The provisional strip is visible and contains exactly the provisional
+  // album's card — the finalized album must not appear, and no unrated album
+  // (no state row) may slip in either.
+  const strip = page.getByTestId('provisional-carousel-strip');
+  await expect(strip).toBeVisible();
+  const cards = strip.getByTestId('provisional-carousel-strip-album-card');
+  const cardCount = await cards.count();
+  expect(cardCount, 'provisional strip must contain at least one album card').toBeGreaterThan(0);
+  const cardAlbumIds: string[] = [];
+  for (let i = 0; i < cardCount; i++) {
+    const id = await cards.nth(i).getAttribute('data-album-id');
+    expect(id, `card ${i} must declare its album id`).toBeTruthy();
+    cardAlbumIds.push(id!);
+  }
+  expect(cardAlbumIds, 'provisional strip must contain the provisional album').toContain(provisionalId);
+  expect(cardAlbumIds, 'provisional strip must not contain the finalized album').not.toContain(finalizedId);
+});
+
+test('Provisional carousel empty state is neutral when no provisional albums exist', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  // Wipe every rating-state row so no album in the library is provisional.
+  clearAllRatingStates(userId!);
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/dashboard');
+
+  await page.getByTestId('carousel-section-provisional-tab').click();
+  await expect(page.getByTestId('carousel-section-provisional-tab')).not.toHaveAttribute('hx-get');
+
+  // Neutral empty state — present, not celebratory. The strip must be absent.
+  await expect(page.getByTestId('provisional-carousel-strip-empty')).toBeVisible();
+  await expect(page.getByTestId('provisional-carousel-strip')).toHaveCount(0);
+  const emptyText = (await page.getByTestId('provisional-carousel-strip-empty').innerText()).toLowerCase();
+  for (const banned of ['caught up', 'all done', 'great job', 'nice work', ' woo', 'congrat']) {
+    expect(emptyText, `empty-state message must be neutral; found "${banned}" in: ${emptyText}`).not.toContain(banned);
+  }
 });
 
 // --- Unified search bar ---

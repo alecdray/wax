@@ -30,13 +30,6 @@ type RatingStateDTO struct {
 	LastRatedAt time.Time
 }
 
-// IsRerateDue reports whether the album is currently due for a rerate. The
-// live system no longer schedules rerates on a time basis, so this always
-// returns false; callers that branch on it become no-ops.
-func (s RatingStateDTO) IsRerateDue() bool {
-	return false
-}
-
 // AlbumRatingDTO is one entry in a user's rating log for an album. The State
 // field — when non-nil — captures the lifecycle value recorded at the time
 // the log entry was written. Historical entries may carry values no longer

@@ -32,6 +32,17 @@ Feature: Library Dashboard
     When they click the Unrated carousel tab
     Then the carousel reloads showing the Unrated view
 
+  Scenario: Switching the carousel to Provisional lists only provisional albums
+    Given a logged-in user on the dashboard with at least one provisional album and at least one finalized album
+    When they click the Provisional carousel tab
+    Then the carousel reloads showing the Provisional view
+    And every album shown in the strip has a provisional rating state
+
+  Scenario: Provisional carousel empty state is neutral when no provisional albums exist
+    Given a logged-in user on the dashboard with no provisional albums
+    When they click the Provisional carousel tab
+    Then the carousel reloads showing a neutral empty-state message
+
   Scenario: Unified search bar replaces the chip-modal bar
     Given a logged-in user on the dashboard
     Then the unified search bar is visible above the album list

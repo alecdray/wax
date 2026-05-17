@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../helpers/auth';
-import { resetAlbumRating, seedRatingLogEntry, setRatingStateValue } from '../helpers/db';
+import {
+  getAlbumTitle,
+  resetAlbumRating,
+  seedRatingLogEntry,
+  setRatingStateValue,
+} from '../helpers/db';
 
 // Scenarios from e2e/feat/reviews.feature
 
@@ -400,4 +405,79 @@ test('Deleting the only rating entry clears the album rating', async ({ context,
   await deleteEntry(page);
 
   await expect(page.getByTestId('album-rating-history-entry')).toHaveCount(0);
+});
+
+// --- Score-readout icon scheme ---
+//
+// The dashboard list view's score-readout cell shows a `pen` icon when the
+// album is provisional, and no status icon for finalized or unrated albums.
+// Locates the readout via the page-scoped data-testid (rated vs unrated) for
+// the fixture album, then asserts the status-icon child.
+
+async function gotoDashboardAndFindRow(page: any, albumId: string) {
+  // Filter the list down to rows whose title contains the album's exact title
+  // — for the fixture album that collapses the visible set to exactly one row
+  // (the test album's own row), which we then return for in-row assertions.
+  const title = getAlbumTitle(albumId);
+  expect(title, `album ${albumId} must exist in the DB`).toBeTruthy();
+  await page.goto(`/app/library/dashboard?q=${encodeURIComponent(title)}`);
+  await expect(page.getByTestId('albums-list')).toBeVisible();
+  const row = page.getByTestId('album-list-row').first();
+  await expect(row, `album ${albumId} must render in the filtered list`).toBeVisible();
+  return row;
+}
+
+test('Score readout shows the pen icon for a provisional album', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
+
+  // Position the fixture album as provisional with a real rating-log entry so
+  // the rated readout is rendered (not the unrated one).
+  resetAlbumRating(userId!, albumId!);
+  seedRatingLogEntry(userId!, albumId!, 6.5);
+  setRatingStateValue(userId!, albumId!, 'provisional');
+
+  await loginAs(context, userId!);
+  const row = await gotoDashboardAndFindRow(page, albumId!);
+
+  const readout = row.getByTestId('album-score-readout-rated');
+  await expect(readout).toBeVisible();
+  const stateIcon = readout.getByTestId('album-score-readout-state-icon');
+  await expect(stateIcon).toBeVisible();
+  // The wrapper carries data-icon-name set from the templ's ratingStateIcon
+  // selector — asserting on it pins the icon-scheme contract to a stable,
+  // test-only attribute (vs the BI class set, which would tie the test to
+  // the primitive's internal class shape).
+  await expect(stateIcon).toHaveAttribute('data-icon-name', 'pen');
+});
+
+test('Score readout shows no status icon for a finalized album', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
+
+  resetAlbumRating(userId!, albumId!);
+  seedRatingLogEntry(userId!, albumId!, 8.0);
+  setRatingStateValue(userId!, albumId!, 'finalized');
+
+  await loginAs(context, userId!);
+  const row = await gotoDashboardAndFindRow(page, albumId!);
+
+  const readout = row.getByTestId('album-score-readout-rated');
+  await expect(readout).toBeVisible();
+  await expect(readout.getByTestId('album-score-readout-state-icon')).toHaveCount(0);
+});
+
+test('Score readout shows no status icon for an unrated album', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
+
+  // Wipe both the log and the state row so the unrated readout is rendered.
+  resetAlbumRating(userId!, albumId!);
+
+  await loginAs(context, userId!);
+  const row = await gotoDashboardAndFindRow(page, albumId!);
+
+  const readout = row.getByTestId('album-score-readout-unrated');
+  await expect(readout).toBeVisible();
+  await expect(readout.getByTestId('album-score-readout-state-icon')).toHaveCount(0);
 });

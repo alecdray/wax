@@ -17,7 +17,7 @@ WHERE user_id = ? AND album_id = ?;
 SELECT * FROM album_rating_state
 WHERE user_id = ?;
 
--- name: GetRerateQueueAlbums :many
+-- name: GetProvisionalAlbums :many
 SELECT
     albums.id,
     albums.spotify_id,

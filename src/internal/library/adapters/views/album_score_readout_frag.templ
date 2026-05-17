@@ -16,36 +16,22 @@ func ratingStateClass(album library.AlbumDTO) string {
 		return "text-default hover-fade-in"
 	}
 	switch album.RatingState.State {
-	case "stalled":
-		return "text-warning"
 	case "finalized":
 		return "text-primary hover-fade-out"
 	case "provisional":
-		if album.RatingState.IsRerateDue() {
-			return "text-default hover-fade-in"
-		}
 		return "text-default hover-fade-out"
 	default:
 		return "text-primary"
 	}
 }
 
-// ratingStateIcon returns the Bootstrap Icon name and style for the album's rating
-// state, or empty name if no icon should be rendered. Paired with the colored
-// number so state survives colorblind viewing.
+// ratingStateIcon returns the Bootstrap Icon name and style for the album's
+// rating state, or empty name if no icon should be rendered. Provisional
+// ratings carry a `pen` mark — open to revision; finalized and unrated
+// ratings carry no status icon.
 func ratingStateIcon(album library.AlbumDTO) (string, templates.IconStyle) {
-	if album.RatingState == nil {
-		return "", templates.IconStyleOutline
-	}
-	switch album.RatingState.State {
-	case "finalized":
-		return "check-circle", templates.IconStyleFill
-	case "stalled":
-		return "exclamation-triangle", templates.IconStyleFill
-	case "provisional":
-		if album.RatingState.IsRerateDue() {
-			return "arrow-repeat", templates.IconStyleOutline
-		}
+	if album.RatingState != nil && album.RatingState.State == "provisional" {
+		return "pen", templates.IconStyleOutline
 	}
 	return "", templates.IconStyleOutline
 }
@@ -53,18 +39,8 @@ func ratingStateIcon(album library.AlbumDTO) (string, templates.IconStyle) {
 // ratingStateLabel returns the human-readable label for the icon's tooltip,
 // since the icon alone won't tell a new user which state it represents.
 func ratingStateLabel(album library.AlbumDTO) string {
-	if album.RatingState == nil {
-		return ""
-	}
-	switch album.RatingState.State {
-	case "finalized":
-		return "Finalized"
-	case "stalled":
-		return "Stalled"
-	case "provisional":
-		if album.RatingState.IsRerateDue() {
-			return "Re-rate due"
-		}
+	if album.RatingState != nil && album.RatingState.State == "provisional" {
+		return "Provisional"
 	}
 	return ""
 }
@@ -90,6 +66,7 @@ templ AlbumScoreReadoutFrag(album library.AlbumDTO, isOOB bool) {
 					<span
 						class="absolute -top-2 -right-4 text-sm font-normal leading-none"
 						data-testid="album-score-readout-state-icon"
+						data-icon-name={ iconName }
 						title={ ratingStateLabel(album) }
 					>
 						@templates.Icon(templates.IconProps{Name: iconName, Style: iconStyle})

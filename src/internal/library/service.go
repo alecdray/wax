@@ -244,10 +244,10 @@ func (s *Service) RemoveAlbumFromLibrary(ctx contextx.ContextX, userId, albumId 
 	return nil
 }
 
-func (s *Service) GetRerateQueue(ctx context.Context, userID string) ([]RerateAlbumDTO, error) {
-	dtos, err := s.repo.GetRerateQueue(ctx, userID)
+func (s *Service) GetProvisionalAlbums(ctx context.Context, userID string) ([]ProvisionalAlbumDTO, error) {
+	dtos, err := s.repo.GetProvisionalAlbums(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get rerate queue: %w", err)
+		return nil, fmt.Errorf("failed to get provisional albums: %w", err)
 	}
 	return dtos, nil
 }

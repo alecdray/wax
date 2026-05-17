@@ -13,13 +13,8 @@ func GetAlbumScoreBadgeID(albumId string) string {
 
 func ratingButtonClass(album library.AlbumDTO) string {
 	color := "btn-primary"
-	if album.RatingState != nil {
-		switch album.RatingState.State {
-		case "stalled":
-			color = "btn-warning"
-		case "provisional":
-			color = ""
-		}
+	if album.RatingState != nil && album.RatingState.State == "provisional" {
+		color = ""
 	}
 	return "btn btn-soft w-full " + color
 }
@@ -39,9 +34,6 @@ templ AlbumScoreBadgeFrag(album library.AlbumDTO, isOOB bool) {
 				hx-swap-oob="true"
 			}
 		>
-			if album.RatingState != nil && album.RatingState.State == "stalled" {
-				Stalled —
-			}
 			{ fmt.Sprintf("%.1f", *album.Rating.Rating) } - { string(review.GetRatingLabel(*album.Rating.Rating)) }
 		</button>
 	} else {

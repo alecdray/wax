@@ -45,3 +45,34 @@ export function seedRatingLogEntry(userId: string, albumId: string, score: numbe
       ` VALUES ('${id}', '${userId}', '${albumId}', ${score}, datetime('now', '-10 seconds'));`,
   );
 }
+
+// clearAllRatingStates wipes every rating-state row for the user, leaving
+// every album in the user's library in the "no state row" shape. Used by the
+// dashboard carousel suite to construct a clean baseline before positioning
+// a small number of albums into known states.
+export function clearAllRatingStates(userId: string) {
+  execSql(`DELETE FROM album_rating_state WHERE user_id = '${userId}';`);
+}
+
+// getLibraryAlbumIds returns the IDs of every album the user currently owns
+// (status = 'owned' on at least one user_release row). Sorted for determinism.
+export function getLibraryAlbumIds(userId: string): string[] {
+  const out = execSql(
+    `SELECT DISTINCT album_id FROM user_releases` +
+      ` WHERE user_id = '${userId}' AND status = 'owned'` +
+      ` ORDER BY album_id;`,
+  );
+  return out
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
+// getAlbumTitle returns the title of a wax album row by ID. Lets specs that
+// want to scope a list-row search to a known album do so via the unified-bar
+// `q=` filter, which collapses the list to rows whose title or artist
+// contains the substring — the cleanest way to pin a deterministic single-row
+// view that respects the suite's testid-only selector rule.
+export function getAlbumTitle(albumId: string): string {
+  return execSql(`SELECT title FROM albums WHERE id = '${albumId}';`).trim();
+}

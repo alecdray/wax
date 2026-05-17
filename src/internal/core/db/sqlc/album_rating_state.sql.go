@@ -69,7 +69,7 @@ func (q *Queries) GetAllAlbumRatingStates(ctx context.Context, userID string) ([
 	return items, nil
 }
 
-const getRerateQueueAlbums = `-- name: GetRerateQueueAlbums :many
+const getProvisionalAlbums = `-- name: GetProvisionalAlbums :many
 SELECT
     albums.id,
     albums.spotify_id,
@@ -99,13 +99,13 @@ WHERE ars.user_id = ?
 ORDER BY ars.updated_at ASC
 `
 
-type GetRerateQueueAlbumsParams struct {
+type GetProvisionalAlbumsParams struct {
 	UserID   string
 	UserID_2 string
 	UserID_3 string
 }
 
-type GetRerateQueueAlbumsRow struct {
+type GetProvisionalAlbumsRow struct {
 	ID          string
 	SpotifyID   string
 	Title       string
@@ -115,15 +115,15 @@ type GetRerateQueueAlbumsRow struct {
 	Rating      float64
 }
 
-func (q *Queries) GetRerateQueueAlbums(ctx context.Context, arg GetRerateQueueAlbumsParams) ([]GetRerateQueueAlbumsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getRerateQueueAlbums, arg.UserID, arg.UserID_2, arg.UserID_3)
+func (q *Queries) GetProvisionalAlbums(ctx context.Context, arg GetProvisionalAlbumsParams) ([]GetProvisionalAlbumsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getProvisionalAlbums, arg.UserID, arg.UserID_2, arg.UserID_3)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetRerateQueueAlbumsRow
+	var items []GetProvisionalAlbumsRow
 	for rows.Next() {
-		var i GetRerateQueueAlbumsRow
+		var i GetProvisionalAlbumsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.SpotifyID,

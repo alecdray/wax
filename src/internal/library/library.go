@@ -63,7 +63,7 @@ type AlbumDTO struct {
 	RatingState  *review.RatingStateDTO
 }
 
-type RerateAlbumDTO struct {
+type ProvisionalAlbumDTO struct {
 	ID          string
 	SpotifyID   string
 	Title       string
