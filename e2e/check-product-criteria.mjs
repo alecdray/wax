@@ -384,10 +384,39 @@ function pc4(repoRoot, baseRef) {
     return base.replace(/_(page|frag|modal)$/i, '').replace(/_/g, '-').toLowerCase();
   }
 
+  // Convert a Go camel/PascalCase identifier to kebab-case.
+  function camelToKebab(name) {
+    return name
+      .replace(/([A-Z]+)([A-Z][a-z])/g, '$1-$2')
+      .replace(/([a-z\d])([A-Z])/g, '$1-$2')
+      .toLowerCase();
+  }
+
   // Build the set of all surfaces declared anywhere in src/internal/** so we
-  // can validate cross-surface composition.
+  // can validate cross-surface composition. Sources:
+  //   1. each templ file's surface (from filename), and
+  //   2. each sub-template declaration inside that file (e.g.
+  //      `templ albumListRow(...)` inside `albums_list_frag.templ`
+  //      contributes the surface `album-list-row`). Multi-component files
+  //      are common, and their sub-component testids legitimately use the
+  //      sub-component's name as the surface.
   const allTemplFiles = walk(join(repoRoot, 'src/internal'), (p) => p.endsWith('.templ'));
-  const allSurfaces = new Set(allTemplFiles.map(surfaceFromFile));
+  const allSurfaces = new Set();
+  for (const f of allTemplFiles) {
+    allSurfaces.add(surfaceFromFile(f));
+    let body;
+    try { body = readFileSync(f, 'utf8'); } catch { continue; }
+    const reSubTempl = /^templ\s+([A-Za-z][A-Za-z0-9_]*)\s*\(/gm;
+    let mm;
+    while ((mm = reSubTempl.exec(body)) !== null) {
+      const ident = mm[1];
+      const kebab = camelToKebab(ident);
+      // Strip trailing -page / -frag / -modal so e.g. `AlbumsListBodyFrag`
+      // contributes `albums-list-body` (matching the file-derived rule).
+      const trimmed = kebab.replace(/-(page|frag|modal)$/i, '');
+      allSurfaces.add(trimmed);
+    }
+  }
 
   const reTestId = /data-testid="([^"]+)"/;
   // Kebab-case lowercase: letters, digits, hyphens. No double-hyphens, no
@@ -459,12 +488,27 @@ function pc4(repoRoot, baseRef) {
 
 // ----------------------- PC5 ----------------------------------------------
 
-// Selector discipline. Every `.locator(...)` argument in spec files must be
-// either the literal `'dialog[open]'` selector OR scoped inside an open dialog
-// (i.e. the chain originates from a locator/element that is itself
-// dialog-scoped). Allowed locator factories: getByTestId, getByRole,
-// getByLabel. Anything else (getByText, getByPlaceholder, getByAltText, ...)
-// is flagged.
+// Selector discipline (amended). Every `.locator(...)` argument in spec files
+// must be one of:
+//   - the literal `'dialog[open]'` selector
+//   - a single `[data-testid="X"]` matcher
+//   - a comma-separated alternation of two-or-more `[data-testid="X"]` matchers
+//   - any selector when the receiver is dialog-scoped (chained under
+//     `dialog[open]`) — the dialog-scope exception preserves backwards
+//     compatibility with existing modal-interaction patterns
+// Forbidden everywhere (including inside dialog-scoped chains):
+//   - CSS-class selectors (`.foo`)
+//   - text-content / nth-of-type / XPath
+//   - `getByText`, `getByPlaceholder`, `getByAltText`, `getByTitle`
+//
+// Note on the dialog-scope exception: the script accepts arbitrary selector
+// strings when the receiver is dialog-scoped. This matches the original PC5
+// implementation's behaviour and aligns with the amended PC5 wording's
+// "locator chained under any of the above" clause for the OUTERMOST locator
+// argument. CSS-class / nth-of-type / XPath remain forbidden even inside
+// dialog scope. Stricter enforcement of bare-attribute selectors inside
+// dialog chains (e.g. `input[name="X"]`) is a deferred follow-up — those
+// sites are accepted here.
 //
 // "Scoped inside an open dialog" detection: a `.locator(...)` call whose
 // receiver expression contains the string `dialog[open]` (e.g.
@@ -472,8 +516,18 @@ function pc4(repoRoot, baseRef) {
 // Variables assigned from such a locator are tracked across the file.
 function pc5(repoRoot) {
   const specFiles = walk(join(repoRoot, 'e2e', 'spec'), (p) => p.endsWith('.spec.ts'));
-  const allowedFactories = new Set(['getByTestId', 'getByRole', 'getByLabel']);
   const flaggedFactories = ['getByText', 'getByPlaceholder', 'getByAltText', 'getByTitle'];
+
+  // Selector composed entirely of [data-testid="..."] matchers — single or
+  // comma-separated alternation. Each non-empty trimmed piece must match
+  // /^\[data-testid="[^"]+"\]$/. Empty pieces (trailing commas, etc.) are
+  // tolerated.
+  function isTestidAttrSelector(sel) {
+    if (sel == null) return false;
+    const pieces = sel.split(',').map((p) => p.trim()).filter((p) => p.length > 0);
+    if (pieces.length === 0) return false;
+    return pieces.every((p) => /^\[data-testid="[^"]+"\]$/.test(p));
+  }
 
   const failures = [];
 
@@ -564,18 +618,17 @@ function pc5(repoRoot) {
         // a combined-selector form of dialog scoping.
         if (strLit !== null && /^dialog\[open\](\s|$|\[)/.test(strLit)) continue;
 
+        // Amended PC5: permit a selector composed entirely of
+        // [data-testid="..."] matchers (single OR comma-separated
+        // alternation), regardless of receiver. Semantically equivalent
+        // to getByTestId / a chain of getByTestId, but expresses the
+        // multi-testid "first-matching-of-N" alternation pattern.
+        if (isTestidAttrSelector(strLit)) continue;
+
         // Is the receiver dialog-scoped?
         const receiverScoped =
           /['"`]dialog\[open\]/.test(receiver) ||
           [...dialogScopedVars].some((v) => new RegExp(`\\b${v}\\b`).test(receiver));
-
-        // Inspect the actual selector. We allow:
-        //   - any selector scoped inside an open dialog (any string)
-        //   - everywhere: starts with `dialog[open]` (full path scoping)
-        //   - everywhere: NOTHING ELSE
-        // Specifically forbid (per PC): CSS class selectors (`.xxx`), text-
-        // content selectors, `nth-of-type`, XPath, attribute selectors etc.
-        // when not dialog-scoped.
 
         if (receiverScoped) {
           // Inside dialog. Still forbid CSS class selectors and explicit
@@ -593,19 +646,51 @@ function pc5(repoRoot) {
           continue;
         }
 
-        // Not dialog-scoped: the selector must literally be `dialog[open]`
-        // (handled above) — anything else is a violation.
+        // Not dialog-scoped and not a permitted testid-attr / dialog literal
+        // selector — flag it.
         if (strLit !== null) {
-          failures.push(`${rel}:${i + 1}: locator selector outside dialog[open] scope: ${JSON.stringify(strLit)}`);
+          failures.push(`${rel}:${i + 1}: locator selector outside allow-list (dialog[open] / [data-testid="..."] / alternation): ${JSON.stringify(strLit)}`);
         } else {
-          // Multi-line argument (e.g. array literal). Capture the next few
-          // lines until we hit `)` or `]`.
-          const block = [argRaw];
-          for (let j = i + 1; j < Math.min(lines.length, i + 8); j++) {
-            block.push(lines[j]);
-            if (lines[j].includes(')') || lines[j].includes(']')) break;
+          // Multi-line argument: either a single quoted string broken across
+          // lines, or an array literal whose elements are quoted testid
+          // selectors joined with ', '. Capture from the open `(` of the
+          // .locator call forward until paren depth returns to zero — that's
+          // the argument body.
+          const startIdx = line.indexOf('.locator(', m.index) + '.locator('.length;
+          let depth = 1;
+          let argBody = '';
+          // Scan rest of current line.
+          for (let c = startIdx; c < line.length && depth > 0; c++) {
+            const ch = line[c];
+            if (ch === '(') depth++;
+            else if (ch === ')') { depth--; if (depth === 0) break; }
+            argBody += ch;
           }
-          failures.push(`${rel}:${i + 1}: locator with non-string/multi-line arg outside dialog[open] scope: ${block.join(' ').slice(0, 200)}`);
+          // Continue onto subsequent lines if not yet balanced.
+          for (let j = i + 1; j < Math.min(lines.length, i + 12) && depth > 0; j++) {
+            argBody += ' ';
+            const ln = lines[j];
+            for (let c = 0; c < ln.length && depth > 0; c++) {
+              const ch = ln[c];
+              if (ch === '(') depth++;
+              else if (ch === ')') { depth--; if (depth === 0) break; }
+              argBody += ch;
+            }
+          }
+          // Strategy: strip every `[data-testid="..."]` matcher from the
+          // argument body and a trailing `.join('...')` if present; the
+          // residue must contain only whitespace, commas, quotes, and
+          // array brackets — i.e. nothing but allowed syntax noise.
+          const matcherRe = /\[data-testid="[^"]+"\]/g;
+          const matchers = argBody.match(matcherRe);
+          if (matchers && matchers.length > 0) {
+            const residue = argBody
+              .replace(matcherRe, '')
+              .replace(/\.join\(\s*['"`][^'"`]*['"`]\s*\)/g, '')
+              .replace(/['"`,\s\[\]]/g, '');
+            if (residue === '') continue;
+          }
+          failures.push(`${rel}:${i + 1}: locator with non-string/multi-line arg outside allow-list: ${argBody.slice(0, 200)}`);
         }
       }
     }
