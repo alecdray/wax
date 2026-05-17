@@ -71,8 +71,6 @@ func (h *HttpHandler) GetRatingRecommender(w http.ResponseWriter, r *http.Reques
 		}
 	} else {
 		props.ContentType = views.RatingModalContentReratePrompt
-		props.RerateIsDue = album.RatingState.IsRerateDue()
-		props.RerateIsStalled = album.RatingState.State == review.RatingStateStalled
 	}
 
 	if err := views.RatingModalFrag(props).Render(ctx, w); err != nil {
@@ -261,7 +259,7 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 				return
 			}
 		}
-		if _, err := h.reviewService.FinalizeRating(ctx, userID, albumID, currentState); err != nil {
+		if _, err := h.reviewService.FinalizeRating(ctx, userID, albumID); err != nil {
 			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 			return
 		}
@@ -295,42 +293,6 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 		return
 	}
 	if err := libViews.AlbumRowTagsSectionFrag(*album, true).Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-		return
-	}
-}
-
-func (h *HttpHandler) SnoozeRating(w http.ResponseWriter, r *http.Request) {
-	ctx := contextx.NewContextX(r.Context())
-
-	userID, err := ctx.UserId()
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: err})
-		return
-	}
-
-	albumID := r.URL.Query().Get("albumId")
-	if albumID == "" {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: errors.New("missing album ID")})
-		return
-	}
-
-	if _, err := h.reviewService.SnoozeRating(ctx, userID, albumID); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: fmt.Errorf("failed to snooze: %w", err)})
-		return
-	}
-
-	album, err := h.libraryService.GetAlbumInLibrary(ctx, userID, albumID)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: err})
-		return
-	}
-
-	if err := views.CloseRatingModalFrag().Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-		return
-	}
-	if err := libViews.AlbumScoreReadoutFrag(*album, true).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}

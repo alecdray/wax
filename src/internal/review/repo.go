@@ -3,7 +3,6 @@ package review
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/alecdray/wax/src/internal/core/db/sqlc"
 
@@ -51,21 +50,13 @@ func albumRatingDTOFromModel(model sqlc.AlbumRatingLog) *AlbumRatingDTO {
 }
 
 func ratingStateDTOFromModel(model sqlc.AlbumRatingState) *RatingStateDTO {
-	dto := &RatingStateDTO{
+	return &RatingStateDTO{
 		ID:          model.ID,
 		AlbumID:     model.AlbumID,
 		UserID:      model.UserID,
 		State:       RatingState(model.State),
-		SnoozeCount: int(model.SnoozeCount),
 		LastRatedAt: model.CreatedAt,
 	}
-
-	if model.NextRerateAt.Valid {
-		t := model.NextRerateAt.Time
-		dto.NextRerateAt = &t
-	}
-
-	return dto
 }
 
 // --- Rating log mutations / lookups ---
@@ -177,15 +168,14 @@ func (r *Repo) GetAllAlbumRatingStates(ctx context.Context, userID string) (map[
 	return result, nil
 }
 
-// InsertAlbumRatingState creates a fresh provisional rating state for the
-// album with the given next-rerate timestamp.
-func (r *Repo) InsertAlbumRatingState(ctx context.Context, userID, albumID string, state RatingState, nextRerateAt time.Time) (*RatingStateDTO, error) {
+// InsertAlbumRatingState creates a fresh rating state row with the given
+// lifecycle value.
+func (r *Repo) InsertAlbumRatingState(ctx context.Context, userID, albumID string, state RatingState) (*RatingStateDTO, error) {
 	model, err := r.q.InsertAlbumRatingState(ctx, sqlc.InsertAlbumRatingStateParams{
-		ID:           uuid.NewString(),
-		UserID:       userID,
-		AlbumID:      albumID,
-		State:        string(state),
-		NextRerateAt: sql.NullTime{Time: nextRerateAt, Valid: true},
+		ID:      uuid.NewString(),
+		UserID:  userID,
+		AlbumID: albumID,
+		State:   string(state),
 	})
 	if err != nil {
 		return nil, err
@@ -193,16 +183,12 @@ func (r *Repo) InsertAlbumRatingState(ctx context.Context, userID, albumID strin
 	return ratingStateDTOFromModel(model), nil
 }
 
-// UpdateAlbumRatingState writes the new state, snooze count, and next-rerate
-// timestamp for the user/album. A zero-valued nextRerateAt is stored as NULL
-// (used when an album becomes stalled and has no scheduled rerate).
-func (r *Repo) UpdateAlbumRatingState(ctx context.Context, userID, albumID string, state RatingState, snoozeCount int, nextRerateAt sql.NullTime) (*RatingStateDTO, error) {
+// UpdateAlbumRatingState writes the new lifecycle value for the user/album.
+func (r *Repo) UpdateAlbumRatingState(ctx context.Context, userID, albumID string, state RatingState) (*RatingStateDTO, error) {
 	model, err := r.q.UpdateAlbumRatingState(ctx, sqlc.UpdateAlbumRatingStateParams{
-		State:        string(state),
-		SnoozeCount:  int64(snoozeCount),
-		NextRerateAt: nextRerateAt,
-		UserID:       userID,
-		AlbumID:      albumID,
+		State:   string(state),
+		UserID:  userID,
+		AlbumID: albumID,
 	})
 	if err != nil {
 		return nil, err

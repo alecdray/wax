@@ -17,12 +17,10 @@ const (
 )
 
 type RatingModalProps struct {
-	Album           library.AlbumDTO
-	Mode            review.RatingMode
-	Rating          *float64
-	ContentType     RatingModalContent
-	RerateIsDue     bool
-	RerateIsStalled bool
+	Album       library.AlbumDTO
+	Mode        review.RatingMode
+	Rating      *float64
+	ContentType RatingModalContent
 }
 
 templ RatingModalFrag(props RatingModalProps) {
@@ -34,9 +32,7 @@ templ RatingModalFrag(props RatingModalProps) {
 	case RatingModalContentReratePrompt:
 		@templates.Modal(RatingModalId, templates.ModalProps{
 			ModalContent: ReratePromptFrag(ReratePromptProps{
-				Album:     props.Album,
-				IsDue:     props.RerateIsDue,
-				IsStalled: props.RerateIsStalled,
+				Album: props.Album,
 			}),
 		})
 	default:

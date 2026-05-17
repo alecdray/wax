@@ -10,65 +10,37 @@ import (
 
 var ErrRatingStateNotFound = errors.New("rating state not found")
 
-// RatingState is the value of a rating's lifecycle: provisional (initial),
-// finalized (committed), or stalled (max snoozes reached). It's tagged onto
-// each rating log entry and carried by the per-album rating state machine.
+// RatingState is the value of a rating's lifecycle. Live state machine values
+// are provisional (initial) and finalized (committed). The historical log can
+// also contain values written under earlier lifecycles ("stalled"); those are
+// preserved as-is for display but are no longer produced by the live system.
 type RatingState string
 
 const (
 	RatingStateProvisional RatingState = "provisional"
 	RatingStateFinalized   RatingState = "finalized"
-	RatingStateStalled     RatingState = "stalled"
 )
 
-// RatingStateDTO is the per-album rating state machine: snooze count and
-// next-rerate timing.
+// RatingStateDTO is the per-album rating-lifecycle marker.
 type RatingStateDTO struct {
-	ID           string
-	AlbumID      string
-	UserID       string
-	State        RatingState
-	SnoozeCount  int
-	LastRatedAt  time.Time
-	NextRerateAt *time.Time
+	ID          string
+	AlbumID     string
+	UserID      string
+	State       RatingState
+	LastRatedAt time.Time
 }
 
-const (
-	MaxSnoozeCount      = 3
-	SnoozeDuration      = 7 * 24 * time.Hour
-	RerateCycleDuration = 30 * 24 * time.Hour
-)
-
+// IsRerateDue reports whether the album is currently due for a rerate. The
+// live system no longer schedules rerates on a time basis, so this always
+// returns false; callers that branch on it become no-ops.
 func (s RatingStateDTO) IsRerateDue() bool {
-	if s.NextRerateAt == nil {
-		return false
-	}
-	return s.NextRerateAt.Before(time.Now())
-}
-
-// NextRerateTime returns the time at which a rerate should next be prompted.
-// snoozeCount is the number of snoozes already applied (before this call).
-// Returns nil when the album is stalled (snoozeCount >= MaxSnoozeCount).
-func NextRerateTime(snoozeCount int) *time.Time {
-	if snoozeCount >= MaxSnoozeCount {
-		return nil
-	}
-	t := time.Now().Add(RerateCycleDuration)
-	return &t
-}
-
-// StateAfterSnooze returns the RatingState that results from applying one snooze.
-// current.SnoozeCount is expected to be less than MaxSnoozeCount (i.e. snoozing is still allowed).
-func StateAfterSnooze(current RatingStateDTO) RatingState {
-	if current.SnoozeCount+1 >= MaxSnoozeCount {
-		return RatingStateStalled
-	}
-	return current.State
+	return false
 }
 
 // AlbumRatingDTO is one entry in a user's rating log for an album. The State
-// field — when non-nil — captures whether the rating was made provisionally,
-// finalized, or while stalled at the time of the log entry.
+// field — when non-nil — captures the lifecycle value recorded at the time
+// the log entry was written. Historical entries may carry values no longer
+// produced by the live system.
 type AlbumRatingDTO struct {
 	ID        string
 	UserID    string
@@ -258,4 +230,22 @@ func GetRatingLabel(rating float64) RatingLabel {
 		}
 	}
 	return RatingKey[0].Label
+}
+
+// RatingStateLogLabel returns a human-readable label for a RatingState value
+// appearing on a historical rating-log entry. Live values map to their
+// canonical capitalised form; historical values written under earlier
+// lifecycles ("stalled") get a recognisable label so old entries render
+// cleanly.
+func RatingStateLogLabel(s RatingState) string {
+	switch s {
+	case RatingStateProvisional:
+		return "Provisional"
+	case RatingStateFinalized:
+		return "Finalized"
+	case "stalled":
+		return "Stalled"
+	default:
+		return string(s)
+	}
 }
