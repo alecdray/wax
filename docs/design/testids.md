@@ -26,6 +26,8 @@ data-testid="<component>-<role>"
 
 `AlbumDetailPage` has a title heading inside it → `album-detail-page-title`. A submit button in `BaseQuestionsFormFrag` → `base-questions-form-submit`. The role names what the element does within the component; it is not derived from a separate component name.
 
+When a sub-fragment is composed into **exactly one parent** and exists to serve that parent, "containing component" means the parent: the fragment's testid takes the parent's prefix, not its own. A `FormatsReleasesFrag` that lives only inside `AlbumDetailPage` declares `album-detail-page-releases`, not `formats-releases`. The grep-the-codebase rule still applies — a testid's prefix doesn't always point to its declaring file.
+
 ## One root per component
 
 A non-OOB templ component renders exactly one top-level root. If a component would emit several always-rendered siblings (a header next to a form, a heading next to a list), wrap them in a `<div>` and let the wrapper carry the testid — that wrapper is also the natural target for HTMX swaps, layout classes, and Alpine scopes, so the constraint pays for itself.
