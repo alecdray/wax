@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/library"
 	"github.com/alecdray/wax/src/internal/review"
 )
@@ -17,6 +18,10 @@ func ratingButtonClass(album library.AlbumDTO) string {
 		color = ""
 	}
 	return "btn btn-soft w-full " + color
+}
+
+func isProvisional(album library.AlbumDTO) bool {
+	return album.RatingState != nil && album.RatingState.State == "provisional"
 }
 
 // AlbumScoreBadgeFrag renders the score badge used in the detail panel.
@@ -35,6 +40,11 @@ templ AlbumScoreBadgeFrag(album library.AlbumDTO, isOOB bool) {
 			}
 		>
 			{ fmt.Sprintf("%.1f", *album.Rating.Rating) } - { string(review.GetRatingLabel(*album.Rating.Rating)) }
+			if isProvisional(album) {
+				<span class="ml-1 text-sm leading-none" data-testid="album-score-badge-state-icon" data-icon-name="pen">
+					@templates.Icon(templates.IconProps{Name: "pen"})
+				</span>
+			}
 		</button>
 	} else {
 		<button
