@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "playwright test"
+    "test": "playwright test",
+    "e2e:check": "node e2e/check-testid-alignment.mjs"
   },
   "author": "Alec Draymore",
   "license": "MIT",
