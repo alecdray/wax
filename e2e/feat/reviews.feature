@@ -5,19 +5,17 @@ Feature: Rating Log
   detail page shows the full rating history. Notes are attached to a rating entry
   at submission time and are not separately editable.
 
-  Scenario: Rating modal opens to the confirmation form
-    Given a logged-in user with an album in their library
-    When they open the rating modal for that album
-    Then the rating confirmation form is shown
+  # Retired: "Rating modal opens to the confirmation form" — the modal no longer
+  # always opens to the confirmation form; for an unrated album it opens to the
+  # questionnaire, and for a previously-rated album it may open to a rerate prompt.
 
-  Scenario: Navigating to the questionnaire from the confirmation form
-    Given a logged-in user with the rating confirmation form open
-    When they click the questionnaire button
-    Then the questionnaire form is shown
+  # Retired: "Navigating to the questionnaire from the confirmation form" —
+  # the questionnaire is now the entry point for an unrated album, so the
+  # backward confirm → questionnaire navigation is no longer a primary flow.
 
   Scenario: Completing the questionnaire produces a score
     Given a logged-in user with the rating questionnaire open
-    When they answer all questions and click Calculate Rating
+    When they answer all questions and submit
     Then the rating confirmation form is shown with a computed score
 
   Scenario: Saving a rating
@@ -32,8 +30,8 @@ Feature: Rating Log
     And the album detail page shows the note on the rating history entry
 
   Scenario: No delete button in the rating modal
-    Given a logged-in user opening the rating modal for a rated album
-    When the confirm form is shown
+    Given a logged-in user opening the rating modal for an album
+    When the modal is shown
     Then no delete button is visible in the modal
 
   Scenario: Rating history is shown on the album detail page
