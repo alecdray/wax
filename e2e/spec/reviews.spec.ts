@@ -11,7 +11,7 @@ const albumId = process.env.E2E_TEST_ALBUM_ID;
 // confirmation form depending on the album's rating state; this helper
 // drives whichever entry point appears to the confirmation form.
 async function openConfirmForm(page: any) {
-  const trigger = page.locator('[data-testid^="album-score-badge-"]').first();
+  const trigger = page.locator('[data-testid="album-score-badge-rated"], [data-testid="album-score-badge-unrated"]').first();
   await trigger.click();
 
   const dialog = page.locator('dialog[open]');
@@ -43,7 +43,9 @@ async function answerQuestionnaire(page: any) {
   const fieldsets = page.locator('dialog[open] [data-testid="base-question-fieldset"]');
   const count = await fieldsets.count();
   for (let i = 0; i < count; i++) {
-    await fieldsets.nth(i).locator('input[type="radio"]').first().check();
+    // base-question-radio testid is on the wrapping label; clicking the label
+    // selects its child radio input.
+    await fieldsets.nth(i).getByTestId('base-question-radio').first().click();
   }
 }
 
@@ -61,7 +63,7 @@ async function submitRating(page: any, score: string, note?: string) {
 async function openRatingHistory(page: any) {
   const history = page.getByTestId('album-rating-history');
   await expect(history).toBeVisible();
-  const checkbox = history.locator('input[type="checkbox"]');
+  const checkbox = history.getByTestId('album-rating-history-toggle');
   if (!(await checkbox.isChecked())) {
     await checkbox.click({ force: true });
   }
@@ -92,7 +94,7 @@ test('Completing the questionnaire produces a score', async ({ context, page }) 
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  const trigger = page.locator('[data-testid^="album-score-badge-"]').first();
+  const trigger = page.locator('[data-testid="album-score-badge-rated"], [data-testid="album-score-badge-unrated"]').first();
   await trigger.click();
 
   const dialog = page.locator('dialog[open]');
@@ -103,7 +105,7 @@ test('Completing the questionnaire produces a score', async ({ context, page }) 
   }
   if (await dialog.getByTestId('rating-confirm-form').isVisible().catch(() => false)) {
     // Already on confirm form (album was previously finalized); navigate back to the questionnaire.
-    await dialog.getByTestId('rating-confirm-form').locator('[hx-get*="questions"]').click();
+    await dialog.getByTestId('rating-confirm-form-back-to-questions').click();
   }
 
   await expect(dialog.getByTestId('base-questions-form')).toBeVisible();
@@ -143,12 +145,15 @@ test('No delete button in the rating modal', async ({ context, page }) => {
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  const trigger = page.locator('[data-testid^="album-score-badge-"]').first();
+  const trigger = page.locator('[data-testid="album-score-badge-rated"], [data-testid="album-score-badge-unrated"]').first();
   await trigger.click();
 
   const dialog = page.locator('dialog[open]');
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByTestId('rating-delete')).not.toBeVisible();
+  // Semantic absence: the rating modal exposes no button accessible as "Delete".
+  // The only delete affordance for ratings lives in the album-rating-history
+  // section on the album detail page, outside the modal.
+  await expect(dialog.getByRole('button', { name: /delete/i })).toHaveCount(0);
 });
 
 test('Rating history is shown on the album detail page', async ({ context, page }) => {
@@ -232,13 +237,3 @@ test('Deleting the only rating entry clears the album rating', async ({ context,
   await expect(page.getByTestId('album-rating-history-entry')).toHaveCount(0);
 });
 
-test('No notes on dashboard', async ({ context, page }) => {
-  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
-  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
-
-  await loginAs(context, userId!);
-  await page.goto('/app/library/dashboard');
-
-  await expect(page.getByTestId('album-row-notes')).not.toBeVisible();
-  await expect(page.getByTestId('album-row-notes-button')).not.toBeVisible();
-});

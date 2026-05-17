@@ -128,7 +128,7 @@ templ TagsFormFrag(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*t
       <legend class="fieldset-legend">Tags</legend>
       <div class="flex flex-wrap gap-1.5 mb-2">
         <template x-for="(chip, i) in chips" :key="i">
-          <span class="badge badge-soft badge-primary gap-1 text-sm">
+          <span data-testid="tags-form-chip" class="badge badge-soft badge-primary gap-1 text-sm">
             <span x-text="chip.name"></span>
             <span x-show="groupName(chip.groupId)" class="text-xs text-muted" x-text="'(' + groupName(chip.groupId) + ')'"></span>
             <button type="button" class="ml-1 hover-fade-in" @click="removeChip(i)">✕</button>

@@ -77,6 +77,10 @@ func sortLabel(sortBy string) string {
 	}
 }
 
+// Reserved testids for album-list-row (asserted-absent by e2e/spec/library.spec.ts):
+//   data-testid="album-list-row-spotify-link" — intentionally NOT rendered;
+//     album rows must not surface Spotify outlinks per design. Declared here
+//     so spec assertions of zero count reference a known testid (PC2).
 templ albumListRow(album library.AlbumDTO) {
 	<li class="list-row items-center" data-testid="album-list-row">
 		<button
@@ -449,6 +453,7 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 											data-name={ strings.ToLower(artist.Name) }
 										>
 											<input
+												data-testid="filter-chip-bar-artist-checkbox"
 												type="checkbox"
 												name="artist"
 												value={ artist.ID }

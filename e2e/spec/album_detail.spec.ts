@@ -42,7 +42,10 @@ test('Rating an album from the detail page', async ({ context, page }) => {
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  await page.getByTestId('album-detail-page-rating').locator('[hx-get*="rating-recommender"]').click();
+  // The rating trigger is the score badge (rated or unrated variant) inside
+  // the rating section. Either testid alternates depending on whether the
+  // album currently has a rating.
+  await page.getByTestId('album-detail-page-rating').locator('[data-testid="album-score-badge-rated"], [data-testid="album-score-badge-unrated"]').click();
 
   await expect(page.locator('dialog[open]')).toBeVisible();
 });

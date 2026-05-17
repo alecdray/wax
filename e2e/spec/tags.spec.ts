@@ -33,7 +33,8 @@ test('Typing a tag name adds a chip', async ({ context, page }) => {
   await page.getByTestId('tags-form-input').press('Enter');
 
   // Chip should appear inside the modal
-  await expect(page.locator('dialog[open]').locator('.badge', { hasText: 'e2e-test-tag' })).toBeVisible();
+  const chips = page.locator('dialog[open]').getByTestId('tags-form-chip');
+  await expect(chips).toContainText('e2e-test-tag');
 });
 
 test('Saving tags closes the modal', async ({ context, page }) => {

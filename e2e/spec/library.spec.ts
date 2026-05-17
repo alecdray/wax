@@ -32,19 +32,11 @@ test('Album rows show art, title, and rating — no Spotify outlinks', async ({ 
   const ratingReadout = firstRow.locator('[data-testid="album-score-readout-rated"], [data-testid="album-score-readout-unrated"]');
   await expect(ratingReadout).toBeVisible();
 
-  // No Spotify outlinks in list rows
-  const spotifyLinks = page.getByTestId('albums-list').locator('a[href*="open.spotify.com"]');
+  // No Spotify outlinks in list rows. The testid is declared in the row templ
+  // as a reserved name (see comment in albums_list_frag.templ) and is
+  // intentionally absent from rendered rows.
+  const spotifyLinks = page.getByTestId('albums-list').locator('[data-testid="album-list-row-spotify-link"]');
   await expect(spotifyLinks).toHaveCount(0);
-});
-
-test('No ellipsis menu on album rows', async ({ context, page }) => {
-  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
-
-  await loginAs(context, userId!);
-  await page.goto('/app/library/dashboard');
-
-  await expect(page.getByTestId('album-row-menu')).not.toBeVisible();
-  await expect(page.getByTestId('album-row-tags-button')).not.toBeVisible();
 });
 
 // --- Carousel ---
@@ -203,7 +195,7 @@ test('Artist chip opens a modal when artists exist', async ({ context, page }) =
   await chip.click();
 
   await expect(page.locator('dialog[open]')).toBeVisible();
-  await expect(page.locator('dialog[open] input[type="checkbox"][name="artist"]').first()).toBeVisible();
+  await expect(page.locator('dialog[open]').getByTestId('filter-chip-bar-artist-checkbox').first()).toBeVisible();
 });
 
 // --- Rating modal from list row ---

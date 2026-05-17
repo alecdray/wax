@@ -57,7 +57,7 @@ Feature: Rating Log
     Then the history section is empty
     And the album shows no rating
 
-  Scenario: No notes on dashboard
-    Given a logged-in user viewing the library dashboard
-    When they look at an album row
-    Then no notes icon or notes editing button is present
+  # Retired: "No notes on dashboard" — the original assertion targeted
+  # data-testid values (album-row-notes, album-row-notes-button) that have
+  # never been declared in any templ, so the check passed vacuously. Notes
+  # live on the album detail page (SleeveNotesSectionFrag), never on rows.
