@@ -95,7 +95,26 @@ func (h *HttpHandler) GetDashboardPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lib.Albums.SortByDate(false)
+	// Honor URL query params on initial render so deep links + reloads
+	// reproduce the same view as HTMX-driven interactions (Task 1.5 / PC2).
+	sortBy := r.URL.Query().Get("sortBy")
+	dir := r.URL.Query().Get("dir")
+	ascending := dir == "asc"
+	switch sortBy {
+	case "album":
+		lib.Albums.SortByTitle(ascending)
+	case "artist":
+		lib.Albums.SortByArtist(ascending)
+	case "rating":
+		lib.Albums.SortByRating(ascending)
+	case "lastPlayed":
+		lib.Albums.SortByLastPlayed(ascending)
+	default:
+		lib.Albums.SortByDate(ascending)
+	}
+
+	fp := parseFilterParams(r)
+	filtered := lib.Albums.Filter(fp)
 
 	recentAlbums, err := h.libraryService.GetRecentlyPlayedAlbums(ctx, userId)
 	if err != nil {
@@ -108,9 +127,11 @@ func (h *HttpHandler) GetDashboardPage(w http.ResponseWriter, r *http.Request) {
 		Library:         lib,
 		Feeds:           feeds,
 		RecentAlbums:    recentAlbums,
-		FirstPageAlbums: lib.Albums.Page(0),
+		FirstPageAlbums: filtered.Page(0),
 		Artists:         lib.Artists,
-		FilterParams:    library.FilterParams{},
+		FilterParams:    fp,
+		SortBy:          sortBy,
+		SortDir:         dir,
 	})
 	dashboardPage.Render(r.Context(), w)
 }

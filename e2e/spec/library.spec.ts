@@ -253,3 +253,290 @@ test('Opening the rating modal from an album row', async ({ context, page }) => 
 
   await expect(page.locator('dialog[open]')).toBeVisible();
 });
+
+// --- Task 1.4 — Active non-default state visible on the bar at rest ---
+
+test('Bar shows no badges at full defaults', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/dashboard');
+
+  await expect(page.getByTestId('unified-search-bar')).toBeVisible();
+  await expect(page.getByTestId('unified-search-bar-badges')).toHaveCount(0);
+  await expect(page.getByTestId('unified-search-bar-reset')).toHaveCount(0);
+});
+
+test('Bar surfaces a badge for a non-default filter at rest', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/dashboard');
+
+  // Apply unrated-only via the rating popover.
+  await page.getByTestId('unified-search-bar-rating-toggle').click();
+  const popover = page.getByTestId('unified-search-bar-rating-popover');
+  await expect(popover).toBeVisible();
+  await popover.locator('input[name="rated"][value="unrated"]').check();
+  const resp = page.waitForResponse((res) =>
+    res.url().includes('/app/library/dashboard/albums-table') &&
+    res.url().includes('rated=unrated'),
+  );
+  await popover.getByRole('button', { name: 'Apply' }).click();
+  await resp;
+
+  // The rating-dimension badge is visible at rest — no popover open.
+  await expect(page.getByTestId('unified-search-bar-rating-popover')).not.toBeVisible();
+  await expect(page.getByTestId('unified-search-bar-badges')).toBeVisible();
+  await expect(page.getByTestId('unified-search-bar-badge-rating')).toBeVisible();
+});
+
+test('Bar surfaces a sort badge for a non-default sort at rest', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/dashboard');
+
+  // Apply Artist sort (non-default — default is Date Added desc).
+  await page.getByTestId('unified-search-bar-sort-toggle').click();
+  const popover = page.getByTestId('unified-search-bar-sort-popover');
+  await expect(popover).toBeVisible();
+  await popover.locator('input[name="sortBy"][value="artist"]').check();
+  const resp = page.waitForResponse((res) =>
+    res.url().includes('/app/library/dashboard/albums-table') &&
+    res.url().includes('sortBy=artist'),
+  );
+  await popover.getByRole('button', { name: 'Apply' }).click();
+  await resp;
+
+  await expect(page.getByTestId('unified-search-bar-sort-popover')).not.toBeVisible();
+  await expect(page.getByTestId('unified-search-bar-badge-sort')).toBeVisible();
+  await expect(page.getByTestId('unified-search-bar-badge-sort')).toContainText('Artist');
+});
+
+// --- Task 1.5 — URL reflects full view state; reloading reproduces it ---
+
+test('Bare dashboard URL stays bare in the address bar', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/dashboard');
+
+  // The default-view URL must not have any of the canonical view params.
+  await expect(page.getByTestId('albums-list')).toBeVisible();
+  const url = new URL(page.url());
+  for (const param of ['q', 'sortBy', 'dir', 'minRating', 'maxRating', 'rated', 'format', 'artist']) {
+    expect(url.searchParams.has(param), `default URL must not contain ${param}; got ${page.url()}`).toBe(false);
+  }
+});
+
+test('Applying state writes the expected params to the URL', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/dashboard');
+
+  // Sort by Artist.
+  await page.getByTestId('unified-search-bar-sort-toggle').click();
+  const sortPopover = page.getByTestId('unified-search-bar-sort-popover');
+  await expect(sortPopover).toBeVisible();
+  await sortPopover.locator('input[name="sortBy"][value="artist"]').check();
+  const sortResp = page.waitForResponse((res) =>
+    res.url().includes('/app/library/dashboard/albums-table') &&
+    res.url().includes('sortBy=artist'),
+  );
+  await sortPopover.getByRole('button', { name: 'Apply' }).click();
+  await sortResp;
+
+  // Verify URL reflects sortBy=artist (dir was 'desc' default — must be dropped).
+  await expect.poll(() => new URL(page.url()).searchParams.get('sortBy')).toBe('artist');
+  expect(new URL(page.url()).searchParams.has('dir'), 'default dir=desc must be dropped').toBe(false);
+
+  // Now type a query.
+  const queryResp = page.waitForResponse((res) =>
+    res.url().includes('/app/library/dashboard/albums-table') &&
+    res.url().includes('q=ab'),
+  );
+  await page.getByTestId('unified-search-bar-input').pressSequentially('ab');
+  await queryResp;
+
+  await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBe('ab');
+  expect(new URL(page.url()).searchParams.get('sortBy'), 'sort should still be in URL').toBe('artist');
+});
+
+test('Reloading the URL reproduces the same view', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+
+  // Visit with explicit URL state.
+  await page.goto('/app/library/dashboard?sortBy=artist&rated=unrated');
+  await expect(page.getByTestId('albums-list')).toBeVisible();
+
+  // Badges should reflect both dimensions.
+  await expect(page.getByTestId('unified-search-bar-badge-sort')).toBeVisible();
+  await expect(page.getByTestId('unified-search-bar-badge-rating')).toBeVisible();
+
+  // Capture the first row's title for a post-reload comparison.
+  const firstTitleBefore = await page.getByTestId('album-list-row-title-link').first().innerText().catch(() => '');
+  const url = page.url();
+
+  // Reload.
+  await page.reload();
+  await expect(page.getByTestId('albums-list')).toBeVisible();
+
+  // URL unchanged.
+  expect(page.url()).toBe(url);
+  // Bar still reflects state.
+  await expect(page.getByTestId('unified-search-bar-badge-sort')).toBeVisible();
+  await expect(page.getByTestId('unified-search-bar-badge-rating')).toBeVisible();
+  // Same first row.
+  const firstTitleAfter = await page.getByTestId('album-list-row-title-link').first().innerText().catch(() => '');
+  expect(firstTitleAfter, 'first row title must reproduce after reload').toBe(firstTitleBefore);
+});
+
+test('A fresh browser context renders the same view for a deep URL', async ({ browser }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  // First context: capture the rendered state for sortBy=artist.
+  const ctxA = await browser.newContext();
+  await loginAs(ctxA, userId!);
+  const pageA = await ctxA.newPage();
+  await pageA.goto('/app/library/dashboard?sortBy=artist');
+  await expect(pageA.getByTestId('albums-list')).toBeVisible();
+  const titleA = await pageA.getByTestId('album-list-row-title-link').first().innerText();
+  await ctxA.close();
+
+  // Second context: a fresh authenticated context with no prior interaction.
+  const ctxB = await browser.newContext();
+  await loginAs(ctxB, userId!);
+  const pageB = await ctxB.newPage();
+  await pageB.goto('/app/library/dashboard?sortBy=artist');
+  await expect(pageB.getByTestId('albums-list')).toBeVisible();
+  const titleB = await pageB.getByTestId('album-list-row-title-link').first().innerText();
+  await ctxB.close();
+
+  expect(titleB, 'fresh context with same URL must render the same first row').toBe(titleA);
+});
+
+test('Setting a value back to its default removes the param from the URL', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/dashboard?rated=unrated');
+  await expect(page.getByTestId('albums-list')).toBeVisible();
+  expect(new URL(page.url()).searchParams.get('rated')).toBe('unrated');
+
+  // The reset control is rendered in the bar's badges row when state is active.
+  const resp = page.waitForResponse((res) =>
+    res.url().includes('/app/library/dashboard/albums-table'),
+  );
+  await page.getByTestId('unified-search-bar-reset').click();
+  await resp;
+
+  await expect.poll(() => new URL(page.url()).searchParams.has('rated')).toBe(false);
+  // No badges left.
+  await expect(page.getByTestId('unified-search-bar-badges')).toHaveCount(0);
+});
+
+// --- Task 1.6 — Infinite-scroll pagination preserves all state ---
+
+test('Pagination request carries every active filter and sort param', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+
+  // Visit a deep URL with sort + filter active. The fixture has ~236 albums in
+  // the test user's library; "rated=only" still yields enough to span pages.
+  await page.goto('/app/library/dashboard?sortBy=artist&rated=only');
+  await expect(page.getByTestId('albums-list')).toBeVisible();
+
+  // Sanity: first page must be full (20 rows) for the sentinel to exist.
+  // The sentinel is an empty <li> with zero intrinsic height — we don't assert
+  // visibility (would fail), only that the DOM node is present and carries the
+  // expected hx-get URL.
+  const initialRows = await page.getByTestId('album-list-row').count();
+  expect(initialRows, 'need a full first page to test pagination').toBe(20);
+  await expect(page.getByTestId('albums-list-pagination-sentinel')).toHaveCount(1);
+  const sentinelHxGet = await page.getByTestId('albums-list-pagination-sentinel').getAttribute('hx-get');
+  expect(sentinelHxGet, 'sentinel must carry an hx-get URL').toBeTruthy();
+  const sentinelURL = new URL(sentinelHxGet!, page.url());
+  expect(sentinelURL.searchParams.get('sortBy'), 'sentinel URL must carry sortBy').toBe('artist');
+  expect(sentinelURL.searchParams.get('rated'), 'sentinel URL must carry rated').toBe('only');
+  expect(sentinelURL.searchParams.get('offset'), 'sentinel URL must carry offset').toBe('20');
+  expect(sentinelURL.searchParams.has('dir'), 'default dir=desc must not appear in sentinel URL').toBe(false);
+
+  // Snapshot first-page titles to verify no duplicates after the swap.
+  const titlesPage1 = await page.getByTestId('album-list-row-title-link').allInnerTexts();
+
+  // Scrolling reveals the sentinel which fires hx-get for albums-page. Wait on
+  // a request URL that includes the active filter + sort params.
+  const pageReq = page.waitForRequest((req) => {
+    if (!req.url().includes('/app/library/dashboard/albums-page')) return false;
+    const u = new URL(req.url());
+    return u.searchParams.get('sortBy') === 'artist' &&
+      u.searchParams.get('rated') === 'only' &&
+      u.searchParams.get('offset') === '20';
+  });
+  await page.getByTestId('albums-list-pagination-sentinel').scrollIntoViewIfNeeded();
+  const req = await pageReq;
+
+  // Verify the URL has no leaked default dir param.
+  expect(new URL(req.url()).searchParams.has('dir'), 'default dir=desc must not be in pagination URL').toBe(false);
+
+  // After the swap, rows should have grown and no duplicates across the boundary.
+  await expect.poll(async () => page.getByTestId('album-list-row').count()).toBeGreaterThan(20);
+  const titlesAll = await page.getByTestId('album-list-row-title-link').allInnerTexts();
+  expect(titlesAll.length, 'rows must grow').toBeGreaterThan(titlesPage1.length);
+
+  // No duplicates across the page boundary.
+  const unique = new Set(titlesAll);
+  expect(unique.size, `pagination introduced duplicates: ${titlesAll.length - unique.size}`).toBe(titlesAll.length);
+});
+
+// --- Task 1.7 — Zero-result state with one-click reset ---
+
+test('Zero-result view shows a non-judgemental message and a single reset control', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+
+  // Deep-link to a guaranteed-zero query.
+  await page.goto('/app/library/dashboard?q=zzzznotpresent');
+  await expect(page.getByTestId('albums-list')).toBeVisible();
+  await expect(page.getByTestId('album-list-row')).toHaveCount(0);
+
+  // Empty-state message and a single visible reset control.
+  await expect(page.getByTestId('albums-list-empty-state')).toBeVisible();
+  // Exactly one reset control in the empty state (the bar's reset is the same
+  // affordance class but the empty-state reset has its own testid).
+  await expect(page.getByTestId('albums-list-empty-state-reset')).toHaveCount(1);
+  await expect(page.getByTestId('albums-list-empty-state-reset')).toBeVisible();
+});
+
+test('Activating reset from the empty state restores the full library and bare URL', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/dashboard?q=zzzznotpresent');
+  await expect(page.getByTestId('albums-list-empty-state-reset')).toBeVisible();
+
+  // Activate the empty-state reset.
+  const resp = page.waitForResponse((res) =>
+    res.url().includes('/app/library/dashboard/albums-table'),
+  );
+  await page.getByTestId('albums-list-empty-state-reset').click();
+  await resp;
+
+  // URL is bare (no q, no other view params).
+  await expect.poll(() => {
+    const u = new URL(page.url());
+    return ['q', 'sortBy', 'dir', 'minRating', 'maxRating', 'rated', 'format', 'artist']
+      .some((p) => u.searchParams.has(p));
+  }).toBe(false);
+
+  // Full library re-rendered.
+  await expect(page.getByTestId('album-list-row').first()).toBeVisible();
+  // No badges shown.
+  await expect(page.getByTestId('unified-search-bar-badges')).toHaveCount(0);
+});

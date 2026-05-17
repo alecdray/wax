@@ -80,3 +80,65 @@ Feature: Library Dashboard
     Given a logged-in user on the dashboard with at least one album
     When they click the rating control on an album row
     Then the rating modal opens
+
+  # --- Task 1.4 — Active non-default state visible on the bar at rest ---
+
+  Scenario: Bar shows no badges at full defaults
+    Given a logged-in user on the dashboard
+    Then the unified search bar shows no active-state badges
+
+  Scenario: Bar surfaces a badge for a non-default filter at rest
+    Given a logged-in user on the dashboard
+    When they apply a non-default filter from the unified bar
+    Then a compact badge naming that filter dimension is visible on the bar without opening any popover
+
+  Scenario: Bar surfaces a sort badge for a non-default sort at rest
+    Given a logged-in user on the dashboard
+    When they apply a non-default sort from the unified bar
+    Then a compact badge naming the active sort is visible on the bar without opening any popover
+
+  # --- Task 1.5 — URL reflects full view state; reloading reproduces it ---
+
+  Scenario: Bare dashboard URL stays bare in the address bar
+    Given a logged-in user on the dashboard
+    Then the URL contains no q, sortBy, dir, minRating, maxRating, rated, format, or artist params
+
+  Scenario: Applying state writes the expected params to the URL
+    Given a logged-in user on the dashboard
+    When they apply a non-default sort and a text query
+    Then the URL contains the corresponding params under their canonical names
+
+  Scenario: Reloading the URL reproduces the same view
+    Given a logged-in user on the dashboard with applied filter and sort state
+    When they reload the page
+    Then the same params remain in the URL and the bar reflects the applied state
+
+  Scenario: A fresh browser context renders the same view for a deep URL
+    Given a deep dashboard URL with filter and sort params
+    When a fresh authenticated context visits that URL
+    Then the bar reflects the same state and the album list matches
+
+  Scenario: Setting a value back to its default removes the param from the URL
+    Given a logged-in user on the dashboard with a non-default filter active
+    When they activate reset on the unified bar
+    Then the URL no longer contains the dropped param
+
+  # --- Task 1.6 — Infinite-scroll pagination preserves all state ---
+
+  Scenario: Pagination request carries every active filter and sort param
+    Given a logged-in user on the dashboard with filter and sort state applied
+    When they scroll to the pagination sentinel
+    Then the next-page request URL includes every active param
+    And the appended rows respect the narrowed view with no duplicates across the page boundary
+
+  # --- Task 1.7 — Zero-result state with one-click reset ---
+
+  Scenario: Zero-result view shows a non-judgemental message and a single reset control
+    Given a logged-in user on the dashboard with a query that matches no albums
+    Then the list region shows a short empty-state message
+    And a single visible reset control is present in the empty state
+
+  Scenario: Activating reset from the empty state restores the full library and bare URL
+    Given a logged-in user on the dashboard with a query that matches no albums
+    When they activate the reset control
+    Then the URL is bare, the full library re-renders, and no active-state badges are shown
