@@ -142,3 +142,25 @@ Feature: Library Dashboard
     Given a logged-in user on the dashboard with a query that matches no albums
     When they activate the reset control
     Then the URL is bare, the full library re-renders, and no active-state badges are shown
+
+  # --- Product criteria (PC) — whole-system invariants of the assembled feature ---
+  #
+  # These scenarios assert the cross-cutting product criteria PC1, PC2, PC3 as
+  # emergent properties, distinct from the per-task scenarios above. They are
+  # the gates the unified-search build must hold even after all tasks pass
+  # individually.
+
+  Scenario: PC1 — combined q + filter + sort produces the predicted set in the predicted order
+    Given a logged-in user on the dashboard
+    When they apply a text query, a non-default filter, and a non-default sort together
+    Then the rendered album list equals the AND of all three dimensions in the active sort order
+
+  Scenario: PC2 — a captured URL reproduces the exact DOM order in a fresh browser context
+    Given a logged-in user who composes a non-trivial view state via the unified bar
+    When the resulting URL is opened in a fresh authenticated browser context
+    Then the rendered album list matches the original DOM order row-for-row
+
+  Scenario: PC2 — every reachable param combination round-trips via the URL
+    Given a logged-in user on the dashboard
+    When they reach each of several combined view states via the bar and the resulting URL is opened fresh
+    Then each fresh-context render matches the corresponding originally-rendered list

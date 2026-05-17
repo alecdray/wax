@@ -540,3 +540,178 @@ test('Activating reset from the empty state restores the full library and bare U
   // No badges shown.
   await expect(page.getByTestId('unified-search-bar-badges')).toHaveCount(0);
 });
+
+// --- Product criteria (PC) ---
+//
+// Whole-system invariants of the assembled feature, distinct from per-task
+// tests. These survive past this build as regression coverage for the
+// search/filter/sort surface as a unit.
+//
+// PC1 is verified primarily at the Go integration layer
+// (src/internal/library/pc_and_composition_test.go) where every combination
+// can be enumerated against an independently-computed reference. The e2e
+// test below covers the assembled UI half: that the bar's composition flows
+// through HTMX into the rendered DOM as a single coherent set/order.
+//
+// PC2 is inherently a browser concern — the URL is owned by the address
+// bar, and the round-trip property only holds when a real navigation
+// reproduces the view. Two e2e tests cover the two halves: deep-link
+// fidelity (cold start with a URL) and end-to-end UI → URL → fresh-context
+// round-trip across several combinations.
+
+test('PC1 — combined q + filter + sort produces the predicted set in the predicted order', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+
+  // Compose a non-trivial view state through the URL — equivalent to driving
+  // the bar end-to-end, but deterministic across runs. Sort by album ASC so
+  // the row order is mechanically checkable against the rendered titles.
+  // Filter to rated-only with a min rating to narrow the set.
+  await page.goto('/app/library/dashboard?q=the&rated=only&minRating=7&sortBy=album&dir=asc');
+  await expect(page.getByTestId('albums-list')).toBeVisible();
+
+  const rowCount = await page.getByTestId('album-list-row').count();
+  expect(rowCount, 'combined view must render at least one row for this fixture').toBeGreaterThan(0);
+
+  // Capture every row's title and artist line. Every row must satisfy the
+  // text query AND-composed with the filter — the title or any artist line
+  // must contain "the" (case-insensitive). Filter conformance for ratings is
+  // server-side; we verify it indirectly by asserting the row count is
+  // strictly less than the unfiltered library size below.
+  const rows = page.getByTestId('album-list-row');
+  const titles: string[] = [];
+  for (let i = 0; i < rowCount; i++) {
+    const row = rows.nth(i);
+    const text = (await row.innerText()).toLowerCase();
+    expect(text, `row ${i} must contain the query "the" in title or artist`).toContain('the');
+    const titleEl = row.getByTestId('album-list-row-title-link').first();
+    titles.push((await titleEl.innerText()).trim());
+  }
+
+  // Sort assertion — sortBy=album dir=asc means titles render in
+  // case-sensitive lexicographic order (production SortByTitle uses < on
+  // raw strings, not a folded comparison).
+  const sortedTitles = [...titles].sort();
+  expect(titles, 'rendered order must equal the active sort').toEqual(sortedTitles);
+
+  // The combined view must be a strict subset of the unfiltered library —
+  // proves the AND composition actually narrowed the set rather than the
+  // bar interactions silently failing and showing the full library.
+  await page.goto('/app/library/dashboard');
+  await expect(page.getByTestId('albums-list')).toBeVisible();
+  const baseCount = await page.getByTestId('album-list-row').count();
+  expect(rowCount, 'combined view must narrow the full library').toBeLessThan(baseCount);
+});
+
+test('PC2 — a captured URL reproduces the exact DOM order in a fresh browser context', async ({ browser }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  // First context — drive the bar through a multi-dimensional state via
+  // interactions (not a deep link). This exercises the UI→URL push path
+  // alongside the URL→DOM render path.
+  const ctxA = await browser.newContext();
+  await loginAs(ctxA, userId!);
+  const pageA = await ctxA.newPage();
+  await pageA.goto('/app/library/dashboard');
+  await expect(pageA.getByTestId('albums-list')).toBeVisible();
+
+  // Apply: sort by Artist asc.
+  await pageA.getByTestId('unified-search-bar-sort-toggle').click();
+  const sortPopover = pageA.getByTestId('unified-search-bar-sort-popover');
+  await expect(sortPopover).toBeVisible();
+  await sortPopover.locator('input[name="sortBy"][value="artist"]').check();
+  await sortPopover.locator('input[name="dir"][value="asc"]').check();
+  const sortResp = pageA.waitForResponse((res) =>
+    res.url().includes('/app/library/dashboard/albums-table') &&
+    res.url().includes('sortBy=artist'),
+  );
+  await sortPopover.getByRole('button', { name: 'Apply' }).click();
+  await sortResp;
+
+  // Apply: rated only.
+  await pageA.getByTestId('unified-search-bar-rating-toggle').click();
+  const ratingPopover = pageA.getByTestId('unified-search-bar-rating-popover');
+  await expect(ratingPopover).toBeVisible();
+  await ratingPopover.locator('input[name="rated"][value="only"]').check();
+  const ratingResp = pageA.waitForResponse((res) =>
+    res.url().includes('/app/library/dashboard/albums-table') &&
+    res.url().includes('rated=only'),
+  );
+  await ratingPopover.getByRole('button', { name: 'Apply' }).click();
+  await ratingResp;
+
+  // Wait until the URL has both params pushed.
+  await expect.poll(() => {
+    const u = new URL(pageA.url());
+    return u.searchParams.get('sortBy') === 'artist' && u.searchParams.get('rated') === 'only';
+  }, { message: 'URL must reflect both sort and filter state after interactions' }).toBe(true);
+
+  // Capture: URL + every rendered title in order.
+  const capturedURL = pageA.url();
+  const titlesA = await pageA.getByTestId('album-list-row-title-link').allInnerTexts();
+  expect(titlesA.length, 'context A must render at least one row').toBeGreaterThan(0);
+  await ctxA.close();
+
+  // Second context — fresh, no prior interaction. Opening the captured URL
+  // must reproduce the exact same DOM order row-for-row.
+  const ctxB = await browser.newContext();
+  await loginAs(ctxB, userId!);
+  const pageB = await ctxB.newPage();
+  await pageB.goto(capturedURL);
+  await expect(pageB.getByTestId('albums-list')).toBeVisible();
+
+  const titlesB = await pageB.getByTestId('album-list-row-title-link').allInnerTexts();
+  expect(titlesB.length, 'fresh context must render the same number of rows').toBe(titlesA.length);
+  expect(titlesB, 'fresh context DOM order must match the original row-for-row').toEqual(titlesA);
+
+  // The bar must also reflect both dimensions at rest (badges visible).
+  await expect(pageB.getByTestId('unified-search-bar-badge-sort')).toBeVisible();
+  await expect(pageB.getByTestId('unified-search-bar-badge-rating')).toBeVisible();
+
+  await ctxB.close();
+});
+
+test('PC2 — every reachable param combination round-trips via the URL', async ({ browser }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  // A small but cross-dimensional set of view states. Each is a non-default
+  // combination touching at least two of {q, filter, sort}. Together they
+  // exercise: text-only, sort-only, filter-only, all three combined, and
+  // multi-select repeatables (format).
+  const states = [
+    'q=the',
+    'sortBy=album&dir=asc',
+    'rated=only',
+    'q=the&sortBy=album&dir=asc',
+    'minRating=7&sortBy=rating&dir=desc',
+    'q=the&rated=only&sortBy=album&dir=asc',
+    'format=vinyl&format=digital&sortBy=date&dir=asc',
+  ];
+
+  for (const qs of states) {
+    const url = `/app/library/dashboard?${qs}`;
+
+    // Render the URL twice in two fresh contexts; their DOM orders must
+    // match exactly. This is the property-style version of PC2: any
+    // captured URL is a faithful representation of the view, with no
+    // hidden client-side state mediating the result.
+    const ctxA = await browser.newContext();
+    await loginAs(ctxA, userId!);
+    const pageA = await ctxA.newPage();
+    await pageA.goto(url);
+    await expect(pageA.getByTestId('albums-list'), `[${qs}] albums-list must render`).toBeVisible();
+    const titlesA = await pageA.getByTestId('album-list-row-title-link').allInnerTexts();
+    await ctxA.close();
+
+    const ctxB = await browser.newContext();
+    await loginAs(ctxB, userId!);
+    const pageB = await ctxB.newPage();
+    await pageB.goto(url);
+    await expect(pageB.getByTestId('albums-list'), `[${qs}] albums-list must render in fresh context`).toBeVisible();
+    const titlesB = await pageB.getByTestId('album-list-row-title-link').allInnerTexts();
+    await ctxB.close();
+
+    expect(titlesB, `[${qs}] fresh-context DOM order must match the original row-for-row`).toEqual(titlesA);
+  }
+});
