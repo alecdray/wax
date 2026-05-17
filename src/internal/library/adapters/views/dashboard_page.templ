@@ -13,6 +13,10 @@ type DashboardPageProps struct {
 	FirstPageAlbums []library.AlbumDTO
 	Artists         []library.ArtistDTO
 	FilterParams    library.FilterParams
+	// SortBy and SortDir reflect the URL query so deep links and reloads
+	// reproduce the same view (Task 1.5 / PC2). Empty string means default.
+	SortBy  string
+	SortDir string
 }
 
 templ DashboardPage(props DashboardPageProps) {
@@ -28,7 +32,7 @@ templ DashboardPage(props DashboardPageProps) {
 					Active:        CarouselViewRecentlyPlayed,
 				})
 				if props.Library != nil {
-					@AlbumsListFrag(props.FirstPageAlbums, "date", "desc", props.FilterParams, props.Artists)
+					@AlbumsListFrag(props.FirstPageAlbums, props.SortBy, props.SortDir, props.FilterParams, props.Artists)
 				}
 			</div>
 		</div>

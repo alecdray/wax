@@ -45,6 +45,7 @@ func NewHttpHandler(spotifyAuth *spotify.AuthService, mb *musicbrainz.Service, f
 func parseFilterParams(r *http.Request) library.FilterParams {
 	q := r.URL.Query()
 	var fp library.FilterParams
+	fp.Q = strings.TrimSpace(q.Get("q"))
 	if minStr := q.Get("minRating"); minStr != "" {
 		if v, err := strconv.ParseFloat(minStr, 64); err == nil {
 			fp.MinRating = &v
@@ -56,8 +57,11 @@ func parseFilterParams(r *http.Request) library.FilterParams {
 		}
 	}
 	fp.Rated = q.Get("rated")
-	if format := q.Get("format"); format != "" {
-		fp.Formats = []models.ReleaseFormat{models.ReleaseFormat(format)}
+	for _, format := range q["format"] {
+		if format == "" {
+			continue
+		}
+		fp.Formats = append(fp.Formats, models.ReleaseFormat(format))
 	}
 	fp.ArtistIDs = q["artist"]
 	return fp
@@ -91,7 +95,26 @@ func (h *HttpHandler) GetDashboardPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lib.Albums.SortByDate(false)
+	// Honor URL query params on initial render so deep links + reloads
+	// reproduce the same view as HTMX-driven interactions (Task 1.5 / PC2).
+	sortBy := r.URL.Query().Get("sortBy")
+	dir := r.URL.Query().Get("dir")
+	ascending := dir == "asc"
+	switch sortBy {
+	case "album":
+		lib.Albums.SortByTitle(ascending)
+	case "artist":
+		lib.Albums.SortByArtist(ascending)
+	case "rating":
+		lib.Albums.SortByRating(ascending)
+	case "lastPlayed":
+		lib.Albums.SortByLastPlayed(ascending)
+	default:
+		lib.Albums.SortByDate(ascending)
+	}
+
+	fp := parseFilterParams(r)
+	filtered := lib.Albums.Filter(fp)
 
 	recentAlbums, err := h.libraryService.GetRecentlyPlayedAlbums(ctx, userId)
 	if err != nil {
@@ -104,9 +127,11 @@ func (h *HttpHandler) GetDashboardPage(w http.ResponseWriter, r *http.Request) {
 		Library:         lib,
 		Feeds:           feeds,
 		RecentAlbums:    recentAlbums,
-		FirstPageAlbums: lib.Albums.Page(0),
+		FirstPageAlbums: filtered.Page(0),
 		Artists:         lib.Artists,
-		FilterParams:    library.FilterParams{},
+		FilterParams:    fp,
+		SortBy:          sortBy,
+		SortDir:         dir,
 	})
 	dashboardPage.Render(r.Context(), w)
 }
@@ -269,7 +294,7 @@ func (h *HttpHandler) GetAlbumsPage(w http.ResponseWriter, r *http.Request) {
 	offset := 0
 	fmt.Sscanf(r.URL.Query().Get("offset"), "%d", &offset)
 
-	ascending := dir != "desc"
+	ascending := dir == "asc"
 	albums := lib.Albums
 	switch sortBy {
 	case "album":
@@ -278,10 +303,10 @@ func (h *HttpHandler) GetAlbumsPage(w http.ResponseWriter, r *http.Request) {
 		albums.SortByArtist(ascending)
 	case "rating":
 		albums.SortByRating(ascending)
-	case "date":
-		albums.SortByDate(ascending)
 	case "lastPlayed":
 		albums.SortByLastPlayed(ascending)
+	default:
+		albums.SortByDate(ascending)
 	}
 
 	fp := parseFilterParams(r)

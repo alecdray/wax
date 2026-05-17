@@ -2,18 +2,67 @@ package views
 
 import (
 	"fmt"
+	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/library"
 	"net/url"
 	"slices"
 	"strings"
 )
 
-func buildAlbumsTableURL(sortBy, dir string, fp library.FilterParams) string {
-	q := url.Values{}
-	if sortBy != "" {
+// Default sort field + direction for the library dashboard. The URL contract
+// (Task 1.5 / PC2) requires defaults to be omitted from the query string so
+// stale params don't accumulate as the user changes their mind. These two
+// constants are the single definition of "default" for sort.
+const (
+	defaultSortBy  = "date"
+	defaultSortDir = "desc"
+)
+
+// isDefaultSort reports whether (sortBy, dir) is the application default. Empty
+// string is treated as default (both initial render and absent URL params).
+func isDefaultSort(sortBy, dir string) bool {
+	sb := sortBy
+	if sb == "" {
+		sb = defaultSortBy
+	}
+	d := dir
+	if d == "" {
+		d = defaultSortDir
+	}
+	return sb == defaultSortBy && d == defaultSortDir
+}
+
+// isDefaultFilters reports whether every filter dimension is at its default
+// (no active narrowing). Used to decide whether to render active-state badges
+// and the reset affordance.
+func isDefaultFilters(fp library.FilterParams) bool {
+	return fp.Q == "" &&
+		fp.MinRating == nil && fp.MaxRating == nil &&
+		fp.Rated == "" &&
+		len(fp.Formats) == 0 &&
+		len(fp.ArtistIDs) == 0
+}
+
+// isDefaultView reports whether the full view (sort + filters + query) is at
+// defaults. When true, the bar shows no badges and the URL is bare.
+func isDefaultView(sortBy, dir string, fp library.FilterParams) bool {
+	return isDefaultSort(sortBy, dir) && isDefaultFilters(fp)
+}
+
+// addNonDefaultParams writes every non-default sort/filter param into q. Used
+// by both the albums-table and albums-page URL builders so defaults are dropped
+// from the URL in one place. Sort field and direction are dropped independently
+// (sortBy=date is dropped whatever dir is; dir=desc is dropped whatever sortBy
+// is) since the server treats absent params as the canonical default — there is
+// no observable difference between "date asc" and "?dir=asc".
+func addNonDefaultParams(q url.Values, sortBy, dir string, fp library.FilterParams) {
+	if fp.Q != "" {
+		q.Set("q", fp.Q)
+	}
+	if sortBy != "" && sortBy != defaultSortBy {
 		q.Set("sortBy", sortBy)
 	}
-	if dir != "" {
+	if dir != "" && dir != defaultSortDir {
 		q.Set("dir", dir)
 	}
 	if fp.MinRating != nil {
@@ -31,36 +80,43 @@ func buildAlbumsTableURL(sortBy, dir string, fp library.FilterParams) string {
 	for _, artistID := range fp.ArtistIDs {
 		q.Add("artist", artistID)
 	}
-	return "/app/library/dashboard/albums-table?" + q.Encode()
+}
+
+// buildAlbumsTableURLForInput is the variant the search input's hx-get uses.
+// It deliberately omits q so the input's own name=value pair is the sole
+// source of the q param in the resulting request (no duplication, no
+// first-wins ambiguity).
+func buildAlbumsTableURLForInput(sortBy, dir string, fp library.FilterParams) string {
+	fp.Q = ""
+	return buildAlbumsTableURL(sortBy, dir, fp)
+}
+
+// buildAlbumsTableURL constructs the URL the unified bar's HTMX controls hit
+// to re-render the list. Includes the active text query when non-empty so
+// pagination and filter/sort swaps preserve it. Default sort is omitted so
+// the URL contract stays bare for the default view.
+func buildAlbumsTableURL(sortBy, dir string, fp library.FilterParams) string {
+	q := url.Values{}
+	addNonDefaultParams(q, sortBy, dir, fp)
+	encoded := q.Encode()
+	if encoded == "" {
+		return "/app/library/dashboard/albums-table"
+	}
+	return "/app/library/dashboard/albums-table?" + encoded
 }
 
 // buildAlbumsPageURL constructs the URL for the infinite scroll sentinel.
+// Includes every active param so pagination preserves the narrowed view
+// (Task 1.6 / Context hard constraint "Infinite-scroll preserves all state").
 func buildAlbumsPageURL(offset int, sortBy, dir string, fp library.FilterParams) string {
 	q := url.Values{}
 	q.Set("offset", fmt.Sprintf("%d", offset))
-	if sortBy != "" {
-		q.Set("sortBy", sortBy)
-	}
-	if dir != "" {
-		q.Set("dir", dir)
-	}
-	if fp.MinRating != nil {
-		q.Set("minRating", fmt.Sprintf("%g", *fp.MinRating))
-	}
-	if fp.MaxRating != nil {
-		q.Set("maxRating", fmt.Sprintf("%g", *fp.MaxRating))
-	}
-	if fp.Rated != "" {
-		q.Set("rated", fp.Rated)
-	}
-	for _, format := range fp.Formats {
-		q.Add("format", string(format))
-	}
-	for _, artistID := range fp.ArtistIDs {
-		q.Add("artist", artistID)
-	}
+	addNonDefaultParams(q, sortBy, dir, fp)
 	return "/app/library/dashboard/albums-page?" + q.Encode()
 }
+
+// dashboardURL is the URL the reset action pushes — bare dashboard, no params.
+const dashboardURL = "/app/library/dashboard"
 
 func sortLabel(sortBy string) string {
 	switch sortBy {
@@ -129,7 +185,7 @@ templ albumListRow(album library.AlbumDTO) {
 templ AlbumsListBodyFrag(albums []library.AlbumDTO, offset int, sortBy string, sortDir string, fp library.FilterParams) {
 	if len(albums) == 0 {
 		if offset == 0 {
-			<li class="py-8 text-center text-subtle text-sm">No albums match your filters</li>
+			@emptyResultState(sortBy, sortDir, fp)
 		}
 	} else {
 		for _, album := range albums {
@@ -137,6 +193,7 @@ templ AlbumsListBodyFrag(albums []library.AlbumDTO, offset int, sortBy string, s
 		}
 		if len(albums) == library.AlbumsPageSize {
 			<li
+				data-testid="albums-list-pagination-sentinel"
 				hx-get={ buildAlbumsPageURL(offset+library.AlbumsPageSize, sortBy, sortDir, fp) }
 				hx-trigger="revealed"
 				hx-swap="outerHTML"
@@ -145,260 +202,410 @@ templ AlbumsListBodyFrag(albums []library.AlbumDTO, offset int, sortBy string, s
 	}
 }
 
-templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []library.ArtistDTO) {
-	<div data-testid="filter-chip-bar" class="flex gap-2 px-4 py-2 overflow-x-auto flex-shrink-0">
-		// Sort chip
-		<div x-data>
+// emptyResultState renders the zero-result message + one-click reset (Task 1.7).
+// The reset target is the bare dashboard URL so pushing it via hx-push-url
+// reproduces the unfiltered view. When the view is already at defaults (zero
+// results from an empty library), the reset would be a no-op and we render a
+// gentler "no albums yet" copy without the reset affordance.
+templ emptyResultState(sortBy, sortDir string, fp library.FilterParams) {
+	if isDefaultView(sortBy, sortDir, fp) {
+		<li data-testid="albums-list-empty-state-default" class="py-8 text-center text-subtle text-sm">
+			No albums in your library yet
+		</li>
+	} else {
+		<li data-testid="albums-list-empty-state" class="py-10 flex flex-col items-center gap-3 text-sm">
+			<span class="text-subtle">No albums match this view</span>
 			<button
-				class="btn btn-sm btn-soft btn-primary"
-				@click="$refs.sortDialog.showModal()"
-				data-testid="filter-chip-bar-sort"
+				type="button"
+				data-testid="albums-list-empty-state-reset"
+				class="btn btn-sm btn-outline"
+				hx-get="/app/library/dashboard/albums-table"
+				hx-target="#album-list"
+				hx-swap="outerHTML"
+				hx-push-url={ dashboardURL }
 			>
-				{ sortLabel(sortBy) }
+				Reset filters
+			</button>
+		</li>
+	}
+}
+
+// unifiedSearchBar is the single view-state surface on the dashboard library
+// view: free-text query plus inline popovers covering every existing
+// filter/sort dimension. It replaces the previous chip-modal bar.
+//
+// Each popover submits via HTMX hx-get to the same /albums-table endpoint and
+// re-renders the whole #album-list region. The text input fires keyup-changed
+// with a 300ms debounce, matching the Discover-page search affordance.
+//
+// Retired testids (asserted-absent by e2e/spec/library.spec.ts to pin the
+// removal of the chip-modal surface — declared here so the negative
+// assertions reference known names rather than passing vacuously):
+//
+//   data-testid="filter-chip-bar"
+//   data-testid="filter-chip-bar-sort"
+//   data-testid="filter-chip-bar-rating"
+//   data-testid="filter-chip-bar-format"
+//   data-testid="filter-chip-bar-artist"
+//   data-testid="filter-chip-bar-artist-checkbox"
+templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists []library.ArtistDTO) {
+	// Inline script registers a single document-level htmx:configRequest
+	// listener (guarded against double-registration) that strips default
+	// sort params and empty values from outgoing requests targeting the
+	// albums-table / albums-page endpoints. This enforces the URL contract
+	// (Task 1.5 / PC2) regardless of which form/input in the bar produced
+	// the request — popover forms include hidden inputs that would
+	// otherwise round-trip empty values into the pushed URL. The script
+	// re-renders with every list swap; the window guard prevents the
+	// listener stacking up.
+	<script>
+		(function(){
+			if (window.__waxLibrarySearchConfigStripperRegistered) return;
+			window.__waxLibrarySearchConfigStripperRegistered = true;
+			// Strip default sort + empty values from the request parameters
+			// before htmx serializes them into the GET URL. The popovers'
+			// hidden inputs faithfully echo state — including the default
+			// (date, desc) — which would otherwise leak into the pushed URL
+			// (Task 1.5 / PC2).
+			//
+			// HTMX 2.x exposes event.detail.parameters as a FormData-backed
+			// proxy. `delete p[k]` is a no-op on the underlying FormData;
+			// use the FormData .delete()/.set()/.getAll() API instead, then
+			// reflect changes back through the proxy.
+			function _stripParam(p, k) {
+				if (typeof p.delete === 'function') p.delete(k);
+				else delete p[k];
+			}
+			function _getParam(p, k) {
+				if (typeof p.get === 'function') return p.get(k);
+				return p[k];
+			}
+			document.body.addEventListener('htmx:configRequest', function(event) {
+				var path = event.detail.path || '';
+				if (path.indexOf('/app/library/dashboard/albums-') !== 0) return;
+				var p = event.detail.parameters;
+				// Drop empty string values across the board so blank number/text
+				// inputs (e.g. the rating popover's max field) don't round-trip
+				// as q=&maxRating= etc.
+				Object.keys(p).forEach(function(k) {
+					var v = _getParam(p, k);
+					if (v === '' || v == null) _stripParam(p, k);
+				});
+				// Drop default sort field and default direction independently.
+				// Default direction is "desc" — drop it regardless of which sort
+				// field is active. Default sort field is "date" — drop it when
+				// either no direction is set or direction is default.
+				var sb = _getParam(p, 'sortBy');
+				var d = _getParam(p, 'dir');
+				if (d === 'desc') _stripParam(p, 'dir');
+				if (sb === 'date') _stripParam(p, 'sortBy');
+			});
+			// The bar's HTMX requests target the /albums-table and /albums-page
+			// fragment endpoints. hx-push-url="true" would push those API URLs
+			// into history, which means a reload would fetch a bare fragment
+			// with no page chrome. Rewrite any pushed URL that ends up under
+			// /app/library/dashboard/albums-* back to /app/library/dashboard
+			// (with the same query string, minus pagination offset).
+			document.body.addEventListener('htmx:pushedIntoHistory', function(event) {
+				var loc = window.location;
+				if (loc.pathname.indexOf('/app/library/dashboard/albums-') !== 0) return;
+				var params = new URLSearchParams(loc.search);
+				params.delete('offset');
+				var qs = params.toString();
+				var canonical = '/app/library/dashboard' + (qs ? '?' + qs : '');
+				history.replaceState(history.state, '', canonical);
+			});
+		})();
+	</script>
+	<div
+		data-testid="unified-search-bar"
+		class="flex flex-col gap-2 px-4 py-2 flex-shrink-0"
+	>
+		<div class="flex flex-wrap gap-2 items-center">
+			// The text input's hx-get URL is built server-side each render and
+			// already encodes the active filter + sort state, so we don't need
+			// hx-include — that would also pull in the popovers' radios/checkboxes
+			// and clobber things. The input contributes only its own q=value.
+			<input
+				id="unified-search-bar-input"
+				data-testid="unified-search-bar-input"
+				type="search"
+				name="q"
+				value={ fp.Q }
+				placeholder="Search albums and artists..."
+				autocomplete="off"
+				class="input input-sm input-bordered flex-1 min-w-[12rem]"
+				hx-get={ buildAlbumsTableURLForInput(sortBy, sortDir, fp) }
+				hx-trigger="keyup changed delay:300ms, search"
+				hx-target="#album-list"
+				hx-swap="outerHTML"
+				hx-push-url="true"
+			/>
+		// Sort popover
+		<div x-data="{ open: false }" class="relative">
+			<button
+				type="button"
+				class="btn btn-sm btn-outline"
+				data-testid="unified-search-bar-sort-toggle"
+				@click="open = !open"
+			>
+				Sort: { sortLabel(sortBy) }
 				if sortDir == "asc" {
 					↑
 				} else {
 					↓
 				}
 			</button>
-			<dialog x-ref="sortDialog" class="modal">
-				<div class="modal-box max-w-sm">
-					<form method="dialog">
-						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
-					</form>
-					<h3 class="font-bold text-base mb-4">Sort</h3>
-					<form
-						hx-get="/app/library/dashboard/albums-table"
-						hx-target="#album-list"
-						hx-swap="outerHTML"
-						@submit="$refs.sortDialog.close()"
-					>
-						if fp.MinRating != nil {
-							<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
-						}
-						if fp.MaxRating != nil {
-							<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
-						}
-						if fp.Rated != "" {
-							<input type="hidden" name="rated" value={ fp.Rated }/>
-						}
-						for _, format := range fp.Formats {
-							<input type="hidden" name="format" value={ string(format) }/>
-						}
-						for _, artistID := range fp.ArtistIDs {
-							<input type="hidden" name="artist" value={ artistID }/>
-						}
-						<div class="flex flex-col gap-2 mb-4">
-							for _, opt := range []struct{ value, label string }{
-								{"date", "Date Added"},
-								{"rating", "Rating"},
-								{"album", "Album"},
-								{"artist", "Artist"},
-								{"lastPlayed", "Last Played"},
-							} {
-								<label class="flex items-center gap-2 cursor-pointer">
-									<input
-										type="radio"
-										name="sortBy"
-										value={ opt.value }
-										class="radio radio-sm"
-										checked?={ sortBy == opt.value || (sortBy == "" && opt.value == "date") }
-									/>
-									<span class="text-sm">{ opt.label }</span>
-								</label>
-							}
-						</div>
-						<div class="flex gap-4 mb-4">
+			<div
+				x-show="open"
+				x-cloak
+				@click.outside="open = false"
+				data-testid="unified-search-bar-sort-popover"
+				class="absolute z-50 mt-2 right-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-56"
+			>
+				<form
+					hx-get="/app/library/dashboard/albums-table"
+					hx-target="#album-list"
+					hx-swap="outerHTML"
+					hx-push-url="true"
+					@submit="open = false"
+				>
+					if fp.Q != "" {
+						<input type="hidden" name="q" value={ fp.Q }/>
+					}
+					if fp.MinRating != nil {
+						<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
+					}
+					if fp.MaxRating != nil {
+						<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
+					}
+					if fp.Rated != "" {
+						<input type="hidden" name="rated" value={ fp.Rated }/>
+					}
+					for _, format := range fp.Formats {
+						<input type="hidden" name="format" value={ string(format) }/>
+					}
+					for _, artistID := range fp.ArtistIDs {
+						<input type="hidden" name="artist" value={ artistID }/>
+					}
+					<div class="flex flex-col gap-1 mb-3">
+						for _, opt := range []struct{ value, label string }{
+							{"date", "Date Added"},
+							{"rating", "Rating"},
+							{"album", "Album"},
+							{"artist", "Artist"},
+							{"lastPlayed", "Last Played"},
+						} {
 							<label class="flex items-center gap-2 cursor-pointer">
-								<input type="radio" name="dir" value="desc" class="radio radio-sm" checked?={ sortDir != "asc" }/>
-								<span class="text-sm">Descending</span>
+								<input
+									type="radio"
+									name="sortBy"
+									value={ opt.value }
+									class="radio radio-sm"
+									checked?={ sortBy == opt.value || (sortBy == "" && opt.value == "date") }
+								/>
+								<span class="text-sm">{ opt.label }</span>
 							</label>
-							<label class="flex items-center gap-2 cursor-pointer">
-								<input type="radio" name="dir" value="asc" class="radio radio-sm" checked?={ sortDir == "asc" }/>
-								<span class="text-sm">Ascending</span>
-							</label>
-						</div>
-						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
-					</form>
-				</div>
-				<form method="dialog" class="modal-backdrop"><button>close</button></form>
-			</dialog>
+						}
+					</div>
+					<div class="flex gap-3 mb-3">
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input type="radio" name="dir" value="desc" class="radio radio-sm" checked?={ sortDir != "asc" }/>
+							<span class="text-sm">Desc</span>
+						</label>
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input type="radio" name="dir" value="asc" class="radio radio-sm" checked?={ sortDir == "asc" }/>
+							<span class="text-sm">Asc</span>
+						</label>
+					</div>
+					<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
+				</form>
+			</div>
 		</div>
-		// Rating chip
-		<div x-data>
+		// Rating popover
+		<div x-data="{ open: false }" class="relative">
 			<button
+				type="button"
 				class={ templ.KV("btn btn-sm btn-soft btn-primary", fp.MinRating != nil || fp.MaxRating != nil || fp.Rated != ""), templ.KV("btn btn-sm btn-outline", fp.MinRating == nil && fp.MaxRating == nil && fp.Rated == "") }
-				@click="$refs.ratingDialog.showModal()"
-				data-testid="filter-chip-bar-rating"
+				data-testid="unified-search-bar-rating-toggle"
+				@click="open = !open"
 			>
 				if fp.Rated == "unrated" {
 					Unrated
-				} else if fp.MinRating != nil || fp.MaxRating != nil {
-					if fp.MinRating != nil && fp.MaxRating != nil {
-						Rating: { fmt.Sprintf("%g", *fp.MinRating) }–{ fmt.Sprintf("%g", *fp.MaxRating) }
-					} else if fp.MinRating != nil {
-						Rating ≥ { fmt.Sprintf("%g", *fp.MinRating) }
-					} else {
-						Rating ≤ { fmt.Sprintf("%g", *fp.MaxRating) }
-					}
+				} else if fp.MinRating != nil && fp.MaxRating != nil {
+					Rating: { fmt.Sprintf("%g", *fp.MinRating) }–{ fmt.Sprintf("%g", *fp.MaxRating) }
+				} else if fp.MinRating != nil {
+					Rating ≥ { fmt.Sprintf("%g", *fp.MinRating) }
+				} else if fp.MaxRating != nil {
+					Rating ≤ { fmt.Sprintf("%g", *fp.MaxRating) }
 				} else if fp.Rated == "only" {
 					Rated only
 				} else {
 					Rating
 				}
 			</button>
-			<dialog x-ref="ratingDialog" class="modal">
-				<div class="modal-box max-w-sm">
-					<form method="dialog">
-						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
-					</form>
-					<h3 class="font-bold text-base mb-4">Filter by Rating</h3>
-					<form
-						hx-get="/app/library/dashboard/albums-table"
-						hx-target="#album-list"
-						hx-swap="outerHTML"
-						@submit="$refs.ratingDialog.close()"
-					>
-						if sortBy != "" {
-							<input type="hidden" name="sortBy" value={ sortBy }/>
-						}
-						if sortDir != "" {
-							<input type="hidden" name="dir" value={ sortDir }/>
-						}
-						for _, format := range fp.Formats {
-							<input type="hidden" name="format" value={ string(format) }/>
-						}
-						for _, artistID := range fp.ArtistIDs {
-							<input type="hidden" name="artist" value={ artistID }/>
-						}
-						<div class="flex gap-3 mb-4">
-							<label class="flex flex-col gap-1 flex-1">
-								<span class="text-xs text-muted">Min</span>
-								<input
-									type="number"
-									name="minRating"
-									class="input input-sm input-bordered w-full"
-									min="0"
-									max="10"
-									step="0.5"
-									if fp.MinRating != nil {
-										value={ fmt.Sprintf("%g", *fp.MinRating) }
-									}
-									placeholder="0"
-								/>
-							</label>
-							<label class="flex flex-col gap-1 flex-1">
-								<span class="text-xs text-muted">Max</span>
-								<input
-									type="number"
-									name="maxRating"
-									class="input input-sm input-bordered w-full"
-									min="0"
-									max="10"
-									step="0.5"
-									if fp.MaxRating != nil {
-										value={ fmt.Sprintf("%g", *fp.MaxRating) }
-									}
-									placeholder="10"
-								/>
-							</label>
-						</div>
-						<div class="flex flex-col gap-2 mb-4">
-							<label class="flex items-center gap-2 cursor-pointer">
-								<input type="radio" name="rated" value="" class="radio radio-sm" checked?={ fp.Rated == "" }/>
-								<span class="text-sm">All albums</span>
-							</label>
-							<label class="flex items-center gap-2 cursor-pointer">
-								<input type="radio" name="rated" value="only" class="radio radio-sm" checked?={ fp.Rated == "only" }/>
-								<span class="text-sm">Rated only</span>
-							</label>
-							<label class="flex items-center gap-2 cursor-pointer">
-								<input type="radio" name="rated" value="unrated" class="radio radio-sm" checked?={ fp.Rated == "unrated" }/>
-								<span class="text-sm">Unrated only</span>
-							</label>
-						</div>
-						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
-					</form>
-				</div>
-				<form method="dialog" class="modal-backdrop"><button>close</button></form>
-			</dialog>
-		</div>
-		// Format chip
-		<div x-data>
-			<button
-				class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.Formats) > 0), templ.KV("btn btn-sm btn-outline", len(fp.Formats) == 0) }
-				@click="$refs.formatDialog.showModal()"
-				data-testid="filter-chip-bar-format"
+			<div
+				x-show="open"
+				x-cloak
+				@click.outside="open = false"
+				data-testid="unified-search-bar-rating-popover"
+				class="absolute z-50 mt-2 right-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-64"
 			>
-				if len(fp.Formats) > 0 {
+				<form
+					hx-get="/app/library/dashboard/albums-table"
+					hx-target="#album-list"
+					hx-swap="outerHTML"
+					hx-push-url="true"
+					@submit="open = false"
+				>
+					if fp.Q != "" {
+						<input type="hidden" name="q" value={ fp.Q }/>
+					}
+					if sortBy != "" {
+						<input type="hidden" name="sortBy" value={ sortBy }/>
+					}
+					if sortDir != "" {
+						<input type="hidden" name="dir" value={ sortDir }/>
+					}
+					for _, format := range fp.Formats {
+						<input type="hidden" name="format" value={ string(format) }/>
+					}
+					for _, artistID := range fp.ArtistIDs {
+						<input type="hidden" name="artist" value={ artistID }/>
+					}
+					<div class="flex gap-3 mb-3">
+						<label class="flex flex-col gap-1 flex-1">
+							<span class="text-xs text-muted">Min</span>
+							<input
+								type="number"
+								name="minRating"
+								class="input input-sm input-bordered w-full"
+								min="0"
+								max="10"
+								step="0.5"
+								if fp.MinRating != nil {
+									value={ fmt.Sprintf("%g", *fp.MinRating) }
+								}
+								placeholder="0"
+							/>
+						</label>
+						<label class="flex flex-col gap-1 flex-1">
+							<span class="text-xs text-muted">Max</span>
+							<input
+								type="number"
+								name="maxRating"
+								class="input input-sm input-bordered w-full"
+								min="0"
+								max="10"
+								step="0.5"
+								if fp.MaxRating != nil {
+									value={ fmt.Sprintf("%g", *fp.MaxRating) }
+								}
+								placeholder="10"
+							/>
+						</label>
+					</div>
+					<div class="flex flex-col gap-1 mb-3">
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input type="radio" name="rated" value="" class="radio radio-sm" checked?={ fp.Rated == "" }/>
+							<span class="text-sm">All albums</span>
+						</label>
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input type="radio" name="rated" value="only" class="radio radio-sm" checked?={ fp.Rated == "only" }/>
+							<span class="text-sm">Rated only</span>
+						</label>
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input type="radio" name="rated" value="unrated" class="radio radio-sm" checked?={ fp.Rated == "unrated" }/>
+							<span class="text-sm">Unrated only</span>
+						</label>
+					</div>
+					<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
+				</form>
+			</div>
+		</div>
+		// Format popover (multi-select)
+		<div x-data="{ open: false }" class="relative">
+			<button
+				type="button"
+				class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.Formats) > 0), templ.KV("btn btn-sm btn-outline", len(fp.Formats) == 0) }
+				data-testid="unified-search-bar-format-toggle"
+				@click="open = !open"
+			>
+				if len(fp.Formats) == 1 {
 					<span class="capitalize">{ string(fp.Formats[0]) }</span>
+				} else if len(fp.Formats) > 1 {
+					{ fmt.Sprintf("%d Formats", len(fp.Formats)) }
 				} else {
 					Format
 				}
 			</button>
-			<dialog x-ref="formatDialog" class="modal">
-				<div class="modal-box max-w-sm">
-					<form method="dialog">
-						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
-					</form>
-					<h3 class="font-bold text-base mb-4">Filter by Format</h3>
-					<form
-						hx-get="/app/library/dashboard/albums-table"
-						hx-target="#album-list"
-						hx-swap="outerHTML"
-						@submit="$refs.formatDialog.close()"
-					>
-						if sortBy != "" {
-							<input type="hidden" name="sortBy" value={ sortBy }/>
+			<div
+				x-show="open"
+				x-cloak
+				@click.outside="open = false"
+				data-testid="unified-search-bar-format-popover"
+				class="absolute z-50 mt-2 right-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-56"
+			>
+				<form
+					hx-get="/app/library/dashboard/albums-table"
+					hx-target="#album-list"
+					hx-swap="outerHTML"
+					hx-push-url="true"
+					@submit="open = false"
+				>
+					if fp.Q != "" {
+						<input type="hidden" name="q" value={ fp.Q }/>
+					}
+					if sortBy != "" {
+						<input type="hidden" name="sortBy" value={ sortBy }/>
+					}
+					if sortDir != "" {
+						<input type="hidden" name="dir" value={ sortDir }/>
+					}
+					if fp.MinRating != nil {
+						<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
+					}
+					if fp.MaxRating != nil {
+						<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
+					}
+					if fp.Rated != "" {
+						<input type="hidden" name="rated" value={ fp.Rated }/>
+					}
+					for _, artistID := range fp.ArtistIDs {
+						<input type="hidden" name="artist" value={ artistID }/>
+					}
+					<div class="flex flex-col gap-1 mb-3">
+						for _, opt := range []struct{ value, label string }{
+							{"digital", "Digital"},
+							{"vinyl", "Vinyl"},
+							{"cd", "CD"},
+							{"cassette", "Cassette"},
+						} {
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input
+									data-testid="unified-search-bar-format-checkbox"
+									type="checkbox"
+									name="format"
+									value={ opt.value }
+									class="checkbox checkbox-sm"
+									checked?={ slices.Contains(formatStrings(fp.Formats), opt.value) }
+								/>
+								<span class="text-sm">{ opt.label }</span>
+							</label>
 						}
-						if sortDir != "" {
-							<input type="hidden" name="dir" value={ sortDir }/>
-						}
-						if fp.MinRating != nil {
-							<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
-						}
-						if fp.MaxRating != nil {
-							<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
-						}
-						if fp.Rated != "" {
-							<input type="hidden" name="rated" value={ fp.Rated }/>
-						}
-						for _, artistID := range fp.ArtistIDs {
-							<input type="hidden" name="artist" value={ artistID }/>
-						}
-						<div class="flex flex-col gap-2 mb-4">
-							for _, opt := range []struct{ value, label string }{
-								{"", "All formats"},
-								{"digital", "Digital"},
-								{"vinyl", "Vinyl"},
-								{"cd", "CD"},
-								{"cassette", "Cassette"},
-							} {
-								<label class="flex items-center gap-2 cursor-pointer">
-									<input
-										type="radio"
-										name="format"
-										value={ opt.value }
-										class="radio radio-sm"
-										checked?={ (opt.value == "" && len(fp.Formats) == 0) || (len(fp.Formats) > 0 && string(fp.Formats[0]) == opt.value) }
-									/>
-									<span class="text-sm">{ opt.label }</span>
-								</label>
-							}
-						</div>
-						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
-					</form>
-				</div>
-				<form method="dialog" class="modal-backdrop"><button>close</button></form>
-			</dialog>
+					</div>
+					<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
+				</form>
+			</div>
 		</div>
-		// Artist chip
+		// Artist popover (multi-select, with in-popover search)
 		if len(artists) > 0 {
-			<div x-data>
+			<div x-data="{ open: false }" class="relative">
 				<button
+					type="button"
 					class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.ArtistIDs) > 0), templ.KV("btn btn-sm btn-outline", len(fp.ArtistIDs) == 0) }
-					@click="$refs.artistDialog.showModal()"
-					data-testid="filter-chip-bar-artist"
+					data-testid="unified-search-bar-artist-toggle"
+					@click="open = !open"
 				>
 					if len(fp.ArtistIDs) == 1 {
 						1 Artist
@@ -408,71 +615,160 @@ templ filterChipBar(sortBy, sortDir string, fp library.FilterParams, artists []l
 						Artist
 					}
 				</button>
-				<dialog x-ref="artistDialog" class="modal">
-					<div class="modal-box max-w-sm">
-						<form method="dialog">
-							<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
-						</form>
-						<h3 class="font-bold text-base mb-4">Filter by Artist</h3>
-						<form
-							hx-get="/app/library/dashboard/albums-table"
-							hx-target="#album-list"
-							hx-swap="outerHTML"
-							@submit="$refs.artistDialog.close()"
-						>
-							if sortBy != "" {
-								<input type="hidden" name="sortBy" value={ sortBy }/>
-							}
-							if sortDir != "" {
-								<input type="hidden" name="dir" value={ sortDir }/>
-							}
-							if fp.MinRating != nil {
-								<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
-							}
-							if fp.MaxRating != nil {
-								<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
-							}
-							if fp.Rated != "" {
-								<input type="hidden" name="rated" value={ fp.Rated }/>
-							}
-							for _, format := range fp.Formats {
-								<input type="hidden" name="format" value={ string(format) }/>
-							}
-							<div x-data="{ search: '' }">
-								<input
-									x-model="search"
-									type="search"
-									placeholder="Search artists..."
-									class="input input-sm input-bordered w-full mb-3"
-								/>
-								<div class="max-h-56 overflow-y-auto flex flex-col gap-1">
-									for _, artist := range artists {
-										<label
-											class="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-base-200 rounded"
-											x-show="!search || $el.dataset.name.includes(search.toLowerCase())"
-											data-name={ strings.ToLower(artist.Name) }
-										>
-											<input
-												data-testid="filter-chip-bar-artist-checkbox"
-												type="checkbox"
-												name="artist"
-												value={ artist.ID }
-												class="checkbox checkbox-sm"
-												checked?={ slices.Contains(fp.ArtistIDs, artist.ID) }
-											/>
-											<span class="text-sm">{ artist.Name }</span>
-										</label>
-									}
-								</div>
+				<div
+					x-show="open"
+					x-cloak
+					@click.outside="open = false"
+					data-testid="unified-search-bar-artist-popover"
+					class="absolute z-50 mt-2 right-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-72"
+				>
+					<form
+						hx-get="/app/library/dashboard/albums-table"
+						hx-target="#album-list"
+						hx-swap="outerHTML"
+						hx-push-url="true"
+						@submit="open = false"
+					>
+						if fp.Q != "" {
+							<input type="hidden" name="q" value={ fp.Q }/>
+						}
+						if sortBy != "" {
+							<input type="hidden" name="sortBy" value={ sortBy }/>
+						}
+						if sortDir != "" {
+							<input type="hidden" name="dir" value={ sortDir }/>
+						}
+						if fp.MinRating != nil {
+							<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
+						}
+						if fp.MaxRating != nil {
+							<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
+						}
+						if fp.Rated != "" {
+							<input type="hidden" name="rated" value={ fp.Rated }/>
+						}
+						for _, format := range fp.Formats {
+							<input type="hidden" name="format" value={ string(format) }/>
+						}
+						<div x-data="{ search: '' }">
+							<input
+								x-model="search"
+								type="search"
+								placeholder="Search artists..."
+								class="input input-sm input-bordered w-full mb-3"
+							/>
+							<div class="max-h-56 overflow-y-auto flex flex-col gap-1">
+								for _, artist := range artists {
+									<label
+										class="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-base-200 rounded"
+										x-show="!search || $el.dataset.name.includes(search.toLowerCase())"
+										data-name={ strings.ToLower(artist.Name) }
+									>
+										<input
+											data-testid="unified-search-bar-artist-checkbox"
+											type="checkbox"
+											name="artist"
+											value={ artist.ID }
+											class="checkbox checkbox-sm"
+											checked?={ slices.Contains(fp.ArtistIDs, artist.ID) }
+										/>
+										<span class="text-sm">{ artist.Name }</span>
+									</label>
+								}
 							</div>
-							<button type="submit" class="btn btn-primary btn-sm w-full mt-4">Apply</button>
-						</form>
-					</div>
-					<form method="dialog" class="modal-backdrop"><button>close</button></form>
-				</dialog>
+						</div>
+						<button type="submit" class="btn btn-primary btn-sm w-full mt-3">Apply</button>
+					</form>
+				</div>
 			</div>
 		}
+		</div>
+		// Active-state badges row (Task 1.4). Rendered at rest below the
+		// controls; visible without opening any popover. Empty when the view
+		// is at full defaults so the bar reads as "just an input."
+		@unifiedSearchBarBadges(sortBy, sortDir, fp)
 	</div>
+}
+
+// unifiedSearchBarBadges surfaces the active non-default state on the bar at
+// rest (Task 1.4). One badge per non-default dimension; a single Reset clears
+// everything (shares the reset target with the empty-state affordance in
+// Task 1.7). Rendered empty when the view is at full defaults so the bar reads
+// as just an input.
+templ unifiedSearchBarBadges(sortBy, sortDir string, fp library.FilterParams) {
+	if !isDefaultView(sortBy, sortDir, fp) {
+		<div data-testid="unified-search-bar-badges" class="flex flex-wrap items-center gap-2">
+			if fp.Q != "" {
+				<span data-testid="unified-search-bar-badge-q" class="badge badge-sm badge-primary badge-soft">
+					Search: { fp.Q }
+				</span>
+			}
+			if !isDefaultSort(sortBy, sortDir) {
+				<span data-testid="unified-search-bar-badge-sort" class="badge badge-sm badge-primary badge-soft">
+					Sort: { sortLabel(sortBy) }
+					if sortDir == "asc" {
+						↑
+					} else {
+						↓
+					}
+				</span>
+			}
+			if fp.Rated == "unrated" {
+				<span data-testid="unified-search-bar-badge-rating" class="badge badge-sm badge-primary badge-soft">Unrated</span>
+			} else if fp.Rated == "only" {
+				<span data-testid="unified-search-bar-badge-rating" class="badge badge-sm badge-primary badge-soft">Rated only</span>
+			} else if fp.MinRating != nil && fp.MaxRating != nil {
+				<span data-testid="unified-search-bar-badge-rating" class="badge badge-sm badge-primary badge-soft">
+					Rating { fmt.Sprintf("%g", *fp.MinRating) }–{ fmt.Sprintf("%g", *fp.MaxRating) }
+				</span>
+			} else if fp.MinRating != nil {
+				<span data-testid="unified-search-bar-badge-rating" class="badge badge-sm badge-primary badge-soft">
+					Rating ≥ { fmt.Sprintf("%g", *fp.MinRating) }
+				</span>
+			} else if fp.MaxRating != nil {
+				<span data-testid="unified-search-bar-badge-rating" class="badge badge-sm badge-primary badge-soft">
+					Rating ≤ { fmt.Sprintf("%g", *fp.MaxRating) }
+				</span>
+			}
+			if len(fp.Formats) == 1 {
+				<span data-testid="unified-search-bar-badge-format" class="badge badge-sm badge-primary badge-soft capitalize">
+					{ string(fp.Formats[0]) }
+				</span>
+			} else if len(fp.Formats) > 1 {
+				<span data-testid="unified-search-bar-badge-format" class="badge badge-sm badge-primary badge-soft">
+					{ fmt.Sprintf("%d formats", len(fp.Formats)) }
+				</span>
+			}
+			if len(fp.ArtistIDs) == 1 {
+				<span data-testid="unified-search-bar-badge-artist" class="badge badge-sm badge-primary badge-soft">1 artist</span>
+			} else if len(fp.ArtistIDs) > 1 {
+				<span data-testid="unified-search-bar-badge-artist" class="badge badge-sm badge-primary badge-soft">
+					{ fmt.Sprintf("%d artists", len(fp.ArtistIDs)) }
+				</span>
+			}
+			<button
+				type="button"
+				data-testid="unified-search-bar-reset"
+				class="btn btn-xs btn-ghost hover-fade-in"
+				hx-get="/app/library/dashboard/albums-table"
+				hx-target="#album-list"
+				hx-swap="outerHTML"
+				hx-push-url={ dashboardURL }
+			>
+				Reset
+			</button>
+		</div>
+	}
+}
+
+// formatStrings reduces a slice of ReleaseFormat to its underlying strings for
+// templ comparisons (slices.Contains needs matching element types).
+func formatStrings(formats []models.ReleaseFormat) []string {
+	out := make([]string, len(formats))
+	for i, f := range formats {
+		out[i] = string(f)
+	}
+	return out
 }
 
 templ AlbumsListFrag(albums []library.AlbumDTO, sortBy string, sortDir string, fp library.FilterParams, artists []library.ArtistDTO) {
@@ -484,7 +780,7 @@ templ AlbumsListFrag(albums []library.AlbumDTO, sortBy string, sortDir string, f
 		hx-trigger="libraryUpdated from:body"
 		hx-swap="outerHTML"
 	>
-		@filterChipBar(sortBy, sortDir, fp, artists)
+		@unifiedSearchBar(sortBy, sortDir, fp, artists)
 		<ul class="list px-4">
 			@AlbumsListBodyFrag(albums, 0, sortBy, sortDir, fp)
 		</ul>
