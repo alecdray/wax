@@ -1,6 +1,8 @@
 package views
 
 import (
+    "encoding/json"
+
     "github.com/alecdray/wax/src/internal/core/templates"
     "github.com/alecdray/wax/src/internal/library"
 )
@@ -9,6 +11,14 @@ type DiscoverPageProps struct {
     RadarAlbums  []library.AlbumDTO
     Query        string
     SearchResults []library.DiscoverResultDTO
+}
+
+func jsString(s string) string {
+    b, err := json.Marshal(s)
+    if err != nil {
+        return `""`
+    }
+    return string(b)
 }
 
 templ DiscoverPage(props DiscoverPageProps) {
@@ -23,20 +33,39 @@ templ DiscoverPage(props DiscoverPageProps) {
                     @RadarCarouselFrag(props.RadarAlbums, false)
                 </div>
                 <div class="w-full max-w-3xl flex flex-col gap-3 flex-1 min-h-0 px-4">
-                    <input
-                        id="discover-search-input"
-                        name="q"
-                        type="search"
-                        class="input input-bordered w-full flex-shrink-0"
-                        placeholder="Search Spotify for albums..."
-                        value={ props.Query }
-                        autocomplete="off"
-                        hx-get="/app/library/discover/search"
-                        hx-trigger="keyup changed delay:300ms, search"
-                        hx-target="#discover-results"
-                        hx-swap="innerHTML scroll:#discover-results:top"
-                        data-testid="discover-page-search-input"
-                    />
+                    <div
+                        class="relative w-full flex-shrink-0"
+                        x-data={ "{ value: " + jsString(props.Query) + " }" }
+                    >
+                        <input
+                            x-ref="input"
+                            id="discover-search-input"
+                            name="q"
+                            type="search"
+                            class="input input-bordered w-full pr-10"
+                            placeholder="Search Spotify for albums..."
+                            value={ props.Query }
+                            autocomplete="off"
+                            hx-get="/app/library/discover/search"
+                            hx-trigger="keyup changed delay:300ms, search"
+                            hx-target="#discover-results"
+                            hx-swap="innerHTML scroll:#discover-results:top"
+                            data-testid="discover-page-search-input"
+                            @input="value = $event.target.value"
+                            @search="value = $event.target.value"
+                        />
+                        <button
+                            type="button"
+                            x-show="value.length > 0"
+                            x-cloak
+                            class="absolute inset-y-0 right-0 flex items-center justify-center w-10 text-subtle hover:text-default cursor-pointer"
+                            aria-label="Clear search"
+                            data-testid="discover-page-search-clear"
+                            @click="$refs.input.value = ''; value = ''; $refs.input.dispatchEvent(new Event('search')); $refs.input.focus()"
+                        >
+                            @templates.Icon(templates.IconProps{Name: "x-circle-fill"})
+                        </button>
+                    </div>
                     <div
                         id="discover-results"
                         class="flex-1 min-h-0 overflow-y-auto"
