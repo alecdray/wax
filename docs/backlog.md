@@ -25,3 +25,9 @@ Next: add a clear (×) affordance inside the search input that empties the query
 The current tagging system isn't pulling its weight and needs a rethink. No replacement design yet — fully open.
 
 Next: brainstorm desired UX and constraints (likely via `/brainstorming`) before drafting a spec.
+
+## Reusable pattern for migration-side ID generation
+
+Backfill migrations need to generate row IDs in SQL, but the codebase has no consistent approach. `lower(hex(randomblob(16)))` (32-char hex) appears in two prior migrations; an inline UUID-v4 construction was used in `20260517202814`. Neither matches runtime, which uses `uuid.NewString()` (36-char dashed UUID v4). The clean fixes each have a cost — inline UUID-v4 SQL is verbose and easy to typo; a Go migration or driver-registered `uuid_v4()` function both need a custom goose binary (`src/cmd/goose/main.go`) because the vanilla CLI can't load Go code or use a custom-registered driver.
+
+Next: when a third backfill is on the horizon, pick a convention (probably the custom goose binary + `RegisterFunc("uuid_v4", ...)` — works in both the CLI and the app, reusable forever) and document it. Until then, inline SQL is the local optimum.
