@@ -42,3 +42,48 @@ test('Visiting the discover page shows the radar', async ({ context, page }) => 
     await expect(empty).toBeVisible();
   }
 });
+
+test('A clear control is offered only while the search has a value', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/discover');
+
+  await expect(page.getByTestId('discover-page-search-input')).toBeVisible();
+  await expect(page.getByTestId('discover-page-search-clear')).not.toBeVisible();
+
+  const query = 'the beatles';
+  const input = page.getByTestId('discover-page-search-input');
+  await input.pressSequentially(query);
+  await expect(page.getByTestId('discover-page-search-clear')).toBeVisible();
+
+  await input.focus();
+  for (let i = 0; i < query.length; i++) {
+    await page.keyboard.press('Backspace');
+  }
+
+  await expect(input).toHaveValue('');
+  await expect(page.getByTestId('discover-page-search-clear')).not.toBeVisible();
+});
+
+test('Activating the clear control resets the search to its empty state', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/discover');
+
+  const input = page.getByTestId('discover-page-search-input');
+  await input.pressSequentially('the beatles');
+
+  // Wait until the server has swapped in results — the empty-query placeholder
+  // must be gone before we can meaningfully assert it returns after clearing.
+  await expect(page.getByTestId('discover-search-results')).toBeVisible();
+  await expect(page.getByTestId('discover-search-results-empty-query')).not.toBeVisible();
+
+  await page.getByTestId('discover-page-search-clear').click();
+
+  await expect(input).toHaveValue('');
+  await expect(page.getByTestId('discover-search-results-empty-query')).toBeVisible();
+  await expect(page.getByTestId('discover-search-results')).not.toBeVisible();
+  await expect(input).toBeFocused();
+});
