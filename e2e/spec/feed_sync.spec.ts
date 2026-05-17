@@ -23,6 +23,6 @@ test('Triggering a feed sync from the dashboard shows a syncing indicator', asyn
 
   // The HTMX swap returns the dropdown with the feed marked as syncing —
   // the immediate, user-visible signal that the sync was accepted.
-  await expect(dropdown.getByText('Syncing...')).toBeVisible();
+  await expect(dropdown.getByTestId('feeds-dropdown-sync-indicator')).toBeVisible();
   await expect(dropdown.getByTestId('feeds-dropdown-sync-button').first()).toBeDisabled();
 });

@@ -104,7 +104,7 @@ templ FeedsDropdownContentFrag(feeds []feed.FeedDTO) {
 									@templates.Icon(templates.IconProps{Name: "exclamation-triangle"})
 								</div>
 							} else if f.LastSyncStatus.IsSyncing() {
-								<div class="text-info text-base">
+								<div data-testid="feeds-dropdown-sync-indicator" class="text-info text-base">
 									<span class="animate-spin inline-block">
 										@templates.Icon(templates.IconProps{Name: "arrow-repeat"})
 									</span>
