@@ -40,6 +40,7 @@ templ RatingConfirmFormFrag(album library.AlbumDTO, mode review.RatingMode, rati
 			<p class="max-w-[75%] text-ellipsis text-nowrap overflow-hidden">{ album.Title }</p>
 			<div class="flex gap-1">
 				<button
+					data-testid="rating-confirm-form-back-to-questions"
 					class="btn btn-ghost btn-sm btn-square text-base"
 					type="button"
 					hx-get={ fmt.Sprintf("/app/review/rating-recommender/questions?albumId=%s&mode=%s", album.ID, string(mode)) }

@@ -5,12 +5,12 @@ import { loginAs } from '../helpers/auth';
 
 test('Unauthenticated user sees the login button', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByTestId('login-button')).toBeVisible();
+  await expect(page.getByTestId('login-page-button')).toBeVisible();
 });
 
 test('Login button links to Spotify OAuth', async ({ page }) => {
   await page.goto('/');
-  const href = await page.getByTestId('login-link').getAttribute('href');
+  const href = await page.getByTestId('login-page-link').getAttribute('href');
   expect(href).toContain('accounts.spotify.com');
 });
 

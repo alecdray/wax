@@ -44,11 +44,11 @@ templ LibraryHeaderBarFrag(props HeaderBarProps) {
 					<div class="h-4 w-px bg-base-300"></div>
 				}
 				<div class="dropdown dropdown-end">
-					<div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle text-base">
+					<div tabindex="0" role="button" class="btn btn-ghost btn-xs btn-circle text-base" data-testid="library-header-bar-user-menu">
 						@templates.Icon(templates.IconProps{Name: "person-circle"})
 					</div>
 					<ul tabindex="0" class="dropdown-content z-[1] menu menu-compact bg-base-100 rounded-box w-32 shadow-xl border border-base-300 mt-1">
-						<li><a href="/logout" class="text-xs">Logout</a></li>
+						<li><a href="/logout" class="text-xs" data-testid="library-header-bar-logout">Logout</a></li>
 					</ul>
 				</div>
 			</div>

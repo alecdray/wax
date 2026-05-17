@@ -13,10 +13,10 @@ test('Tags modal opens from the album detail page', async ({ context, page }) =>
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  await page.getByTestId('album-detail-tags-edit').click();
+  await page.getByTestId('album-detail-page-tags-edit').click();
 
   await expect(page.locator('dialog[open]')).toBeVisible();
-  await expect(page.getByTestId('tags-input')).toBeVisible();
+  await expect(page.getByTestId('tags-form-input')).toBeVisible();
 });
 
 test('Typing a tag name adds a chip', async ({ context, page }) => {
@@ -26,14 +26,15 @@ test('Typing a tag name adds a chip', async ({ context, page }) => {
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  await page.getByTestId('album-detail-tags-edit').click();
+  await page.getByTestId('album-detail-page-tags-edit').click();
   await expect(page.locator('dialog[open]')).toBeVisible();
 
-  await page.getByTestId('tags-input').fill('e2e-test-tag');
-  await page.getByTestId('tags-input').press('Enter');
+  await page.getByTestId('tags-form-input').fill('e2e-test-tag');
+  await page.getByTestId('tags-form-input').press('Enter');
 
   // Chip should appear inside the modal
-  await expect(page.locator('dialog[open]').locator('.badge', { hasText: 'e2e-test-tag' })).toBeVisible();
+  const chips = page.locator('dialog[open]').getByTestId('tags-form-chip');
+  await expect(chips).toContainText('e2e-test-tag');
 });
 
 test('Saving tags closes the modal', async ({ context, page }) => {
@@ -43,10 +44,10 @@ test('Saving tags closes the modal', async ({ context, page }) => {
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  await page.getByTestId('album-detail-tags-edit').click();
+  await page.getByTestId('album-detail-page-tags-edit').click();
   await expect(page.locator('dialog[open]')).toBeVisible();
 
-  await page.getByTestId('tags-save').click();
+  await page.getByTestId('tags-form-save').click();
 
   await expect(page.locator('dialog[open]')).not.toBeVisible();
 });

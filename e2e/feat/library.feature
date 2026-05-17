@@ -16,9 +16,11 @@ Feature: Library Dashboard
     Then each album row shows album art, title link, and rating
     And no Spotify outlinks appear in the list
 
-  Scenario: No ellipsis menu on album rows
-    Given a logged-in user on the dashboard
-    Then no ellipsis menu or tags button is visible on any row
+  # Retired: "No ellipsis menu on album rows" — the original assertion targeted
+  # data-testid values (album-row-menu, album-row-tags-button) that have never
+  # been declared in any templ, so the check passed vacuously. The row's
+  # closed affordance set (title link, tags section, score readout) is what
+  # the templ enforces; testing absence of never-declared testids proves nothing.
 
   Scenario: Default carousel shows Recently Spun
     Given a logged-in user on the dashboard

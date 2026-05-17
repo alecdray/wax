@@ -16,11 +16,11 @@ test('Viewing an album in the library', async ({ context, page }) => {
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  await expect(page.getByTestId('album-detail-cover')).toBeVisible();
-  await expect(page.getByTestId('album-detail-title')).toBeVisible();
-  await expect(page.getByTestId('album-detail-artists')).toBeVisible();
-  await expect(page.getByTestId('album-detail-releases')).toBeVisible();
-  await expect(page.getByTestId('album-detail-rating')).toBeVisible();
+  await expect(page.getByTestId('album-detail-page-cover')).toBeVisible();
+  await expect(page.getByTestId('album-detail-page-title')).toBeVisible();
+  await expect(page.getByTestId('album-detail-page-artists')).toBeVisible();
+  await expect(page.getByTestId('album-detail-page-releases')).toBeVisible();
+  await expect(page.getByTestId('album-detail-page-rating')).toBeVisible();
 });
 
 test('Navigating to the detail page from the dashboard', async ({ context, page }) => {
@@ -29,10 +29,10 @@ test('Navigating to the detail page from the dashboard', async ({ context, page 
   await loginAs(context, userId!);
   await page.goto('/app/library/dashboard');
 
-  await page.getByTestId('album-row-title-link').first().click();
+  await page.getByTestId('album-list-row-title-link').first().click();
 
   await expect(page).toHaveURL(/\/app\/library\/albums\//);
-  await expect(page.getByTestId('album-detail-title')).toBeVisible();
+  await expect(page.getByTestId('album-detail-page-title')).toBeVisible();
 });
 
 test('Rating an album from the detail page', async ({ context, page }) => {
@@ -42,7 +42,10 @@ test('Rating an album from the detail page', async ({ context, page }) => {
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  await page.getByTestId('album-detail-rating').locator('[hx-get*="rating-recommender"]').click();
+  // The rating trigger is the score badge (rated or unrated variant) inside
+  // the rating section. Either testid alternates depending on whether the
+  // album currently has a rating.
+  await page.getByTestId('album-detail-page-rating').locator('[data-testid="album-score-badge-rated"], [data-testid="album-score-badge-unrated"]').click();
 
   await expect(page.locator('dialog[open]')).toBeVisible();
 });
@@ -55,7 +58,7 @@ test('Editing tags from the detail page', async ({ context, page }) => {
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  await page.getByTestId('album-detail-tags-edit').click();
+  await page.getByTestId('album-detail-page-tags-edit').click();
 
   await expect(page.locator('dialog[open]')).toBeVisible();
 });
@@ -76,7 +79,7 @@ test('Last played date is shown when available', async ({ context, page }) => {
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumWithHistoryId}`);
 
-  await expect(page.getByTestId('album-detail-last-played')).toBeVisible();
+  await expect(page.getByTestId('album-detail-page-last-played')).toBeVisible();
 });
 
 test('Last played date is absent when not available', async ({ context, page }) => {
@@ -86,7 +89,7 @@ test('Last played date is absent when not available', async ({ context, page }) 
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  await expect(page.getByTestId('album-detail-last-played')).not.toBeVisible();
+  await expect(page.getByTestId('album-detail-page-last-played')).not.toBeVisible();
 });
 
 test('Back navigation to the dashboard', async ({ context, page }) => {
@@ -96,7 +99,7 @@ test('Back navigation to the dashboard', async ({ context, page }) => {
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
 
-  await page.getByTestId('header-library-icon').click();
+  await page.getByTestId('album-detail-page-back').click();
 
   await expect(page).toHaveURL('/app/library/dashboard');
 });
