@@ -15,7 +15,7 @@ Every feature file in `feat/` has a corresponding spec file in `spec/`. Scenario
 
 ## Running
 
-The app must be running before executing E2E tests.
+The app must be running before executing E2E tests. Use `task dev` (not `task dev/server` alone) — it also starts the `templ generate --watch` loop, so live edits to `.templ` files are reflected in the running server.
 
 ```bash
 # Terminal 1 — start the app
@@ -27,6 +27,21 @@ task test/e2e
 # Run a specific spec file
 task test/e2e -- e2e/spec/login.spec.ts
 ```
+
+Playwright targets `http://127.0.0.1:${PORT}`, where `PORT` is read from `.env` (default `4691`). Running each worktree on its own port via `.env` keeps multiple dev servers from colliding — the suite follows automatically.
+
+### Cold start in a fresh worktree
+
+When `task dev` is starting in a tree that hasn't been actively edited (a new worktree, or after switching branches), run these once before the first `task test/e2e`:
+
+```bash
+cp /Users/shmoopy/workshop/projects/wax/.env .env   # worktrees don't have .env
+cp /Users/shmoopy/workshop/projects/wax/tmp/db.sql ./tmp/db.sql   # seed the fixture user/album rows
+npm install                                          # if node_modules is missing
+task build/templ                                     # regenerate _templ.go from .templ — see pitfall below
+```
+
+After that, `task dev` + `task test/e2e` is the steady-state loop.
 
 ### Watch modes
 
@@ -88,6 +103,7 @@ Follow these steps in order. The last step is non-negotiable: **run the alignmen
 
 - **SQLite `CURRENT_TIMESTAMP` is second-resolution.** Two rows inserted in the same second tie on `ORDER BY created_at DESC`. Tests that depend on insertion order should accept either ordering, or insert a deliberate gap.
 - **A passing spec with an undeclared testid is silently wrong.** If `getByTestId('foo')` matches nothing, `expect(...).not.toBeVisible()` passes vacuously. Run `npm run e2e:check` to catch these.
+- **Stale `_templ.go` after a branch switch.** `_templ.go` files are gitignored, so checking out a branch that added or renamed testids in `.templ` does **not** bring the matching generated Go with it. The static check (`npm run e2e:check`) reads `.templ` source and will pass, but the running server is built from the old `_templ.go` and won't render the new testids — specs time out waiting for elements that source says exist. Run `task build/templ` after any branch switch and before `task dev`. (The cold-start checklist above bakes this in.)
 
 ## Testid alignment check
 
