@@ -4,7 +4,6 @@ import { loginAs } from '../helpers/auth';
 // Scenarios from e2e/feat/library.feature
 
 const userId = process.env.E2E_TEST_USER_ID;
-const albumId = process.env.E2E_TEST_ALBUM_ID;
 
 // --- Dashboard load ---
 
@@ -65,140 +64,181 @@ test('Switching the carousel to Unrated', async ({ context, page }) => {
   await expect(page.getByTestId('carousel-section-unrated-tab')).not.toHaveAttribute('hx-get');
 });
 
-// --- Sort chip ---
+// --- Unified search bar ---
 
-test('Sort chip is visible and shows default sort', async ({ context, page }) => {
+test('Unified search bar replaces the chip-modal bar', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto('/app/library/dashboard');
 
-  const chip = page.getByTestId('filter-chip-bar-sort');
-  await expect(chip).toBeVisible();
-  await expect(chip).toContainText('Date Added');
+  await expect(page.getByTestId('unified-search-bar')).toBeVisible();
+  await expect(page.getByTestId('unified-search-bar-input')).toBeVisible();
+
+  // Legacy chip-modal surface and its four chips must be gone.
+  await expect(page.getByTestId('filter-chip-bar')).toHaveCount(0);
+  await expect(page.getByTestId('filter-chip-bar-sort')).toHaveCount(0);
+  await expect(page.getByTestId('filter-chip-bar-rating')).toHaveCount(0);
+  await expect(page.getByTestId('filter-chip-bar-format')).toHaveCount(0);
+  await expect(page.getByTestId('filter-chip-bar-artist')).toHaveCount(0);
 });
 
-test('Sort chip opens a modal', async ({ context, page }) => {
+test('Typing in the search bar narrows the album list live', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto('/app/library/dashboard');
 
-  await page.getByTestId('filter-chip-bar-sort').click();
+  // Pick a query guaranteed to match: take the title of the first visible row.
+  const firstTitle = await page.getByTestId('album-list-row-title-link').first().innerText();
+  // Pull a short substring (first word, ≤6 chars) to drive the search.
+  const probe = firstTitle.split(/\s+/)[0].slice(0, 6).toLowerCase();
+  expect(probe.length, 'need a non-empty probe substring').toBeGreaterThan(0);
 
-  await expect(page.locator('dialog[open]')).toBeVisible();
-  await expect(page.locator('dialog[open] input[name="sortBy"]').first()).toBeVisible();
-});
+  // Use pressSequentially (not fill) so each character emits a real keyup
+  // event — htmx's "keyup changed" trigger doesn't fire on programmatic fill.
+  const tableResponse = page.waitForResponse((res) =>
+    res.url().includes('/app/library/dashboard/albums-table') &&
+    res.url().includes(`q=${encodeURIComponent(probe)}`),
+  );
+  await page.getByTestId('unified-search-bar-input').pressSequentially(probe);
+  await tableResponse;
 
-test('Sorting by artist via sort chip reloads the list', async ({ context, page }) => {
-  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
-
-  await loginAs(context, userId!);
-  await page.goto('/app/library/dashboard');
-
-  await page.getByTestId('filter-chip-bar-sort').click();
-  await page.locator('dialog[open] input[name="sortBy"][value="artist"]').check();
-  await page.locator('dialog[open] button[type="submit"]').click();
-
-  await expect(page.getByTestId('albums-list')).toBeVisible();
-  await expect(page.getByTestId('filter-chip-bar-sort')).toContainText('Artist');
-});
-
-// --- Rating chip ---
-
-test('Rating chip opens a modal with min/max inputs', async ({ context, page }) => {
-  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
-
-  await loginAs(context, userId!);
-  await page.goto('/app/library/dashboard');
-
-  await page.getByTestId('filter-chip-bar-rating').click();
-
-  await expect(page.locator('dialog[open]')).toBeVisible();
-  await expect(page.locator('dialog[open] input[name="minRating"]')).toBeVisible();
-  await expect(page.locator('dialog[open] input[name="maxRating"]')).toBeVisible();
-  await expect(page.locator('dialog[open] input[name="rated"]').first()).toBeVisible();
-});
-
-test('Rating chip becomes active after applying a min rating filter', async ({ context, page }) => {
-  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
-
-  await loginAs(context, userId!);
-  await page.goto('/app/library/dashboard');
-
-  await page.getByTestId('filter-chip-bar-rating').click();
-  await page.locator('dialog[open] input[name="minRating"]').fill('7');
-  await page.locator('dialog[open] button[type="submit"]').click();
-
-  await expect(page.getByTestId('albums-list')).toBeVisible();
-  await expect(page.getByTestId('filter-chip-bar-rating')).toContainText('7');
-});
-
-test('Filtering to unrated only shows unrated chip label', async ({ context, page }) => {
-  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
-
-  await loginAs(context, userId!);
-  await page.goto('/app/library/dashboard');
-
-  await page.getByTestId('filter-chip-bar-rating').click();
-  await page.locator('dialog[open] input[name="rated"][value="unrated"]').check();
-  await page.locator('dialog[open] button[type="submit"]').click();
-
-  await expect(page.getByTestId('albums-list')).toBeVisible();
-  await expect(page.getByTestId('filter-chip-bar-rating')).toContainText('Unrated');
-});
-
-// --- Format chip ---
-
-test('Format chip opens a modal with format options', async ({ context, page }) => {
-  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
-
-  await loginAs(context, userId!);
-  await page.goto('/app/library/dashboard');
-
-  await page.getByTestId('filter-chip-bar-format').click();
-
-  await expect(page.locator('dialog[open]')).toBeVisible();
-  await expect(page.locator('dialog[open] input[name="format"][value="vinyl"]')).toBeVisible();
-  await expect(page.locator('dialog[open] input[name="format"][value="digital"]')).toBeVisible();
-});
-
-test('Format chip becomes active after selecting vinyl', async ({ context, page }) => {
-  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
-
-  await loginAs(context, userId!);
-  await page.goto('/app/library/dashboard');
-
-  await page.getByTestId('filter-chip-bar-format').click();
-  await page.locator('dialog[open] input[name="format"][value="vinyl"]').check();
-  await page.locator('dialog[open] button[type="submit"]').click();
-
-  await expect(page.getByTestId('albums-list')).toBeVisible();
-  await expect(page.getByTestId('filter-chip-bar-format')).toContainText('vinyl');
-});
-
-// --- Artist chip ---
-
-test('Artist chip opens a modal when artists exist', async ({ context, page }) => {
-  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
-
-  await loginAs(context, userId!);
-  await page.goto('/app/library/dashboard');
-
-  const chip = page.getByTestId('filter-chip-bar-artist');
-  if (!await chip.isVisible()) {
-    // No artists in library for this test user — skip
-    test.skip();
-    return;
+  // After the HTMX swap, every visible row's title or artist line must
+  // contain the probe substring. Re-query rows post-swap.
+  await expect(page.getByTestId('album-list-row').first()).toBeVisible();
+  const rows = page.getByTestId('album-list-row');
+  const count = await rows.count();
+  expect(count, 'expected at least one matching row').toBeGreaterThan(0);
+  for (let i = 0; i < count; i++) {
+    const rowText = (await rows.nth(i).innerText()).toLowerCase();
+    expect(rowText, `row ${i} should contain probe ${probe}`).toContain(probe);
   }
-
-  await chip.click();
-
-  await expect(page.locator('dialog[open]')).toBeVisible();
-  await expect(page.locator('dialog[open]').getByTestId('filter-chip-bar-artist-checkbox').first()).toBeVisible();
 });
 
-// --- Rating modal from list row ---
+test('Clearing the search bar restores the full library', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/dashboard');
+
+  // First narrow: type a guaranteed-zero-match query so the list collapses.
+  const probe = 'zzzznotpresent';
+  const narrowResponse = page.waitForResponse((res) =>
+    res.url().includes('/app/library/dashboard/albums-table') &&
+    res.url().includes(`q=${probe}`),
+  );
+  await page.getByTestId('unified-search-bar-input').pressSequentially(probe);
+  await narrowResponse;
+  await expect(page.getByTestId('album-list-row')).toHaveCount(0);
+
+  // Now clear and confirm a fresh request fires with no q (or empty q) and
+  // rows return. Backspacing each character emits real keyup events that
+  // htmx's "keyup changed" trigger sees; programmatic fill('') wouldn't.
+  const clearResponse = page.waitForResponse((res) => {
+    if (!res.url().includes('/app/library/dashboard/albums-table')) return false;
+    const u = new URL(res.url());
+    return !u.searchParams.get('q'); // q absent or empty string
+  });
+  const input = page.getByTestId('unified-search-bar-input');
+  await input.focus();
+  await input.press('End');
+  for (let i = 0; i < probe.length; i++) {
+    await input.press('Backspace');
+  }
+  await clearResponse;
+
+  await expect(page.getByTestId('album-list-row').first()).toBeVisible();
+});
+
+// --- Sort / rating / format / artist controls on the unified bar ---
+
+test('Sort control on the unified bar reorders the list', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/dashboard');
+
+  await page.getByTestId('unified-search-bar-sort-toggle').click();
+  const popover = page.getByTestId('unified-search-bar-sort-popover');
+  await expect(popover).toBeVisible();
+  await popover.locator('input[name="sortBy"][value="artist"]').check();
+  await popover.getByRole('button', { name: 'Apply' }).click();
+
+  await expect(page.getByTestId('albums-list')).toBeVisible();
+  await expect(page.getByTestId('unified-search-bar-sort-toggle')).toContainText('Artist');
+});
+
+test('Rating control on the unified bar narrows by minimum rating', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/dashboard');
+
+  await page.getByTestId('unified-search-bar-rating-toggle').click();
+  const popover = page.getByTestId('unified-search-bar-rating-popover');
+  await expect(popover).toBeVisible();
+  await popover.locator('input[name="minRating"]').fill('7');
+  await popover.getByRole('button', { name: 'Apply' }).click();
+
+  await expect(page.getByTestId('albums-list')).toBeVisible();
+  await expect(page.getByTestId('unified-search-bar-rating-toggle')).toContainText('7');
+});
+
+test('Filtering to unrated from the unified bar', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/dashboard');
+
+  await page.getByTestId('unified-search-bar-rating-toggle').click();
+  const popover = page.getByTestId('unified-search-bar-rating-popover');
+  await expect(popover).toBeVisible();
+  await popover.locator('input[name="rated"][value="unrated"]').check();
+  await popover.getByRole('button', { name: 'Apply' }).click();
+
+  await expect(page.getByTestId('albums-list')).toBeVisible();
+  await expect(page.getByTestId('unified-search-bar-rating-toggle')).toContainText('Unrated');
+});
+
+test('Format control on the unified bar supports multi-select', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/dashboard');
+
+  await page.getByTestId('unified-search-bar-format-toggle').click();
+  const popover = page.getByTestId('unified-search-bar-format-popover');
+  await expect(popover).toBeVisible();
+  // Multi-select inputs are checkboxes — picking one keeps the others
+  // unchecked but the same control accepts further picks. We confirm the
+  // checkbox shape (vs the legacy radio) and apply.
+  const vinylCheckbox = popover.locator('input[name="format"][value="vinyl"]');
+  await expect(vinylCheckbox).toHaveAttribute('type', 'checkbox');
+  await vinylCheckbox.check();
+  await popover.getByRole('button', { name: 'Apply' }).click();
+
+  await expect(page.getByTestId('albums-list')).toBeVisible();
+  await expect(page.getByTestId('unified-search-bar-format-toggle')).toContainText('vinyl');
+});
+
+test('Artist control on the unified bar opens a searchable list when artists exist', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/dashboard');
+
+  const toggle = page.getByTestId('unified-search-bar-artist-toggle');
+  // The fixture user is expected to have at least one artist; fail loud if not.
+  await expect(toggle, 'fixture user must have at least one artist in their library').toBeVisible();
+  await toggle.click();
+
+  const popover = page.getByTestId('unified-search-bar-artist-popover');
+  await expect(popover).toBeVisible();
+  await expect(popover.getByTestId('unified-search-bar-artist-checkbox').first()).toBeVisible();
+});
+
+// --- Rating modal from list row (unchanged behaviour) ---
 
 test('Opening the rating modal from an album row', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();

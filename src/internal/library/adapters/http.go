@@ -45,6 +45,7 @@ func NewHttpHandler(spotifyAuth *spotify.AuthService, mb *musicbrainz.Service, f
 func parseFilterParams(r *http.Request) library.FilterParams {
 	q := r.URL.Query()
 	var fp library.FilterParams
+	fp.Q = strings.TrimSpace(q.Get("q"))
 	if minStr := q.Get("minRating"); minStr != "" {
 		if v, err := strconv.ParseFloat(minStr, 64); err == nil {
 			fp.MinRating = &v
@@ -56,8 +57,11 @@ func parseFilterParams(r *http.Request) library.FilterParams {
 		}
 	}
 	fp.Rated = q.Get("rated")
-	if format := q.Get("format"); format != "" {
-		fp.Formats = []models.ReleaseFormat{models.ReleaseFormat(format)}
+	for _, format := range q["format"] {
+		if format == "" {
+			continue
+		}
+		fp.Formats = append(fp.Formats, models.ReleaseFormat(format))
 	}
 	fp.ArtistIDs = q["artist"]
 	return fp
@@ -269,7 +273,7 @@ func (h *HttpHandler) GetAlbumsPage(w http.ResponseWriter, r *http.Request) {
 	offset := 0
 	fmt.Sscanf(r.URL.Query().Get("offset"), "%d", &offset)
 
-	ascending := dir != "desc"
+	ascending := dir == "asc"
 	albums := lib.Albums
 	switch sortBy {
 	case "album":
@@ -278,10 +282,10 @@ func (h *HttpHandler) GetAlbumsPage(w http.ResponseWriter, r *http.Request) {
 		albums.SortByArtist(ascending)
 	case "rating":
 		albums.SortByRating(ascending)
-	case "date":
-		albums.SortByDate(ascending)
 	case "lastPlayed":
 		albums.SortByLastPlayed(ascending)
+	default:
+		albums.SortByDate(ascending)
 	}
 
 	fp := parseFilterParams(r)

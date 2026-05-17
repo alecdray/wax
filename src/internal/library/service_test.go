@@ -384,6 +384,152 @@ func TestFilter_CombinedFormatAndRating(t *testing.T) {
 	}
 }
 
+// --- AlbumDTOs.Filter — text query (Q) ---
+//
+// These tests pin the contract from build wax-unified-search (Task 1.1):
+// case-insensitive substring match against album title and credited artist
+// names; empty query returns the full slice; AND-composes with other filters.
+
+func makeAlbumTitled(id, title string, artistNames ...string) AlbumDTO {
+	album := AlbumDTO{ID: id, Title: title}
+	for _, name := range artistNames {
+		album.Artists = append(album.Artists, ArtistDTO{ID: name, Name: name})
+	}
+	return album
+}
+
+func TestFilter_Q_EmptyReturnsAll(t *testing.T) {
+	albums := AlbumDTOs{
+		makeAlbumTitled("1", "Abbey Road", "The Beatles"),
+		makeAlbumTitled("2", "Kid A", "Radiohead"),
+	}
+	result := albums.Filter(FilterParams{Q: ""})
+	if len(result) != 2 {
+		t.Fatalf("empty Q must match every album; got %d / 2", len(result))
+	}
+}
+
+func TestFilter_Q_WhitespaceOnlyReturnsAll(t *testing.T) {
+	albums := AlbumDTOs{
+		makeAlbumTitled("1", "Abbey Road", "The Beatles"),
+		makeAlbumTitled("2", "Kid A", "Radiohead"),
+	}
+	result := albums.Filter(FilterParams{Q: "   "})
+	if len(result) != 2 {
+		t.Fatalf("whitespace-only Q must match every album; got %d / 2", len(result))
+	}
+}
+
+func TestFilter_Q_MatchesTitleSubstring(t *testing.T) {
+	albums := AlbumDTOs{
+		makeAlbumTitled("1", "Abbey Road", "The Beatles"),
+		makeAlbumTitled("2", "Kid A", "Radiohead"),
+		makeAlbumTitled("3", "OK Computer", "Radiohead"),
+	}
+	result := albums.Filter(FilterParams{Q: "abbey"})
+	if len(result) != 1 || result[0].ID != "1" {
+		t.Fatalf("expected only Abbey Road; got %+v", result)
+	}
+}
+
+func TestFilter_Q_MatchesArtistNameSubstring(t *testing.T) {
+	albums := AlbumDTOs{
+		makeAlbumTitled("1", "Abbey Road", "The Beatles"),
+		makeAlbumTitled("2", "Kid A", "Radiohead"),
+		makeAlbumTitled("3", "OK Computer", "Radiohead"),
+	}
+	result := albums.Filter(FilterParams{Q: "radio"})
+	gotIDs := map[string]bool{}
+	for _, a := range result {
+		gotIDs[a.ID] = true
+	}
+	if len(result) != 2 || !gotIDs["2"] || !gotIDs["3"] {
+		t.Fatalf("expected the two Radiohead albums; got %+v", result)
+	}
+}
+
+func TestFilter_Q_CaseInsensitive(t *testing.T) {
+	albums := AlbumDTOs{
+		makeAlbumTitled("1", "Abbey Road", "The Beatles"),
+		makeAlbumTitled("2", "Kid A", "Radiohead"),
+	}
+	upper := albums.Filter(FilterParams{Q: "ABBEY"})
+	mixed := albums.Filter(FilterParams{Q: "aBbEy"})
+	if len(upper) != 1 || upper[0].ID != "1" {
+		t.Fatalf("upper-case Q didn't match; got %+v", upper)
+	}
+	if len(mixed) != 1 || mixed[0].ID != "1" {
+		t.Fatalf("mixed-case Q didn't match; got %+v", mixed)
+	}
+}
+
+func TestFilter_Q_TitleOrArtistMatchIsSufficient(t *testing.T) {
+	// "noise" matches album 1's title only. "head" matches the artist of
+	// albums 2/3 only. Each side proves matching one is sufficient — neither
+	// album has both sides matching.
+	albums := AlbumDTOs{
+		makeAlbumTitled("1", "White Noise", "The Beatles"),
+		makeAlbumTitled("2", "Kid A", "Radiohead"),
+		makeAlbumTitled("3", "OK Computer", "Radiohead"),
+	}
+	titleSide := albums.Filter(FilterParams{Q: "noise"})
+	if len(titleSide) != 1 || titleSide[0].ID != "1" {
+		t.Fatalf("title-only match: expected album 1; got %+v", titleSide)
+	}
+	artistSide := albums.Filter(FilterParams{Q: "head"})
+	if len(artistSide) != 2 {
+		t.Fatalf("artist-only match: expected the two Radiohead albums; got %+v", artistSide)
+	}
+}
+
+func TestFilter_Q_NoMatchReturnsEmpty(t *testing.T) {
+	albums := AlbumDTOs{
+		makeAlbumTitled("1", "Abbey Road", "The Beatles"),
+		makeAlbumTitled("2", "Kid A", "Radiohead"),
+	}
+	result := albums.Filter(FilterParams{Q: "zzzznotpresent"})
+	if len(result) != 0 {
+		t.Fatalf("expected zero results; got %d", len(result))
+	}
+}
+
+func TestFilter_Q_AndComposesWithFormat(t *testing.T) {
+	now := time.Now()
+	albums := AlbumDTOs{
+		{
+			ID:       "1",
+			Title:    "Abbey Road",
+			Artists:  []ArtistDTO{{ID: "beatles", Name: "The Beatles"}},
+			Releases: ReleaseDTOs{{Format: models.ReleaseFormatVinyl, AddedAt: &now}},
+		},
+		{
+			ID:       "2",
+			Title:    "Abbey Road",
+			Artists:  []ArtistDTO{{ID: "beatles", Name: "The Beatles"}},
+			Releases: ReleaseDTOs{{Format: models.ReleaseFormatDigital, AddedAt: &now}},
+		},
+	}
+	result := albums.Filter(FilterParams{
+		Q:       "abbey",
+		Formats: []models.ReleaseFormat{models.ReleaseFormatVinyl},
+	})
+	if len(result) != 1 || result[0].ID != "1" {
+		t.Fatalf("expected only the vinyl Abbey Road; got %+v", result)
+	}
+}
+
+func TestFilter_Q_AndComposesWithRating(t *testing.T) {
+	albums := AlbumDTOs{
+		makeAlbum("1", "Radiohead Demo", "Radiohead", ptr(9.0), nil),
+		makeAlbum("2", "Radiohead B-Sides", "Radiohead", ptr(5.0), nil),
+		makeAlbum("3", "Different Band", "Other", ptr(9.5), nil),
+	}
+	result := albums.Filter(FilterParams{Q: "radio", MinRating: ptr(7.0)})
+	if len(result) != 1 || result[0].ID != "1" {
+		t.Fatalf("expected only the high-rated Radiohead album; got %+v", result)
+	}
+}
+
 // --- SaveFormatInput ---
 
 func TestSaveFormatInput_PhysicalFormats(t *testing.T) {

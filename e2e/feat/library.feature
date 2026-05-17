@@ -2,7 +2,8 @@ Feature: Library Dashboard
 
   The main hub of the app where users browse their music collection. Shows
   library statistics, a carousel of recent or unrated albums, and a visual
-  list of all albums with chip-based sort and filter controls.
+  list of all albums narrowed by a single unified search bar that combines
+  free-text query with inline filter and sort controls.
 
   Scenario: Viewing the library dashboard shows list view
     Given a logged-in user with a library
@@ -31,52 +32,49 @@ Feature: Library Dashboard
     When they click the Unrated carousel tab
     Then the carousel reloads showing the Unrated view
 
-  Scenario: Sort chip is visible and shows default sort
+  Scenario: Unified search bar replaces the chip-modal bar
     Given a logged-in user on the dashboard
-    Then the sort chip is visible and shows "Date Added"
+    Then the unified search bar is visible above the album list
+    And the legacy chip-modal bar is not present anywhere on the page
 
-  Scenario: Sort chip opens a modal
+  Scenario: Typing in the search bar narrows the album list live
     Given a logged-in user on the dashboard
-    When they click the sort chip
-    Then a sort modal opens with sort field and direction options
+    When they type a query that matches at least one album in the search bar
+    Then the album list is replaced via HTMX without a page reload
+    And every visible row matches the query in title or artist
 
-  Scenario: Sorting by artist via sort chip reloads the list
-    Given a logged-in user on the dashboard
-    When they click the sort chip and select Artist
-    Then the albums list reloads and the sort chip shows "Artist"
+  Scenario: Clearing the search bar restores the full library
+    Given a logged-in user on the dashboard with a non-empty search query active
+    When they clear the search bar
+    Then the album list shows the full library again
 
-  Scenario: Rating chip opens a modal with min/max inputs
+  Scenario: Sort control on the unified bar reorders the list
     Given a logged-in user on the dashboard
-    When they click the rating chip
-    Then a rating modal opens with min/max number inputs and rated/unrated options
+    When they open the sort popover and choose Artist
+    Then the albums list reloads and the sort control shows "Artist"
 
-  Scenario: Rating chip becomes active after applying a min rating filter
+  Scenario: Rating control on the unified bar narrows by minimum rating
     Given a logged-in user on the dashboard
-    When they click the rating chip and set a minimum rating of 7
-    Then the albums list reloads showing only albums rated 7 or above
-    And the rating chip shows the active filter
+    When they open the rating popover and set a minimum rating of 7
+    Then the albums list reloads
+    And the rating control shows the active filter
 
-  Scenario: Filtering to unrated only shows unrated chip label
+  Scenario: Filtering to unrated from the unified bar
     Given a logged-in user on the dashboard
-    When they click the rating chip and select Unrated only
+    When they open the rating popover and choose Unrated only
     Then the albums list reloads showing only unrated albums
-    And the rating chip shows "Unrated"
+    And the rating control shows "Unrated"
 
-  Scenario: Format chip opens a modal with format options
+  Scenario: Format control on the unified bar supports multi-select
     Given a logged-in user on the dashboard
-    When they click the format chip
-    Then a format modal opens with digital, vinyl, CD, and cassette options
+    When they open the format popover and select Vinyl
+    Then the albums list reloads
+    And the format control shows "vinyl"
 
-  Scenario: Format chip becomes active after selecting vinyl
-    Given a logged-in user on the dashboard
-    When they click the format chip and select Vinyl
-    Then the albums list reloads showing only vinyl albums
-    And the format chip shows "vinyl"
-
-  Scenario: Artist chip opens a modal when artists exist
+  Scenario: Artist control on the unified bar opens a searchable list when artists exist
     Given a logged-in user on the dashboard with artists in their library
-    When they click the artist chip
-    Then an artist modal opens with a searchable checkbox list
+    When they open the artist popover
+    Then a searchable artist checkbox list is visible inside the popover
 
   Scenario: Opening the rating modal from an album row
     Given a logged-in user on the dashboard with at least one album

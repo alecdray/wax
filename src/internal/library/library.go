@@ -3,6 +3,7 @@ package library
 import (
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/alecdray/wax/src/internal/core/db/models"
@@ -285,6 +286,7 @@ func (albums AlbumDTOs) SortByDate(ascending bool) {
 }
 
 type FilterParams struct {
+	Q         string // case-insensitive substring against album title and credited artist names
 	MinRating *float64
 	MaxRating *float64
 	Rated     string // "only" | "unrated" | ""
@@ -292,12 +294,34 @@ type FilterParams struct {
 	ArtistIDs []string
 }
 
+// matchesQ returns true if the album's title or any credited artist's name
+// contains q as a case-insensitive substring. Empty q matches everything.
+func matchesQ(album AlbumDTO, q string) bool {
+	if q == "" {
+		return true
+	}
+	needle := strings.ToLower(q)
+	if strings.Contains(strings.ToLower(album.Title), needle) {
+		return true
+	}
+	for _, artist := range album.Artists {
+		if strings.Contains(strings.ToLower(artist.Name), needle) {
+			return true
+		}
+	}
+	return false
+}
+
 func (albums AlbumDTOs) Filter(p FilterParams) AlbumDTOs {
-	if p.MinRating == nil && p.MaxRating == nil && p.Rated == "" && len(p.Formats) == 0 && len(p.ArtistIDs) == 0 {
+	q := strings.TrimSpace(p.Q)
+	if q == "" && p.MinRating == nil && p.MaxRating == nil && p.Rated == "" && len(p.Formats) == 0 && len(p.ArtistIDs) == 0 {
 		return albums
 	}
 	result := make(AlbumDTOs, 0, len(albums))
 	for _, album := range albums {
+		if !matchesQ(album, q) {
+			continue
+		}
 		if p.MinRating != nil {
 			if album.Rating == nil || album.Rating.Rating == nil || *album.Rating.Rating < *p.MinRating {
 				continue
