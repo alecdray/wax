@@ -55,12 +55,16 @@ export function clearAllRatingStates(userId: string) {
 }
 
 // getLibraryAlbumIds returns the IDs of every album the user currently owns
-// (status = 'owned' on at least one user_release row). Sorted for determinism.
+// (status = 'owned' on at least one user_release row). The user_release →
+// album link goes through releases (user_releases.release_id →
+// releases.album_id). Sorted for determinism.
 export function getLibraryAlbumIds(userId: string): string[] {
   const out = execSql(
-    `SELECT DISTINCT album_id FROM user_releases` +
-      ` WHERE user_id = '${userId}' AND status = 'owned'` +
-      ` ORDER BY album_id;`,
+    `SELECT DISTINCT albums.id FROM user_releases` +
+      ` JOIN releases ON releases.id = user_releases.release_id` +
+      ` JOIN albums ON albums.id = releases.album_id` +
+      ` WHERE user_releases.user_id = '${userId}' AND user_releases.status = 'owned'` +
+      ` ORDER BY albums.id;`,
   );
   return out
     .split('\n')
