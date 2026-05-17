@@ -386,9 +386,9 @@ func TestFilter_CombinedFormatAndRating(t *testing.T) {
 
 // --- AlbumDTOs.Filter — text query (Q) ---
 //
-// These tests pin the contract from build wax-unified-search (Task 1.1):
-// case-insensitive substring match against album title and credited artist
-// names; empty query returns the full slice; AND-composes with other filters.
+// Contract for the Q field: case-insensitive substring match against album
+// title and credited artist names; empty query returns the full slice;
+// AND-composes with the other filter dimensions.
 
 func makeAlbumTitled(id, title string, artistNames ...string) AlbumDTO {
 	album := AlbumDTO{ID: id, Title: title}

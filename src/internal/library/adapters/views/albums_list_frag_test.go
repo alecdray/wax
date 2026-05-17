@@ -9,10 +9,10 @@ import (
 	"github.com/alecdray/wax/src/internal/library"
 )
 
-// URL builder tests pin the Task 1.5 / PC2 contract: default sort/dir is
-// omitted from the URL so stale params don't accumulate as the user changes
-// their mind. Default filters omitted is already enforced by the original
-// builder; the new constraint is that defaultSort = (date, desc) is also bare.
+// URL builder tests pin the URL contract: default sort/dir is omitted from
+// the URL so stale params don't accumulate as the user changes their mind.
+// Default filters were already dropped by the builder; the extension this
+// file pins is that defaultSort = (date, desc) is also bare.
 
 func ptr[T any](v T) *T { return &v }
 
@@ -104,8 +104,8 @@ func TestBuildAlbumsTableURLForInput_OmitsQ(t *testing.T) {
 }
 
 func TestBuildAlbumsPageURL_CarriesAllActiveParams(t *testing.T) {
-	// Task 1.6: pagination sentinel must carry every active dimension so the
-	// appended rows belong to the same narrowed set.
+	// Pagination sentinel must carry every active dimension so the appended
+	// rows belong to the same narrowed set.
 	fp := library.FilterParams{
 		Q:         "radio",
 		MinRating: ptr(7.0),

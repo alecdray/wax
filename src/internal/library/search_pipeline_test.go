@@ -11,31 +11,17 @@ import (
 	"github.com/alecdray/wax/src/internal/review"
 )
 
-// Integration tests for the wax-unified-search build's product criteria.
+// Integration tests for the assembled Filter + SortBy* search pipeline.
 //
-// These tests assert PC1 and PC3 as whole-system invariants of the assembled
-// search/filter/sort pipeline, distinct from per-task tests. They drive
-// realistic combinations of (q, filters, sort) through Library.Filter +
-// SortBy*, then compare the result against an independently-computed
-// reference implementation (`referenceFilteredSorted` below). The reference
-// is deliberately naive — a predicate loop and a stable sort.Slice with
-// hand-written less functions — so the two implementations agree only when
-// the production pipeline correctly composes its parts.
+// Each test compares the production pipeline against an independently
+// implemented reference (`referenceFilteredSorted`) over a representative
+// parameter matrix. The reference is intentionally naive — a predicate loop
+// and a stable sort.Slice with hand-written less functions — so the two
+// implementations agree only when production composes its parts correctly.
 //
-// PC1 — AND composition across text, filters, and sort. For any (q, filter,
-//   sort) combination, the rendered set equals the AND of all dimensions in
-//   the active sort order. Tested by `TestPC1_AndCompositionMatrix` which
-//   walks a Cartesian product of representative parameter values.
-//
-// PC3 — No regressions to pre-existing filter/sort behavior. With q="",
-//   every filter × sort combination produces what the unchanged pipeline
-//   produces. Tested by `TestPC3_NoRegressionWhenQEmpty`. (The reference
-//   for "before this build" is the same Filter/Sort pipeline minus the Q
-//   field — Q matching is the only addition to Filter, and SortBy* is
-//   untouched.)
-//
-// PC2 (URL round-trip) is verified at the e2e layer — see
-// `e2e/spec/library.spec.ts` PC2 tests, which require a browser.
+// The URL round-trip half of the dashboard's contract is verified in
+// `e2e/spec/library.spec.ts`, since it only holds across a real browser
+// navigation.
 
 // fixtureAlbums returns a small but representative library: titles and
 // artist names sampled to exercise Q substring matching (case, partial,
@@ -82,17 +68,12 @@ func fixtureAlbums(t *testing.T) AlbumDTOs {
 	}
 }
 
-// referenceFilteredSorted is an independent implementation of the assembled
+// referenceFilteredSorted is an independent implementation of the search
 // pipeline. It applies the Q + filter predicates directly (no shortcut for
 // the all-defaults case) and sorts via sort.Slice with explicit less
-// functions. It must agree with `albums.Filter(fp)` followed by the
-// matching SortBy* call.
-//
-// The reference is structurally distinct from the production code: it uses
-// the explicit predicate form rather than the early-return guard, and it
-// shares no helpers with Library.Filter / SortBy*. Agreement therefore
-// demonstrates that the production pipeline composes correctly across all
-// inputs.
+// functions. It shares no helpers with Library.Filter / SortBy*, so
+// agreement with `albums.Filter(fp)` followed by the matching SortBy* call
+// is structural — not a co-implementation artifact.
 func referenceFilteredSorted(albums AlbumDTOs, fp FilterParams, sortBy, dir string) AlbumDTOs {
 	q := strings.TrimSpace(strings.ToLower(fp.Q))
 
@@ -275,11 +256,11 @@ albumLoop:
 	return out
 }
 
-// productionFilteredSorted runs the assembled production pipeline: sort the
-// in-memory slice with the same dispatch the HTTP handler uses, then apply
-// Filter with the given params. The handler in adapters/http.go does sort
-// first then filter; this helper mirrors that order so the comparison is
-// against what the dashboard actually renders.
+// productionFilteredSorted runs the dashboard's filter/sort pipeline: sort
+// the in-memory slice with the same dispatch the HTTP handler uses, then
+// apply Filter with the given params. The handler in adapters/http.go does
+// sort first then filter; this helper mirrors that order so the comparison
+// is against what the dashboard actually renders.
 func productionFilteredSorted(albums AlbumDTOs, fp FilterParams, sortBy, dir string) AlbumDTOs {
 	// Copy the slice so the in-place sort doesn't mutate the caller.
 	cp := make(AlbumDTOs, len(albums))
@@ -323,14 +304,14 @@ func idsOf(albums AlbumDTOs) []string {
 	return out
 }
 
-// --- PC1: AND composition across text, filters, and sort ---
+// --- AND composition across text, filters, and sort ---
 
-// TestPC1_AndCompositionMatrix walks a representative Cartesian product of
-// (q, filter, sort) and asserts that the assembled pipeline produces the
-// same set in the same order as the reference. This is the PC1 invariant:
-// the rendered list IS the AND of text + every active filter, ordered by
-// the active sort, for every reachable combination.
-func TestPC1_AndCompositionMatrix(t *testing.T) {
+// TestFilterSortMatrix_AndComposition walks a representative Cartesian
+// product of (q, filter, sort) and asserts that the pipeline produces the
+// same set in the same order as the reference. The rendered list IS the AND
+// of text + every active filter, ordered by the active sort, for every
+// reachable combination.
+func TestFilterSortMatrix_AndComposition(t *testing.T) {
 	albums := fixtureAlbums(t)
 
 	queries := []string{
@@ -384,10 +365,10 @@ func TestPC1_AndCompositionMatrix(t *testing.T) {
 	}
 }
 
-// TestPC1_DefaultsYieldFullLibraryInDefaultOrder pins the second sentence
-// of PC1: empty text + default filters + default sort yields the full
-// library in the default order (date desc).
-func TestPC1_DefaultsYieldFullLibraryInDefaultOrder(t *testing.T) {
+// TestDefaults_FullLibraryInDateDescOrder pins the bare-dashboard contract:
+// empty text + default filters + default sort yields the full library in
+// the default order (date desc).
+func TestDefaults_FullLibraryInDateDescOrder(t *testing.T) {
 	albums := fixtureAlbums(t)
 
 	// Default: empty FilterParams, empty sortBy/dir (defaults to date desc).
@@ -411,22 +392,13 @@ func TestPC1_DefaultsYieldFullLibraryInDefaultOrder(t *testing.T) {
 	}
 }
 
-// --- PC3: No regressions to pre-existing filter/sort behavior ---
+// --- Filter + sort with no active text query ---
 
-// TestPC3_NoRegressionWhenQEmpty asserts the pre-build invariant: with no
-// Q, the assembled pipeline produces the same list (in the same order) as
-// it would have produced before this build. The reference IS the
-// pre-build behavior, because:
-//
-//   - SortBy* is structurally unchanged by this build (verified by git
-//     blame on library.go in the build commits).
-//   - Filter gained one new field (Q) and one early-return guard for
-//     Q==""; with Q="" the predicate path is identical to before.
-//
-// The test enumerates every filter dimension × every sort field × both
-// directions, and asserts that production matches the reference. Failure
-// would indicate that the build changed pre-existing filter/sort behavior.
-func TestPC3_NoRegressionWhenQEmpty(t *testing.T) {
+// TestFilterSortMatrix_NoQuery enumerates every filter dimension × sort
+// field × direction with Q empty, and asserts the pipeline matches the
+// reference. The empty-Q early-return guard inside Filter is meant to be
+// behaviourally a no-op; this test pins that.
+func TestFilterSortMatrix_NoQuery(t *testing.T) {
 	albums := fixtureAlbums(t)
 
 	filters := []FilterParams{
@@ -460,12 +432,11 @@ func TestPC3_NoRegressionWhenQEmpty(t *testing.T) {
 	}
 }
 
-// TestPC3_BareURLPipelineIdentity is a property-style check: for every
-// (filter, sort) the dashboard handler is reachable from a pre-existing
-// URL (no `q` param), the assembled pipeline output equals the reference.
-// This is the data-layer half of "pre-existing URLs render identically to
-// before" — the URL parsing half is exercised in e2e.
-func TestPC3_BareURLPipelineIdentity(t *testing.T) {
+// TestBareURLs_PipelineMatchesReference enumerates the (filter, sort)
+// combinations any dashboard URL without a `q` param can produce, and
+// asserts the pipeline matches the reference. The URL parsing half of the
+// contract is exercised in e2e.
+func TestBareURLs_PipelineMatchesReference(t *testing.T) {
 	albums := fixtureAlbums(t)
 
 	// All combinations a pre-existing URL could have produced — q is

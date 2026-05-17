@@ -10,9 +10,9 @@ import (
 )
 
 // Default sort field + direction for the library dashboard. The URL contract
-// (Task 1.5 / PC2) requires defaults to be omitted from the query string so
-// stale params don't accumulate as the user changes their mind. These two
-// constants are the single definition of "default" for sort.
+// requires defaults to be omitted from the query string so stale params
+// don't accumulate as the user changes their mind. These two constants are
+// the single definition of "default" for sort.
 const (
 	defaultSortBy  = "date"
 	defaultSortDir = "desc"
@@ -106,8 +106,7 @@ func buildAlbumsTableURL(sortBy, dir string, fp library.FilterParams) string {
 }
 
 // buildAlbumsPageURL constructs the URL for the infinite scroll sentinel.
-// Includes every active param so pagination preserves the narrowed view
-// (Task 1.6 / Context hard constraint "Infinite-scroll preserves all state").
+// Includes every active param so pagination preserves the narrowed view.
 func buildAlbumsPageURL(offset int, sortBy, dir string, fp library.FilterParams) string {
 	q := url.Values{}
 	q.Set("offset", fmt.Sprintf("%d", offset))
@@ -136,7 +135,7 @@ func sortLabel(sortBy string) string {
 // Reserved testids for album-list-row (asserted-absent by e2e/spec/library.spec.ts):
 //   data-testid="album-list-row-spotify-link" — intentionally NOT rendered;
 //     album rows must not surface Spotify outlinks per design. Declared here
-//     so spec assertions of zero count reference a known testid (PC2).
+//     so spec assertions of zero count reference a known testid.
 templ albumListRow(album library.AlbumDTO) {
 	<li class="list-row items-center" data-testid="album-list-row">
 		<button
@@ -202,7 +201,7 @@ templ AlbumsListBodyFrag(albums []library.AlbumDTO, offset int, sortBy string, s
 	}
 }
 
-// emptyResultState renders the zero-result message + one-click reset (Task 1.7).
+// emptyResultState renders the zero-result message + one-click reset.
 // The reset target is the bare dashboard URL so pushing it via hx-push-url
 // reproduces the unfiltered view. When the view is already at defaults (zero
 // results from an empty library), the reset would be a no-op and we render a
@@ -253,7 +252,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 	// listener (guarded against double-registration) that strips default
 	// sort params and empty values from outgoing requests targeting the
 	// albums-table / albums-page endpoints. This enforces the URL contract
-	// (Task 1.5 / PC2) regardless of which form/input in the bar produced
+	// regardless of which form/input in the bar produced
 	// the request — popover forms include hidden inputs that would
 	// otherwise round-trip empty values into the pushed URL. The script
 	// re-renders with every list swap; the window guard prevents the
@@ -265,8 +264,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 			// Strip default sort + empty values from the request parameters
 			// before htmx serializes them into the GET URL. The popovers'
 			// hidden inputs faithfully echo state — including the default
-			// (date, desc) — which would otherwise leak into the pushed URL
-			// (Task 1.5 / PC2).
+			// (date, desc) — which would otherwise leak into the pushed URL.
 			//
 			// HTMX 2.x exposes event.detail.parameters as a FormData-backed
 			// proxy. `delete p[k]` is a no-op on the underlying FormData;
@@ -683,18 +681,18 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 			</div>
 		}
 		</div>
-		// Active-state badges row (Task 1.4). Rendered at rest below the
-		// controls; visible without opening any popover. Empty when the view
-		// is at full defaults so the bar reads as "just an input."
+		// Active-state badges row. Rendered at rest below the controls;
+		// visible without opening any popover. Empty when the view is at
+		// full defaults so the bar reads as "just an input."
 		@unifiedSearchBarBadges(sortBy, sortDir, fp)
 	</div>
 }
 
-// unifiedSearchBarBadges surfaces the active non-default state on the bar at
-// rest (Task 1.4). One badge per non-default dimension; a single Reset clears
-// everything (shares the reset target with the empty-state affordance in
-// Task 1.7). Rendered empty when the view is at full defaults so the bar reads
-// as just an input.
+// unifiedSearchBarBadges surfaces the active non-default state on the bar
+// at rest. One badge per non-default dimension; a single Reset clears
+// everything (shares the reset target with the empty-state affordance).
+// Rendered empty when the view is at full defaults so the bar reads as
+// just an input.
 templ unifiedSearchBarBadges(sortBy, sortDir string, fp library.FilterParams) {
 	if !isDefaultView(sortBy, sortDir, fp) {
 		<div data-testid="unified-search-bar-badges" class="flex flex-wrap items-center gap-2">

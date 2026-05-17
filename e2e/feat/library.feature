@@ -81,7 +81,7 @@ Feature: Library Dashboard
     When they click the rating control on an album row
     Then the rating modal opens
 
-  # --- Task 1.4 — Active non-default state visible on the bar at rest ---
+  # --- Active non-default state visible on the bar at rest ---
 
   Scenario: Bar shows no badges at full defaults
     Given a logged-in user on the dashboard
@@ -97,7 +97,7 @@ Feature: Library Dashboard
     When they apply a non-default sort from the unified bar
     Then a compact badge naming the active sort is visible on the bar without opening any popover
 
-  # --- Task 1.5 — URL reflects full view state; reloading reproduces it ---
+  # --- URL reflects full view state; reloading reproduces it ---
 
   Scenario: Bare dashboard URL stays bare in the address bar
     Given a logged-in user on the dashboard
@@ -123,7 +123,7 @@ Feature: Library Dashboard
     When they activate reset on the unified bar
     Then the URL no longer contains the dropped param
 
-  # --- Task 1.6 — Infinite-scroll pagination preserves all state ---
+  # --- Infinite-scroll pagination preserves all state ---
 
   Scenario: Pagination request carries every active filter and sort param
     Given a logged-in user on the dashboard with filter and sort state applied
@@ -131,7 +131,7 @@ Feature: Library Dashboard
     Then the next-page request URL includes every active param
     And the appended rows respect the narrowed view with no duplicates across the page boundary
 
-  # --- Task 1.7 — Zero-result state with one-click reset ---
+  # --- Zero-result state with one-click reset ---
 
   Scenario: Zero-result view shows a non-judgemental message and a single reset control
     Given a logged-in user on the dashboard with a query that matches no albums
@@ -143,24 +143,23 @@ Feature: Library Dashboard
     When they activate the reset control
     Then the URL is bare, the full library re-renders, and no active-state badges are shown
 
-  # --- Product criteria (PC) — whole-system invariants of the assembled feature ---
+  # --- Whole-system invariants of the search/filter/sort surface ---
   #
-  # These scenarios assert the cross-cutting product criteria PC1, PC2, PC3 as
-  # emergent properties, distinct from the per-task scenarios above. They are
-  # the gates the unified-search build must hold even after all tasks pass
-  # individually.
+  # The scenarios below cover emergent properties of the assembled bar — the
+  # set/order contract of the rendered list, and the URL round-trip — that
+  # don't reduce to any single scenario above.
 
-  Scenario: PC1 — combined q + filter + sort produces the predicted set in the predicted order
+  Scenario: Combined q + filter + sort produces the predicted set in the predicted order
     Given a logged-in user on the dashboard
     When they apply a text query, a non-default filter, and a non-default sort together
     Then the rendered album list equals the AND of all three dimensions in the active sort order
 
-  Scenario: PC2 — a captured URL reproduces the exact DOM order in a fresh browser context
+  Scenario: A captured URL reproduces the exact DOM order in a fresh browser context
     Given a logged-in user who composes a non-trivial view state via the unified bar
     When the resulting URL is opened in a fresh authenticated browser context
     Then the rendered album list matches the original DOM order row-for-row
 
-  Scenario: PC2 — every reachable param combination round-trips via the URL
+  Scenario: Every reachable param combination round-trips via the URL
     Given a logged-in user on the dashboard
     When they reach each of several combined view states via the bar and the resulting URL is opened fresh
     Then each fresh-context render matches the corresponding originally-rendered list

@@ -254,7 +254,7 @@ test('Opening the rating modal from an album row', async ({ context, page }) => 
   await expect(page.locator('dialog[open]')).toBeVisible();
 });
 
-// --- Task 1.4 — Active non-default state visible on the bar at rest ---
+// --- Active non-default state visible on the bar at rest ---
 
 test('Bar shows no badges at full defaults', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
@@ -314,7 +314,7 @@ test('Bar surfaces a sort badge for a non-default sort at rest', async ({ contex
   await expect(page.getByTestId('unified-search-bar-badge-sort')).toContainText('Artist');
 });
 
-// --- Task 1.5 — URL reflects full view state; reloading reproduces it ---
+// --- URL reflects full view state; reloading reproduces it ---
 
 test('Bare dashboard URL stays bare in the address bar', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
@@ -439,7 +439,7 @@ test('Setting a value back to its default removes the param from the URL', async
   await expect(page.getByTestId('unified-search-bar-badges')).toHaveCount(0);
 });
 
-// --- Task 1.6 — Infinite-scroll pagination preserves all state ---
+// --- Infinite-scroll pagination preserves all state ---
 
 test('Pagination request carries every active filter and sort param', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
@@ -494,7 +494,7 @@ test('Pagination request carries every active filter and sort param', async ({ c
   expect(unique.size, `pagination introduced duplicates: ${titlesAll.length - unique.size}`).toBe(titlesAll.length);
 });
 
-// --- Task 1.7 — Zero-result state with one-click reset ---
+// --- Zero-result state with one-click reset ---
 
 test('Zero-result view shows a non-judgemental message and a single reset control', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
@@ -541,25 +541,21 @@ test('Activating reset from the empty state restores the full library and bare U
   await expect(page.getByTestId('unified-search-bar-badges')).toHaveCount(0);
 });
 
-// --- Product criteria (PC) ---
+// --- Whole-system invariants of the search/filter/sort surface ---
 //
-// Whole-system invariants of the assembled feature, distinct from per-task
-// tests. These survive past this build as regression coverage for the
-// search/filter/sort surface as a unit.
+// Set/order composition is enumerated against an independent reference
+// implementation at the Go integration layer
+// (src/internal/library/search_pipeline_test.go). The e2e test below covers
+// the assembled UI half: that the bar's composition flows through HTMX into
+// the rendered DOM as a single coherent set/order.
 //
-// PC1 is verified primarily at the Go integration layer
-// (src/internal/library/pc_and_composition_test.go) where every combination
-// can be enumerated against an independently-computed reference. The e2e
-// test below covers the assembled UI half: that the bar's composition flows
-// through HTMX into the rendered DOM as a single coherent set/order.
-//
-// PC2 is inherently a browser concern — the URL is owned by the address
-// bar, and the round-trip property only holds when a real navigation
-// reproduces the view. Two e2e tests cover the two halves: deep-link
-// fidelity (cold start with a URL) and end-to-end UI → URL → fresh-context
-// round-trip across several combinations.
+// URL round-trip is inherently a browser concern — the URL is owned by the
+// address bar, and the property only holds when a real navigation reproduces
+// the view. Two e2e tests cover the two halves: deep-link fidelity (cold
+// start with a URL) and end-to-end UI → URL → fresh-context round-trip
+// across several combinations.
 
-test('PC1 — combined q + filter + sort produces the predicted set in the predicted order', async ({ context, page }) => {
+test('Combined q + filter + sort produces the predicted set in the predicted order', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
@@ -604,7 +600,7 @@ test('PC1 — combined q + filter + sort produces the predicted set in the predi
   expect(rowCount, 'combined view must narrow the full library').toBeLessThan(baseCount);
 });
 
-test('PC2 — a captured URL reproduces the exact DOM order in a fresh browser context', async ({ browser }) => {
+test('A captured URL reproduces the exact DOM order in a fresh browser context', async ({ browser }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   // First context — drive the bar through a multi-dimensional state via
@@ -672,7 +668,7 @@ test('PC2 — a captured URL reproduces the exact DOM order in a fresh browser c
   await ctxB.close();
 });
 
-test('PC2 — every reachable param combination round-trips via the URL', async ({ browser }) => {
+test('Every reachable param combination round-trips via the URL', async ({ browser }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   // A small but cross-dimensional set of view states. Each is a non-default
@@ -693,9 +689,8 @@ test('PC2 — every reachable param combination round-trips via the URL', async 
     const url = `/app/library/dashboard?${qs}`;
 
     // Render the URL twice in two fresh contexts; their DOM orders must
-    // match exactly. This is the property-style version of PC2: any
-    // captured URL is a faithful representation of the view, with no
-    // hidden client-side state mediating the result.
+    // match exactly. Any captured URL is a faithful representation of the
+    // view, with no hidden client-side state mediating the result.
     const ctxA = await browser.newContext();
     await loginAs(ctxA, userId!);
     const pageA = await ctxA.newPage();
