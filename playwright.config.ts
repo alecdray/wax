@@ -3,12 +3,14 @@ import { config } from 'dotenv';
 
 config(); // load .env so vars are available to helpers
 
+const port = process.env.PORT || '4691';
+
 export default defineConfig({
   testDir: './e2e/spec',
   fullyParallel: false,
   retries: 0,
   use: {
-    baseURL: 'http://127.0.0.1:4691',
+    baseURL: `http://127.0.0.1:${port}`,
     trace: 'on-first-retry',
     testIdAttribute: 'data-testid',
   },
