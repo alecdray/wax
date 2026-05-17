@@ -40,13 +40,8 @@ Full rules: [`docs/design/`](../docs/design/).
 
 ## Testing
 
-- **Always write tests for new logic.** Any non-trivial function should have a corresponding test.
-- For pure logic functions in `cmd` packages, extract them into a separate file (e.g. `pull.go`) so they can be unit tested without I/O — keep `main.go` as thin orchestration only
-- Group tests by the function under test using a top-level `Test<FuncName>` function
-- Use `t.Run` subtests to describe specific behaviours — makes output scannable and serves as documentation
-- Name subtests as plain descriptions of the expected behaviour (e.g. `"returns empty for nonsense query"`)
-- Test behaviour, not implementation — each subtest should assert one specific outcome
-- Use `t.Skip` when a test condition may legitimately not be met in all dataset states
+- **Strategy, unit-test conventions, the dev flow, and the gate** — [`docs/testing.md`](../docs/testing.md).
+- **E2E suite rules + 8-step authoring recipe** — [`e2e/README.md`](../e2e/README.md) (and [`e2e/CLAUDE.md`](../e2e/CLAUDE.md), which auto-loads for agents working in `e2e/`).
 
 ## Documentation map
 
@@ -57,7 +52,8 @@ Where to find / update docs:
 | Product vision & philosophy | `docs/vision.md` |
 | Roadmap, ideas, open questions | `docs/roadmap.md` |
 | Operational follow-ups | `docs/backlog.md` |
-| Testing strategy | `docs/testing.md` |
+| Testing strategy & gate | `docs/testing.md` |
+| E2E authoring, debugging, and suite rules | `e2e/README.md` (auto-loads `e2e/CLAUDE.md`) |
 | Architecture rules | `docs/architecture/` |
 | Cross-cutting data model | `docs/architecture/data-model.md` |
 | Design rules | `docs/design/` |

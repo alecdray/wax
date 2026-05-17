@@ -4,7 +4,7 @@ Listen with wax.
 
 A music library management application with album ratings, reviews, and Spotify integration.
 
-For product, architecture, and roadmap see the **[wiki](./docs/wiki/wiki.md)**.
+For product, architecture, and roadmap, browse [`docs/`](./docs/).
 
 ## Tech Stack
 

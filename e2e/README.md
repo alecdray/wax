@@ -90,62 +90,15 @@ Follow these steps in order. The last step is non-negotiable: **run the alignmen
    Test names must match the scenario names in the feature file **exactly** — the feature↔spec mapping is name-based 1:1.
 4. **Log in if the scenario is authenticated.** Use `loginAs(context, userId)` from `helpers/auth.ts`. It is the only sanctioned bypass of Spotify OAuth — there is no mock backend.
 5. **Locate elements with `data-testid` only.** Use `page.getByTestId('...')`. The two narrow exceptions are `getByRole(...)` / `getByLabel(...)` for semantic assertions on standard form controls, and `dialog[open]` for scoping inside an open modal. Never select on CSS classes, raw text, or structural selectors — they change for non-test reasons.
-6. **If the testid you need does not yet exist**, add `data-testid="..."` to the relevant `.templ` file following the [naming convention](#testid-naming-convention) below, then `task build/templ`.
+6. **If the testid you need does not yet exist**, add `data-testid="..."` to the relevant `.templ` file following the [naming convention in `docs/design/testids.md`](../docs/design/testids.md), then `task build/templ`.
 7. **Wait on observable DOM signals, never on time.** HTMX swaps complete when the new DOM is present — assert on that. `page.waitForTimeout(...)` is banned; it produces flaky tests and hides race conditions.
-8. **Run the alignment check and the suite.**
-   ```bash
-   npm run e2e:check        # static check: every spec testid is declared in some templ
-   task test/e2e            # full Playwright run (needs `task dev` in another terminal)
-   ```
-   Both must pass before the test is done.
+8. **Run the suite.** `task test/e2e` (with `task dev` in another terminal) must pass before the test is done. The suite-wide rules in [Conventions](#conventions) below aren't automated — verify them yourself, especially that every `getByTestId` you add resolves to a real declaration in `src/internal/`.
 
 ### Common pitfalls
 
 - **SQLite `CURRENT_TIMESTAMP` is second-resolution.** Two rows inserted in the same second tie on `ORDER BY created_at DESC`. Tests that depend on insertion order should accept either ordering, or insert a deliberate gap.
-- **A passing spec with an undeclared testid is silently wrong.** If `getByTestId('foo')` matches nothing, `expect(...).not.toBeVisible()` passes vacuously. Run `npm run e2e:check` to catch these.
-- **Stale `_templ.go` after a branch switch.** `_templ.go` files are gitignored, so checking out a branch that added or renamed testids in `.templ` does **not** bring the matching generated Go with it. The static check (`npm run e2e:check`) reads `.templ` source and will pass, but the running server is built from the old `_templ.go` and won't render the new testids — specs time out waiting for elements that source says exist. Run `task build/templ` after any branch switch and before `task dev`. (The cold-start checklist above bakes this in.)
-
-## Testid alignment check
-
-`npm run e2e:check` is a fast, dependency-free static check that every `data-testid` referenced by a spec (via `getByTestId('...')`) is declared by at least one `.templ` under `src/internal/`. It reads files only — no dev server, DB, or browser. Source: [`check-testid-alignment.mjs`](./check-testid-alignment.mjs).
-
-**Clean run** — every spec reference resolves, exit 0:
-
-```
-OK — 123 spec testid reference(s) across 5 spec file(s) all declared (scanned 87 templ file(s), 214 declared testid(s)).
-```
-
-**Dirty run** — one line per orphan in `<spec>:<line>: <testid>` form, a summary on stderr, exit 1. Example output from the current repo:
-
-```
-e2e/spec/library.spec.ts:46: album-row-menu
-e2e/spec/library.spec.ts:47: album-row-tags-button
-e2e/spec/reviews.spec.ts:151: rating-delete
-e2e/spec/reviews.spec.ts:242: album-row-notes
-e2e/spec/reviews.spec.ts:243: album-row-notes-button
-
-5 orphan reference(s) across 5 distinct missing testid(s); spec testid is not declared in any templ under src/internal.
-```
-
-To fix an orphan, either add the missing `data-testid="..."` to the appropriate templ (and `task build/templ`) or update the spec to reference an existing testid. The check does not detect the reverse case (testids declared in templs but unused by specs) — those are not failures.
-
-## Testid naming convention
-
-`<surface>[-<element>][-<modifier>]`, kebab-case throughout.
-
-- **surface** — derived from the declaring templ's filename, with `_page` / `_frag` / `_modal` suffixes dropped and underscores converted to hyphens. For example, `login_page.templ` → surface `login-page`; `album_score_readout_frag.templ` → surface `album-score-readout`.
-- **element** — optional. Names the role of the specific node within the surface (`button`, `link`, `cover`, `title`, `state-icon`).
-- **modifier** — optional. Names the variant or state (`rated`, `unrated`, `open`).
-
-Concrete examples from the current codebase:
-
-| Templ file | Surface | Declared testid |
-|---|---|---|
-| `auth/adapters/views/login_page.templ` | `login-page` | `login-page`, `login-page-button`, `login-page-link` |
-| `library/adapters/views/album_score_readout_frag.templ` | `album-score-readout` | `album-score-readout-rated`, `album-score-readout-unrated`, `album-score-readout-state-icon` |
-| `library/adapters/views/album_detail_page.templ` | `album-detail-page` | `album-detail-page-title`, `album-detail-page-cover`, `album-detail-page-rating` |
-
-**Cross-surface composition is allowed.** A fragment that is consumed by exactly one page may declare testids using the consuming page's surface name. For example, `formats_releases_frag.templ` declares `album-detail-page-releases` because it is composed into `album_detail_page.templ`. The rule is "surface from filename" by default; explicit cross-composition is valid when the fragment is owned by a consuming page.
+- **A passing spec with an undeclared testid is silently wrong.** If `getByTestId('foo')` matches nothing, `expect(...).not.toBeVisible()` passes vacuously. Grep `src/internal/` for the testid after adding a new `getByTestId` call to confirm it actually exists.
+- **Stale `_templ.go` after a branch switch.** `_templ.go` files are gitignored, so checking out a branch that added or renamed testids in `.templ` does **not** bring the matching generated Go with it. The `.templ` source will show the new testid, but the running server is built from the old `_templ.go` and won't render it — specs time out waiting for elements that source says exist. Run `task build/templ` after any branch switch and before `task dev`. (The cold-start checklist above bakes this in.)
 
 ## Discovering existing testids
 
@@ -169,7 +122,7 @@ grep -rn 'data-testid' src/internal/auth/adapters/views/login_page.templ
 grep -rn 'data-testid="album-score-readout-rated"' src/internal/
 ```
 
-The grep-everything approach is the source of truth. Because of cross-surface composition, you cannot infer where a testid is declared from its name alone — always grep.
+The grep-everything approach is the source of truth. A testid's prefix doesn't always match its file's own component name (a fragment scoped to one parent uses the parent's prefix — see [`docs/design/testids.md`](../docs/design/testids.md)), so always grep.
 
 ## Helpers
 
@@ -197,13 +150,53 @@ Put new helpers in `helpers/<name>.ts` and export named functions. Keep helpers 
 
 ## Conventions
 
-- **BDD style**: scenarios describe behaviour, not implementation. Write from the user's point of view.
-- **One spec per feature file**: `login.feature` → `login.spec.ts`. Scenarios map 1:1 to tests by exact name.
-- **Feature file is the source of truth**: if a scenario changes, update the feature file first, then the spec.
-- **No shared state between tests**: each test must be self-contained. Use `page.goto` to set up starting state.
-- **No mock backend**: tests run against the real Go server and SQLite database. `loginAs(context, userId)` is the only sanctioned bypass.
-- **Selectors are `data-testid` only** (with narrow exceptions for `getByRole` / `getByLabel` on semantic form controls and `dialog[open]` for modal scoping). See [Testid naming convention](#testid-naming-convention).
-- **Wait on observable DOM signals, never on time**: `page.waitForTimeout(...)` is banned. HTMX swaps complete when the new DOM is present — assert on that.
+BDD style (scenarios describe behaviour, not implementation) is covered in [`docs/testing.md`](../docs/testing.md). The rules below are the suite-wide invariants — honor them when adding or editing specs. None of them are automated; the only gate is `task test/e2e` passing.
+
+### Feature ↔ spec 1:1
+
+Every `e2e/feat/<name>.feature` has a matching `e2e/spec/<name>.spec.ts`, and every `Scenario:` in a feature has a `test()` with the **exact same name** in the paired spec — no orphans in either direction.
+
+The feature file is the source of truth: when behaviour changes, edit the feature first, then the spec. Renaming a scenario means editing two files in lockstep.
+
+### No orphan testids
+
+Every `getByTestId('foo')` in a spec must resolve to a `data-testid="foo"` declared by some templ under `src/internal/`. An orphan testid silently makes `expect(...).not.toBeVisible()` pass for the wrong reason — the element doesn't exist, so the negative assertion succeeds vacuously.
+
+After adding a `getByTestId` call, grep `src/internal/` to confirm the testid exists. If it doesn't, add `data-testid="..."` to the relevant templ and run `task build/templ`.
+
+### Testid naming
+
+Naming follows [`docs/design/testids.md`](../docs/design/testids.md). The grep-everything approach (see [Discovering existing testids](#discovering-existing-testids)) is the source of truth — a testid's prefix doesn't always match its file's own component name (a fragment scoped to one parent uses the parent's prefix), so always grep before inventing a new one.
+
+### Selectors are `data-testid` only
+
+Allowed locator factories: `getByTestId`, `getByRole`, `getByLabel`. The latter two are reserved for semantic assertions on standard form controls.
+
+Do not use `getByText`, `getByPlaceholder`, `getByAltText`, or `getByTitle` — even for content assertions. If you want to assert that a piece of text is visible, add a testid to its container and assert text on that. Copy, placeholders, alt attributes, and title attributes change for non-test reasons; testids are the only stable contract.
+
+`page.locator(...)` is allowed only for `'dialog[open]'` (modal scoping) and `[data-testid="..."]` attribute selectors (including comma-separated alternation, semantically equivalent to chained `getByTestId`). No CSS classes, no `nth-of-type`, no XPath — anywhere.
+
+### Wait on observable DOM signals, never on time
+
+No `page.waitForTimeout(...)`, no `sleep(N)` / `delay(N)`, no `setTimeout(...)` in specs. HTMX swaps complete when the new DOM is present — assert on that with `expect(page.getByTestId(...)).toBeVisible()` or equivalent. For a specific network response, use `page.waitForResponse(...)`.
+
+### Single auth path
+
+Authenticated specs reach the authenticated state only through `loginAs(context, userId)` from `helpers/auth.ts`. No raw `wax_token` cookie injection anywhere else. The bypass needs a single owner — alternate paths would mean multiple things to update when JWT shape or cookie name changes, and would create unsanctioned ways to skip OAuth that drift from production.
+
+### Real backend
+
+Tests run against the real Go server and SQLite database. No mocking, no request interception, no test-double libraries. Specifically forbidden: `page.route(...)`, `page.unroute(...)`, `page.fulfill(...)`, `MockServiceWorker`, imports from `msw` / `nock` / `sinon`, `jest.mock|fn|spyOn`, `vi.mock|fn|spyOn`.
+
+If a test needs a specific data shape, insert the fixture into the database directly. If it needs to exercise an external API call, that belongs in a unit test against the adapter, not in e2e.
+
+### Fail loud on missing required data
+
+When a test depends on an env var or fixture, guard with `expect(value, '<msg>').toBeTruthy()`, not `test.skip()`. Skipping silently hides a misconfigured environment; a failure surfaces the problem immediately.
+
+### Self-contained tests
+
+Each test must be self-contained. Use `page.goto` (and `loginAs` if authenticated) to set up starting state — never depend on what a previous test left behind.
 
 ## Logs
 
