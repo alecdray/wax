@@ -41,9 +41,27 @@ The score is a weighted average of answered questions, linearly mapped to the 0�
 
 ## Rating lifecycle
 
-Ratings are provisional by default — all six questions are presented regardless of mode. The mode is a marker on the rating itself, not a filter on the questionnaire.
+The live state machine has two values: `provisional` and `finalized`. An album with no row in `album_rating_state` is `unrated` — there is no third stored value for it.
 
-After a cycle the record enters the rerate queue. You can finalize the rating, snooze it (which reschedules), or let it stall after the max snoozes is reached. Stalled records remain in the queue until acted on.
+Application-driven transitions:
+
+- `(no row) → provisional` — implicit, on the album's first saved rating.
+- `provisional → finalized` — explicit, via the manual Finalize action on the score-entry form.
+- `provisional → provisional` and `finalized → finalized` — re-rating an already-rated album appends a log entry and leaves the state value untouched.
+
+There is no time-based promotion, no scheduled re-rate, and no snooze. Finalizing is the only path that promotes an album to `finalized`, and it only applies from `provisional`.
+
+## Rating modal
+
+The modal entry route (`GET /app/review/rating-recommender`) always returns the score-entry form (`RatingConfirmFormFrag`). The score input is pre-filled with the most-recent rating-log score when one exists, or left empty for an unrated album.
+
+The questionnaire is opt-in — a button on the score-entry form opens it. Submitting the questionnaire computes a score from the answers and re-renders the score-entry form with that score pre-filled; dismissing it restores the prior pre-fill. The questionnaire never writes a rating row on its own.
+
+The Finalize action is a second submit button on the score-entry form, visible only while the album is currently `provisional`. Clicking it saves the entered score and promotes the album to `finalized` in a single submission.
+
+## Historical state values
+
+The rating log (`album_rating_log`) preserves whatever lifecycle value was recorded at the time each entry was written. Entries written under earlier lifecycles can carry `stalled`; the column's CHECK constraint still admits it for that reason. `AlbumRatingHistoryFrag` renders log entries through `review.RatingStateLogLabel`, which has a label for the historical value alongside the live ones.
 
 ## Score labels
 

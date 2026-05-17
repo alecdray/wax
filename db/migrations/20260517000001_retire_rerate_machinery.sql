@@ -1,13 +1,24 @@
 -- +goose Up
 -- +goose StatementBegin
--- Rebuild album_rating_state without snooze_count / next_rerate_at and with a
--- two-value CHECK constraint. SQLite cannot DROP COLUMN with a CHECK that
--- references the dropped columns, so we rebuild the table.
+-- Retire the time-based rerate lifecycle on album_rating_state:
+--   * drop snooze_count and next_rerate_at
+--   * narrow the state CHECK from {provisional, finalized, stalled} to
+--     {provisional, finalized}
+--   * backfill any pre-existing state='stalled' rows to 'provisional' so they
+--     satisfy the new CHECK
 --
--- Idempotent: goose records the applied version, so the rebuild only runs on
--- the first apply. The INSERT pulls every existing row and maps any historical
--- 'stalled' state to 'provisional' in the same step — the previous CHECK
--- constraint on the live state column prevents a separate UPDATE pass.
+-- SQLite cannot DROP COLUMN with a CHECK that references the dropped columns,
+-- and the original CHECK on the state column blocks a plain UPDATE to map
+-- 'stalled' to 'provisional', so we rebuild the table and map state inline
+-- inside the INSERT.
+--
+-- Idempotent via goose's applied-version tracking — the rebuild runs only on
+-- the first apply.
+--
+-- This migration does not touch album_rating_log: log entries are immutable
+-- history and the log's state CHECK still admits 'stalled' for entries written
+-- under the earlier lifecycle. No new album_rating_log rows are written by
+-- this migration.
 CREATE TABLE __new_album_rating_state (
     id         TEXT PRIMARY KEY,
     user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
