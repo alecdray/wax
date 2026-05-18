@@ -80,7 +80,8 @@ SELECT
         FROM (SELECT DISTINCT ar2.id, ar2.name FROM album_artists aa JOIN artists ar2 ON ar2.id = aa.artist_id WHERE aa.album_id = albums.id) AS ar
     ), '') AS artist_names,
     ars.state,
-    arl.rating
+    COALESCE(arl.rating, 0) AS latest_rating,
+    CASE WHEN arl.rating IS NULL THEN 0 ELSE 1 END AS has_rating
 FROM album_rating_state ars
 JOIN albums ON albums.id = ars.album_id
 LEFT JOIN (
@@ -106,15 +107,23 @@ type GetProvisionalAlbumsParams struct {
 }
 
 type GetProvisionalAlbumsRow struct {
-	ID          string
-	SpotifyID   string
-	Title       string
-	ImageUrl    sql.NullString
-	ArtistNames interface{}
-	State       string
-	Rating      float64
+	ID           string
+	SpotifyID    string
+	Title        string
+	ImageUrl     sql.NullString
+	ArtistNames  interface{}
+	State        string
+	LatestRating float64
+	HasRating    int64
 }
 
+// A provisional album may have zero rows in album_rating_log (e.g. rows
+// promoted into 'provisional' by the retired-stalled backfill). The LEFT JOIN
+// onto the latest-rating subquery yields NULL for those rows; we cannot
+// project arl.rating directly because sqlc infers a non-nullable Go float64
+// from album_rating_log.rating's NOT NULL schema. The has_rating flag carries
+// log-row presence to the application; latest_rating is COALESCE'd to 0 for
+// albums with no log row so the column is never NULL on the wire.
 func (q *Queries) GetProvisionalAlbums(ctx context.Context, arg GetProvisionalAlbumsParams) ([]GetProvisionalAlbumsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getProvisionalAlbums, arg.UserID, arg.UserID_2, arg.UserID_3)
 	if err != nil {
@@ -131,7 +140,8 @@ func (q *Queries) GetProvisionalAlbums(ctx context.Context, arg GetProvisionalAl
 			&i.ImageUrl,
 			&i.ArtistNames,
 			&i.State,
-			&i.Rating,
+			&i.LatestRating,
+			&i.HasRating,
 		); err != nil {
 			return nil, err
 		}
