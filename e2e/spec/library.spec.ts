@@ -93,7 +93,7 @@ test('Switching the carousel to Provisional lists only provisional albums', asyn
   // The provisional strip is visible and contains exactly the provisional
   // album's card — the finalized album must not appear, and no unrated album
   // (no state row) may slip in either.
-  const strip = page.getByTestId('provisional-carousel-strip');
+  const strip = page.getByTestId('provisional-carousel-strip-populated');
   await expect(strip).toBeVisible();
   const cards = strip.getByTestId('provisional-carousel-strip-album-card');
   const cardCount = await cards.count();
@@ -122,7 +122,7 @@ test('Provisional carousel empty state is neutral when no provisional albums exi
 
   // Neutral empty state — present, not celebratory. The strip must be absent.
   await expect(page.getByTestId('provisional-carousel-strip-empty')).toBeVisible();
-  await expect(page.getByTestId('provisional-carousel-strip')).toHaveCount(0);
+  await expect(page.getByTestId('provisional-carousel-strip-populated')).toHaveCount(0);
   const emptyText = (await page.getByTestId('provisional-carousel-strip-empty').innerText()).toLowerCase();
   for (const banned of ['caught up', 'all done', 'great job', 'nice work', ' woo', 'congrat']) {
     expect(emptyText, `empty-state message must be neutral; found "${banned}" in: ${emptyText}`).not.toContain(banned);

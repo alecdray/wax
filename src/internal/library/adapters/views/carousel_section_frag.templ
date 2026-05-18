@@ -24,7 +24,7 @@ templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 	if len(albums) == 0 {
 		<div data-testid="carousel-strip-empty" class="px-4 py-4 text-xs text-subtle">{ emptyMsg }</div>
 	} else {
-		<div data-testid="carousel-strip" class="carousel carousel-end gap-3 px-4 py-2 w-full overscroll-x-none">
+		<div data-testid="carousel-strip-populated" class="carousel carousel-end gap-3 px-4 py-2 w-full overscroll-x-none">
 			for _, album := range albums {
 				<div class="carousel-item">
 					if album.InLibrary {
@@ -83,7 +83,7 @@ templ provisionalCarouselStrip(albums []library.ProvisionalAlbumDTO) {
 	if len(albums) == 0 {
 		<div data-testid="provisional-carousel-strip-empty" class="px-4 py-4 text-xs text-subtle">No provisional albums</div>
 	} else {
-		<div data-testid="provisional-carousel-strip" class="carousel carousel-end gap-3 px-4 py-2 w-full overscroll-x-none">
+		<div data-testid="provisional-carousel-strip-populated" class="carousel carousel-end gap-3 px-4 py-2 w-full overscroll-x-none">
 			for _, album := range albums {
 				<div class="carousel-item">
 					<a
