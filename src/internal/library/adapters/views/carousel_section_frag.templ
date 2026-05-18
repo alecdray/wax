@@ -91,6 +91,9 @@ templ provisionalCarouselStrip(albums []library.ProvisionalAlbumDTO) {
 						class="flex flex-col items-center gap-1 hover-fade-out w-26"
 						data-testid="provisional-carousel-strip-album-card"
 						data-album-id={ album.ID }
+						if album.Rating != nil {
+							data-rating={ fmt.Sprintf("%g", *album.Rating) }
+						}
 					>
 						if album.ImageURL != "" {
 							<div class="avatar">
