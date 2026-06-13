@@ -11,7 +11,7 @@ templ AlbumSurfaceListenerFrag() {
 		class="hidden"
 		hx-get="/app/library/album-surfaces"
 		hx-trigger="album-changed from:body"
-		hx-vals="js:{albumId: event.detail.albumId}"
+		hx-vals="js:{albumId: event.detail.albumId, scope: event.detail.scope}"
 		hx-swap="none"
 	></div>
 }

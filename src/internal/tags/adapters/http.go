@@ -148,7 +148,7 @@ func (h *HttpHandler) SubmitAlbumTags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := httpx.SetHXTrigger(w, "album-changed", map[string]string{"albumId": albumId}); err != nil {
+	if err := httpx.SetHXTrigger(w, "album-changed", map[string]string{"albumId": albumId, "scope": "tags"}); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}

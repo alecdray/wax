@@ -326,7 +326,7 @@ func (h *HttpHandler) SubmitRatingRecommenderFinalize(w http.ResponseWriter, r *
 // renderRatingSaveResponse closes the rating modal and broadcasts album-changed
 // so library refreshes the surfaces that depend on the rating state.
 func (h *HttpHandler) renderRatingSaveResponse(ctx contextx.ContextX, w http.ResponseWriter, albumID string) {
-	if err := httpx.SetHXTrigger(w, "album-changed", map[string]string{"albumId": albumID}); err != nil {
+	if err := httpx.SetHXTrigger(w, "album-changed", map[string]string{"albumId": albumID, "scope": "rating"}); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
@@ -361,7 +361,7 @@ func (h *HttpHandler) DeleteRatingLogEntry(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := httpx.SetHXTrigger(w, "album-changed", map[string]string{"albumId": albumID}); err != nil {
+	if err := httpx.SetHXTrigger(w, "album-changed", map[string]string{"albumId": albumID, "scope": "rating"}); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
