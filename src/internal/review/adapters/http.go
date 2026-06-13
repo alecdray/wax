@@ -9,7 +9,6 @@ import (
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/httpx"
 	"github.com/alecdray/wax/src/internal/library"
-	libViews "github.com/alecdray/wax/src/internal/library/adapters/views"
 	"github.com/alecdray/wax/src/internal/review"
 	"github.com/alecdray/wax/src/internal/review/adapters/views"
 )
@@ -274,7 +273,7 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 		}
 	}
 
-	h.renderRatingSaveResponse(ctx, w, userID, albumID)
+	h.renderRatingSaveResponse(ctx, w, albumID)
 }
 
 // SubmitRatingRecommenderFinalize promotes a provisional album to finalized
@@ -321,37 +320,18 @@ func (h *HttpHandler) SubmitRatingRecommenderFinalize(w http.ResponseWriter, r *
 		return
 	}
 
-	h.renderRatingSaveResponse(ctx, w, userID, albumID)
+	h.renderRatingSaveResponse(ctx, w, albumID)
 }
 
-// renderRatingSaveResponse emits the post-save OOB swap payload: close the
-// modal, then refresh every album surface that depends on the rating state.
-func (h *HttpHandler) renderRatingSaveResponse(ctx contextx.ContextX, w http.ResponseWriter, userID, albumID string) {
-	album, err := h.libraryService.GetAlbumInLibrary(ctx, userID, albumID)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("failed to get album: %w", err)})
+// renderRatingSaveResponse closes the rating modal and broadcasts album-changed
+// so library refreshes the surfaces that depend on the rating state.
+func (h *HttpHandler) renderRatingSaveResponse(ctx contextx.ContextX, w http.ResponseWriter, albumID string) {
+	if err := httpx.SetHXTrigger(w, "album-changed", map[string]string{"albumId": albumID}); err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-
 	if err := views.CloseRatingModalFrag().Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-		return
-	}
-	if err := libViews.AlbumScoreReadoutFrag(*album, true).Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-		return
-	}
-	if err := libViews.AlbumScoreBadgeFrag(*album, true).Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-		return
-	}
-	if err := libViews.AlbumRatingHistoryFrag(*album, true).Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-		return
-	}
-	if err := libViews.AlbumRowTagsSectionFrag(*album, true).Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-		return
 	}
 }
 
@@ -381,28 +361,11 @@ func (h *HttpHandler) DeleteRatingLogEntry(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	album, err := h.libraryService.GetAlbumInLibrary(ctx, userID, albumID)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("failed to get album: %w", err)})
-		return
-	}
-
-	if err := libViews.AlbumScoreReadoutFrag(*album, true).Render(ctx, w); err != nil {
+	if err := httpx.SetHXTrigger(w, "album-changed", map[string]string{"albumId": albumID}); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
-	if err := libViews.AlbumScoreBadgeFrag(*album, true).Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-		return
-	}
-	if err := libViews.AlbumRatingHistoryFrag(*album, true).Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-		return
-	}
-	if err := libViews.AlbumRowTagsSectionFrag(*album, true).Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-		return
-	}
+	// No body: HX-Trigger fires album-changed; library refreshes the surfaces.
 }
 
 // optionalFloatParam parses a query-string float that may be absent or empty;
