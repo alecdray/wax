@@ -65,11 +65,12 @@ async function openRatingHistory(page: any) {
 
 async function deleteEntry(page: any) {
   await openRatingHistory(page);
-  const responsePromise = page.waitForResponse(
-    (resp: any) => resp.url().includes('/rating-log/') && resp.status() === 200,
-  );
+  const before = await page.getByTestId('album-rating-history-delete').count();
   await page.getByTestId('album-rating-history-delete').first().click();
-  await responsePromise;
+  // The delete response only fires the `album-changed` event; the rating
+  // history is refreshed by a follow-up /app/library/album-surfaces request.
+  // Wait on that observable DOM change, not the mutation response.
+  await expect(page.getByTestId('album-rating-history-delete')).toHaveCount(before - 1);
 }
 
 async function clearAllEntries(page: any) {
