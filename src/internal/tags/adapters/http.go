@@ -10,7 +10,6 @@ import (
 	"github.com/alecdray/wax/src/internal/core/httpx"
 	"github.com/alecdray/wax/src/internal/discogs"
 	"github.com/alecdray/wax/src/internal/library"
-	libraryViews "github.com/alecdray/wax/src/internal/library/adapters/views"
 	"github.com/alecdray/wax/src/internal/tags"
 	"github.com/alecdray/wax/src/internal/tags/adapters/views"
 )
@@ -141,8 +140,7 @@ func (h *HttpHandler) SubmitAlbumTags(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	newTags, err := h.tagsService.SetAlbumTags(ctx, userId, albumId, inputs)
-	if err != nil {
+	if _, err := h.tagsService.SetAlbumTags(ctx, userId, albumId, inputs); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
 			Err:    fmt.Errorf("failed to set album tags: %w", err),
@@ -150,41 +148,12 @@ func (h *HttpHandler) SubmitAlbumTags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	album, err := h.libraryService.GetAlbumInLibrary(ctx, userId, albumId)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusBadRequest,
-			Err:    fmt.Errorf("failed to get album: %w", err),
-		})
-		return
-	}
-	// GetAlbumInLibrary already calls GetAlbumTags, but use our freshly computed tags
-	// to avoid an extra DB round-trip.
-	album.Tags = newTags
-
-	err = views.CloseTagsModalFrag().Render(ctx, w)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    err,
-		})
+	if err := httpx.SetHXTrigger(w, "album-changed", map[string]string{"albumId": albumId}); err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		return
 	}
 
-	err = libraryViews.AlbumTagsFrag(*album, true).Render(ctx, w)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    err,
-		})
-		return
-	}
-
-	err = libraryViews.AlbumRowTagsSectionFrag(*album, true).Render(ctx, w)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    err,
-		})
+	if err := views.CloseTagsModalFrag().Render(ctx, w); err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }
