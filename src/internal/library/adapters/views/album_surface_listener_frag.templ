@@ -1,0 +1,17 @@
+package views
+
+// AlbumSurfaceListenerFrag is a hidden element present on every library page
+// (rendered inside LibraryHeaderBarFrag). It listens for the `album-changed`
+// HTMX event fired by peer modules after a rating or tag mutation and refreshes
+// the affected album surfaces via the library-owned surfaces endpoint. The
+// album ID is read from the event detail.
+templ AlbumSurfaceListenerFrag() {
+	<div
+		data-testid="album-surface-listener"
+		class="hidden"
+		hx-get="/app/library/album-surfaces"
+		hx-trigger="album-changed from:body"
+		hx-vals="js:{albumId: event.detail.albumId}"
+		hx-swap="none"
+	></div>
+}
