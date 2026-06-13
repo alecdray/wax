@@ -594,40 +594,71 @@ func (h *HttpHandler) GetAlbumSurfaces(w http.ResponseWriter, r *http.Request) {
 
 	userId, err := ctx.UserId()
 	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: err})
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get user ID: %w", err),
+		})
 		return
 	}
 
 	albumId := r.URL.Query().Get("albumId")
 	if albumId == "" {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: errors.New("missing album ID")})
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    errors.New("missing album ID"),
+		})
 		return
 	}
 
 	album, err := h.libraryService.GetAlbumInLibrary(ctx, userId, albumId)
 	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("failed to get album: %w", err)})
+		if errors.Is(err, sql.ErrNoRows) || err.Error() == "album not in library" {
+			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+				Status: http.StatusNotFound,
+				Err:    fmt.Errorf("album not found: %w", err),
+			})
+			return
+		}
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get album: %w", err),
+		})
 		return
 	}
 
 	if err := views.AlbumScoreReadoutFrag(*album, true).Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    err,
+		})
 		return
 	}
 	if err := views.AlbumScoreBadgeFrag(*album, true).Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    err,
+		})
 		return
 	}
 	if err := views.AlbumRatingHistoryFrag(*album, true).Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    err,
+		})
 		return
 	}
 	if err := views.AlbumTagsFrag(*album, true).Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    err,
+		})
 		return
 	}
 	if err := views.AlbumRowTagsSectionFrag(*album, true).Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    err,
+		})
 		return
 	}
 }
