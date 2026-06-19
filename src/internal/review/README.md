@@ -25,7 +25,7 @@ The canonical question list lives in `AllBaseQuestions`. The rationale for each:
 
 **Return Rate** *(Hard)* — Behavioural signal. Whether you'll keep coming back is a reliable proxy for how much you actually value a record.
 
-**Track Quality** *(Soft)* — How much of the record is good. Orthogonal to Sonic Pleasure: a record can have great tracks in a genre you don't personally enjoy, or vice versa.
+**Track Quality** *(Soft)* — Consistency: how much of the record is good. Orthogonal to Sonic Pleasure: a record can be consistent in a genre you don't personally enjoy, or vice versa.
 
 **Cohesion** *(Soft)* — Whether the record works as a complete piece. Split from Track Quality because they measure genuinely different things — a record can have great tracks but no cohesion, or strong cohesion with weaker tracks.
 
