@@ -133,7 +133,7 @@ var AllBaseQuestions = BaseQuestions{
 	},
 	{
 		Key:      QuestionTrackQuality,
-		Question: "This record has great tracks",
+		Question: "Most tracks on this record are great",
 		Options:  likertOptions,
 		Weight:   RatingWeightSoft,
 	},
