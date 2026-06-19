@@ -27,7 +27,7 @@ The canonical question list lives in `AllBaseQuestions`. The rationale for each:
 
 **Track Quality** *(Soft)* — Consistency: how much of the record is good. Orthogonal to Sonic Pleasure: a record can be consistent in a genre you don't personally enjoy, or vice versa.
 
-**Cohesion** *(Soft)* — Whether the record works as a complete piece. Split from Track Quality because they measure genuinely different things — a record can have great tracks but no cohesion, or strong cohesion with weaker tracks.
+**Cohesion** *(Soft)* — Whether the record works as a complete piece. Split from Track Quality because they measure genuinely different things — a record can have great tracks but no cohesion, or strong cohesion with weaker tracks. Note that this question also captures composition: a record where every track sounds identical is technically cohesive but fails the "more than the sum of its parts" test — it's boring, and the question catches that.
 
 **Emotional Resonance** *(Soft)* — Whether the record moves you. Soft because emotional response varies by mood and context more than the hard signals do.
 
