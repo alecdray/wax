@@ -13,7 +13,7 @@ import (
 
 const (
 	jwtCookieName = "wax_token"
-	jwtTTL        = 1 * timex.Day
+	jwtTTL        = 30 * timex.Day
 )
 
 // Claims struct to encode in JWT
