@@ -1,6 +1,6 @@
 # Roadmap
 
-Planned features in rough priority order. See each module's README for what's already shipped, and [`docs/backlog.md`](./backlog.md) for operational follow-ups.
+Planned features in rough priority order. See each module's README for what's already shipped, and [`docs/backlog.md`](./backlog.md) for operational follow-ups. Each feature ships through the [development process](./process.md) — spec → implement → audit → merge.
 
 ## In queue
 

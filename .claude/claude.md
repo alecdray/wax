@@ -1,5 +1,9 @@
 # Claude Guidelines
 
+## Starting new work
+
+All new work ships through the four-phase process in [`docs/process.md`](../docs/process.md) — read it before planning a feature. **Spec is phase 1:** codify the design in the canonical docs (ADRs, module READMEs, data model) on a branch first; `/build`, `/tdd`, and the like are phase-2 (Implement) tools, never the entry point.
+
 ## Code Generation
 
 ### Templates
@@ -50,6 +54,7 @@ Where to find / update docs:
 
 | Topic | Location |
 |---|---|
+| Development process (spec→implement→audit→merge) | `docs/process.md` |
 | Product vision & philosophy | `docs/vision.md` |
 | Roadmap, ideas, open questions | `docs/roadmap.md` |
 | Operational follow-ups | `docs/backlog.md` |
@@ -74,7 +79,7 @@ Anything else that ends up duplicated should be removed from one location, not k
 
 ### Working artifacts (not committed)
 
-Spec, plan, and research files produced by skills (`/build`, `/to-issues`, `/grill-me`, etc.) are scratch artifacts. They live under `tmp/` (gitignored) and **must not be committed**. When the work merges, fold any durable learnings into the appropriate permanent home:
+Spec, plan, and research files produced by skills (`/build`, `/to-issues`, `/grill-me`, etc.) are scratch artifacts. They **must not be committed** — *where* they live is your call (a gitignored `tmp/`, `~/workshop/builds/wax-*/`, `/tmp`, …). When the work merges, fold any durable learnings into the appropriate permanent home:
 
 | Type of learning | Goes to |
 |---|---|
@@ -82,6 +87,8 @@ Spec, plan, and research files produced by skills (`/build`, `/to-issues`, `/gri
 | A reusable design rule or token | `docs/design/` (and `static/src/main.css` if applicable) |
 | User-facing behaviour of a feature | the owning module's `README.md` |
 | A decision worth preserving the "why" of | `docs/adr/NNNN-short-slug.md` |
+| A subtle invariant a refactor could silently break | a doc-comment next to the code it guards |
+| A known architectural divergence | `docs/architecture/known-gaps.md` |
 | Operational follow-up | `docs/backlog.md` |
 | Future direction | `docs/roadmap.md` |
 
