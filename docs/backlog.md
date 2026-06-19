@@ -25,3 +25,13 @@ Next: brainstorm desired UX and constraints (likely via `/brainstorming`) before
 Backfill migrations need to generate row IDs in SQL, but the codebase has no consistent approach. `lower(hex(randomblob(16)))` (32-char hex) appears in two prior migrations; an inline UUID-v4 construction was used in `20260517202814`. Neither matches runtime, which uses `uuid.NewString()` (36-char dashed UUID v4). The clean fixes each have a cost — inline UUID-v4 SQL is verbose and easy to typo; a Go migration or driver-registered `uuid_v4()` function both need a custom goose binary (`src/cmd/goose/main.go`) because the vanilla CLI can't load Go code or use a custom-registered driver.
 
 Next: when a third backfill is on the horizon, pick a convention (probably the custom goose binary + `RegisterFunc("uuid_v4", ...)` — works in both the CLI and the app, reusable forever) and document it. Until then, inline SQL is the local optimum.
+
+## E2E suite SQLite contention / shared-test-data flakiness
+
+Running `task test/e2e` at the default (multi-worker) parallelism intermittently fails with `database is locked` because spec files run in parallel against one SQLite DB while helpers issue direct `sqlite3` CLI writes (no `busy_timeout`/WAL on the app connection; many specs share one test album/user). This is pre-existing and orthogonal to feature work.
+
+Next: consider enabling WAL + `busy_timeout` on the SQLite DSN in `core/db`, setting `workers: 1` (or sharding) in `playwright.config.ts`, or isolating per-spec test data. The suite passes deterministically at `--workers=1`.
+
+## Migrate existing raw `HX-Trigger` header writes to `httpx.SetHXTrigger`
+
+`library/adapters/http.go` still sets several `HX-Trigger` headers via raw `w.Header().Set(...)` (e.g. `libraryUpdated`, `radarUpdated`). Consider migrating them to the new `httpx.SetHXTrigger` helper for consistency. Low priority.
