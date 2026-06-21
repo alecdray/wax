@@ -7,6 +7,7 @@ Short entries that capture **why** a decision was made, when the rationale would
 | # | Decision | Summary |
 |---|---|---|
 | [0001](0001-library-visual-list.md) | Library shifts from table view to visual list | The library dashboard is a cover-art-first visual list with chip-bar filtering, replacing a sortable table; dashboard Spotify outlinks are dropped to keep navigation rooted in Wax. |
+| [0002](0002-loading-feedback-for-network-actions.md) | Loading feedback for network actions | User-triggered network actions gain layered feedback — an app-wide indeterminate progress bar on every request, a busy/non-resubmittable state on discrete actions, and dim-and-overlay on in-place data reloads (a trailing spinner for append-style loads). |
 
 ## Format
 
