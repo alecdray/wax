@@ -35,3 +35,9 @@ Next: consider enabling WAL + `busy_timeout` on the SQLite DSN in `core/db`, set
 ## Migrate existing raw `HX-Trigger` header writes to `httpx.SetHXTrigger`
 
 `library/adapters/http.go` still sets several `HX-Trigger` headers via raw `w.Header().Set(...)` (e.g. `libraryUpdated`, `radarUpdated`). Consider migrating them to the new `httpx.SetHXTrigger` helper for consistency. Low priority.
+
+## `htmx:oobErrorNoTarget` when rating from the album detail page
+
+Saving or finalizing a rating from the album *detail* page logs two `htmx:oobErrorNoTarget` console errors. The rating handlers broadcast `album-changed`, and library's surface-refresh responds with out-of-band swaps for dashboard surfaces (the provisional carousel, the album list row) whose target ids aren't present on the detail page, so the OOB swaps land nowhere. Harmless — the rating still saves and the detail page's own readout updates — but it's console noise on every rate-from-detail action. Pre-existing; surfaced during manual verification of the rating-modal rework.
+
+Next: decide whether the surface-refresh should scope its OOB swaps to targets present on the current page, or whether the detail page should host (hidden) the same surface ids the dashboard does. Low priority.
