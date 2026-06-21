@@ -113,7 +113,7 @@
     animation-play-state: paused;
 }
 
-/* Global request progress bar (Layer A) — indeterminate; ref-counted in root.templ. */
+/* Global request progress bar — indeterminate; driven by static/public/progress-bar.js. */
 .htmx-bar {
     position: fixed;
     top: 0;
@@ -136,9 +136,3 @@
     transition: width 0.2s ease, opacity 0.4s ease 0.2s;
 }
 
-/* Shared spinner keyframe (used by Layer B button busy-state in a later task). */
-@keyframes wax-spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
