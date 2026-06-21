@@ -348,10 +348,10 @@ func (r *Repo) GetProvisionalAlbums(ctx context.Context, userID string) ([]Provi
 		if names, ok := row.ArtistNames.(string); ok {
 			dto.Artists = names
 		}
-		// Rating is 0 for albums with no rating (LEFT JOIN returns 0 for NULLs).
-		// Only set it if there's actually a rating state with existing data.
-		if row.Rating != 0 {
-			rating := row.Rating
+		// HasRating reflects whether a row in album_rating_log exists for this
+		// (user, album); a provisional album with no log row keeps Rating == nil.
+		if row.HasRating != 0 {
+			rating := row.LatestRating
 			dto.Rating = &rating
 		}
 		out = append(out, dto)
