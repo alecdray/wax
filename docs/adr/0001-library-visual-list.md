@@ -1,7 +1,5 @@
-# 0001 — Library shifts from table view to visual list
+# Library shifts from table view to visual list
 
-**Date:** 2026-03-14
+The library dashboard presents albums as a cover-art-first visual list with chip-bar filtering, replacing an earlier sortable table whose column headers, per-row rating buttons, and per-row Spotify outlinks put database affordances ahead of the collection itself.
 
-**Was:** The library was a table with sortable column headers, per-row rating buttons, and Spotify outlinks on every row; tags lived under an ellipsis dropdown.
-
-**Why:** Cover-art-first presentation evokes physical media. Chip-bar filtering supports multi-facet selection that column-header sort could not. Removing dashboard Spotify outlinks keeps navigation rooted in Wax.
+Cover-art-first presentation evokes physical media; chip-bar filtering supports the multi-facet selection that single-column sort could not; and removing the dashboard's Spotify outlinks keeps navigation rooted in Wax.

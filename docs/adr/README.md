@@ -2,19 +2,17 @@
 
 Short entries that capture **why** a decision was made, when the rationale would otherwise be lost once the old approach is gone.
 
+## Decision log
+
+| # | Decision | Summary |
+|---|---|---|
+| [0001](0001-library-visual-list.md) | Library shifts from table view to visual list | The library dashboard is a cover-art-first visual list with chip-bar filtering, replacing a sortable table; dashboard Spotify outlinks are dropped to keep navigation rooted in Wax. |
+
 ## Format
 
-```
-# NNNN — Short title
+Lead with the decision — 1–2 sentences naming what was decided — under an `# h1` title. Then add only the **minimal context needed to understand that decision and its implications**: the constraint or trade-off that forced it. Rejected alternatives and consequences earn space only when they carry real weight, and as a brief clause or short list — never an obligatory section. An ADR that runs past a few short paragraphs is usually restating things that belong elsewhere.
 
-**Date:** YYYY-MM-DD
-
-**Was:** What it used to be. One or two sentences.
-
-**Why:** The reason for the change. One or two sentences.
-```
-
-The **current** state is the codebase — don't restate it. No implementation details: no file names, class names, function names, or exact UI strings. If a sentence would need to change after a routine refactor, it doesn't belong here.
+The **current** state is the codebase — don't restate it. Keep implementation details out: no file names, class names, function names, or exact UI strings that a routine refactor would invalidate. If a sentence would need to change after such a refactor, it doesn't belong here.
 
 ## Naming
 
@@ -22,4 +20,4 @@ The **current** state is the codebase — don't restate it. No implementation de
 
 ## When to write one
 
-Write an ADR when a change replaces a meaningful prior approach and a future reader would otherwise wonder *"why is it like this?"*. Routine changes don't qualify.
+Write an ADR when a change replaces a meaningful prior approach, or locks in a foundational choice, that a future reader would otherwise wonder *"why is it like this?"* about. Routine changes don't qualify.
