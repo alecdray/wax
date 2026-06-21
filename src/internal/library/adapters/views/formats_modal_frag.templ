@@ -139,9 +139,13 @@ templ discogsSearchSection(albumID string, defaultSearch string, format models.R
 				hx-target={ fmt.Sprintf("#discogs-results-%s", string(format)) }
 				hx-swap="innerHTML"
 				hx-include="this"
+				hx-indicator={ fmt.Sprintf("#discogs-results-region-%s", string(format)) }
 			/>
 		</div>
-		<div id={ fmt.Sprintf("discogs-results-%s", string(format)) } class="flex flex-col gap-1 max-h-48 overflow-y-auto">
+		<div id={ fmt.Sprintf("discogs-results-region-%s", string(format)) } class="relative">
+			<div id={ fmt.Sprintf("discogs-results-%s", string(format)) } class="flex flex-col gap-1 max-h-48 overflow-y-auto">
+			</div>
+			@templates.RegionOverlay()
 		</div>
 	</div>
 }
