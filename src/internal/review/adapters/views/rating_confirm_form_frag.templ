@@ -116,7 +116,7 @@ templ RatingConfirmFormFrag(album library.AlbumDTO, mode review.RatingMode, rati
 		>Save only</button>
 		<button
 			data-testid="rating-confirm-form-open-questionnaire"
-			class="btn btn-ghost btn-sm w-full"
+			class="btn btn-ghost btn-sm w-full border border-base-300"
 			type="button"
 			hx-get={ questionnaireOptInHref(album.ID, mode, rating) }
 			hx-target="closest form"
