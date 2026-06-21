@@ -152,6 +152,10 @@
     position: relative;
     pointer-events: none;
 }
+.btn-busy.htmx-request img,
+.htmx-request .btn-busy img {
+    opacity: 0;
+}
 .btn-busy.htmx-request::after,
 .htmx-request .btn-busy::after {
     content: "";

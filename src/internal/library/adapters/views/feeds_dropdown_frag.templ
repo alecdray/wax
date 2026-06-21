@@ -86,6 +86,9 @@ templ FeedsDropdownContentFrag(feeds []feed.FeedDTO) {
 		} else {
 			for _, f := range feeds {
 				<li class={ templ.KV("menu-disabled", f.LastSyncStatus.IsSyncing()) }>
+					// Sync button: hx-disabled-elt guards the click→response window. btn-busy is
+					// intentionally omitted here — this button already shows an animate-spin icon
+					// driven by sync state, so a second spinner would collide.
 					<button
 						data-testid="feeds-dropdown-sync-button"
 						class="flex justify-between"
