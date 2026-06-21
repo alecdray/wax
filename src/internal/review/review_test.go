@@ -3,7 +3,6 @@ package review
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"math"
 	"path/filepath"
 	"testing"
@@ -229,49 +228,76 @@ func TestFinalizeWithRating_PromotesProvisionalAndWritesLog(t *testing.T) {
 	}
 }
 
-func TestFinalizeWithRating_RejectsUnratedAlbum(t *testing.T) {
+func TestFinalizeWithRating_FinalizesUnratedAlbumInOneStep(t *testing.T) {
 	svc, sqlDB := newTestService(t)
 	ctx := context.Background()
-
 	seedUserAndAlbum(t, sqlDB, "user-1", "album-1")
 
-	_, _, err := svc.FinalizeWithRating(ctx, "user-1", "album-1", 5.0, "")
-	if !errors.Is(err, ErrFinalizeRequiresProvisional) {
-		t.Fatalf("expected ErrFinalizeRequiresProvisional, got %v", err)
+	logEntry, newState, err := svc.FinalizeWithRating(ctx, "user-1", "album-1", 5.0, "")
+	if err != nil {
+		t.Fatalf("FinalizeWithRating: %v", err)
 	}
-
+	if logEntry == nil || logEntry.Rating == nil || *logEntry.Rating != 5.0 {
+		t.Fatalf("expected log entry with rating 5.0, got %+v", logEntry)
+	}
+	if newState == nil || newState.State != RatingStateFinalized {
+		t.Fatalf("expected finalized state, got %+v", newState)
+	}
 	log, err := svc.GetRatingLog(ctx, "user-1", "album-1")
 	if err != nil {
 		t.Fatalf("read log: %v", err)
 	}
-	if len(log) != 0 {
-		t.Fatalf("expected no log rows written on rejected finalize, got %d", len(log))
+	if len(log) != 1 {
+		t.Fatalf("expected exactly one log row, got %d", len(log))
 	}
 }
 
-func TestFinalizeWithRating_RejectsAlreadyFinalizedAlbum(t *testing.T) {
+func TestFinalizeWithRating_OnFinalizedAlbumStaysFinalizedAndAppendsLog(t *testing.T) {
 	svc, sqlDB := newTestService(t)
 	ctx := context.Background()
-
 	seedUserAndAlbum(t, sqlDB, "user-1", "album-1")
-	if _, err := svc.CreateRatingState(ctx, "user-1", "album-1"); err != nil {
-		t.Fatalf("seed provisional state: %v", err)
-	}
-	if _, err := svc.FinalizeRating(ctx, "user-1", "album-1"); err != nil {
-		t.Fatalf("promote to finalized: %v", err)
+	if _, _, err := svc.FinalizeWithRating(ctx, "user-1", "album-1", 8.0, ""); err != nil {
+		t.Fatalf("seed finalize: %v", err)
 	}
 
-	_, _, err := svc.FinalizeWithRating(ctx, "user-1", "album-1", 8.0, "")
-	if !errors.Is(err, ErrFinalizeRequiresProvisional) {
-		t.Fatalf("expected ErrFinalizeRequiresProvisional, got %v", err)
+	if _, st, err := svc.FinalizeWithRating(ctx, "user-1", "album-1", 9.0, ""); err != nil {
+		t.Fatalf("re-finalize: %v", err)
+	} else if st == nil || st.State != RatingStateFinalized {
+		t.Fatalf("expected finalized, got %+v", st)
 	}
-
 	log, err := svc.GetRatingLog(ctx, "user-1", "album-1")
 	if err != nil {
 		t.Fatalf("read log: %v", err)
 	}
-	if len(log) != 0 {
-		t.Fatalf("expected no log rows written on rejected finalize, got %d", len(log))
+	if len(log) != 2 {
+		t.Fatalf("expected two log rows, got %d", len(log))
+	}
+}
+
+func TestSaveRating_OnUnratedCreatesProvisional(t *testing.T) {
+	svc, sqlDB := newTestService(t)
+	ctx := context.Background()
+	seedUserAndAlbum(t, sqlDB, "user-1", "album-1")
+
+	if _, st, err := svc.SaveRating(ctx, "user-1", "album-1", 6.0, ""); err != nil {
+		t.Fatalf("SaveRating: %v", err)
+	} else if st == nil || st.State != RatingStateProvisional {
+		t.Fatalf("expected provisional, got %+v", st)
+	}
+}
+
+func TestSaveRating_OnFinalizedDemotesToProvisional(t *testing.T) {
+	svc, sqlDB := newTestService(t)
+	ctx := context.Background()
+	seedUserAndAlbum(t, sqlDB, "user-1", "album-1")
+	if _, _, err := svc.FinalizeWithRating(ctx, "user-1", "album-1", 8.0, ""); err != nil {
+		t.Fatalf("seed finalize: %v", err)
+	}
+
+	if _, st, err := svc.SaveRating(ctx, "user-1", "album-1", 7.0, ""); err != nil {
+		t.Fatalf("SaveRating: %v", err)
+	} else if st == nil || st.State != RatingStateProvisional {
+		t.Fatalf("save must demote finalized to provisional, got %+v", st)
 	}
 }
 

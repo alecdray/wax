@@ -253,7 +253,7 @@ func assertModalLandsOnScoreEntry(t *testing.T, body string) {
 	}
 }
 
-// --- Re-rate save leaves the state value untouched (PC3 at the HTTP boundary) ---
+// --- Re-rate save sets the state to provisional (HTTP boundary) ---
 
 func TestSaveForm_OnProvisionalAlbum_LeavesStateProvisional(t *testing.T) {
 	h := newHarness(t)
@@ -277,15 +277,9 @@ func TestSaveForm_OnProvisionalAlbum_LeavesStateProvisional(t *testing.T) {
 	}
 }
 
-func TestSaveForm_OnFinalizedAlbum_LeavesStateFinalized(t *testing.T) {
+func TestSaveForm_OnFinalizedAlbum_DemotesToProvisional(t *testing.T) {
 	h := newHarness(t)
 	albumID := h.seedAlbumInLibrary(t, "Finalized Save")
-	if _, err := h.svc.AddRating(t.Context(), h.userID, albumID, 5.0, "", review.RatingStateProvisional); err != nil {
-		t.Fatalf("seed rating: %v", err)
-	}
-	if _, err := h.svc.CreateRatingState(t.Context(), h.userID, albumID); err != nil {
-		t.Fatalf("seed state: %v", err)
-	}
 	if _, _, err := h.svc.FinalizeWithRating(t.Context(), h.userID, albumID, 8.0, ""); err != nil {
 		t.Fatalf("seed finalize: %v", err)
 	}
@@ -297,8 +291,8 @@ func TestSaveForm_OnFinalizedAlbum_LeavesStateFinalized(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("save POST: expected 200, got %d (%s)", rec.Code, rec.Body.String())
 	}
-	if got := h.stateRow(t, albumID); got != string(review.RatingStateFinalized) {
-		t.Fatalf("save on finalized must leave state=finalized, got %q", got)
+	if got := h.stateRow(t, albumID); got != string(review.RatingStateProvisional) {
+		t.Fatalf("save on finalized must demote to provisional, got %q", got)
 	}
 }
 
