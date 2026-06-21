@@ -86,16 +86,16 @@ templ FeedsDropdownContentFrag(feeds []feed.FeedDTO) {
 		} else {
 			for _, f := range feeds {
 				<li class={ templ.KV("menu-disabled", f.LastSyncStatus.IsSyncing()) }>
-					// Sync button: hx-disabled-elt guards the click→response window. btn-busy is
-					// intentionally omitted here — this button already shows an animate-spin icon
-					// driven by sync state, so a second spinner would collide.
+					// Sync button: no hx-disabled-elt / btn-busy here. This button manages its
+					// own in-flight state — it renders `disabled` plus an animate-spin icon driven
+					// by sync status, swapped in via morph. hx-disabled-elt would fight that: htmx
+					// re-enables the element after the request, clobbering the server-set disabled.
 					<button
 						data-testid="feeds-dropdown-sync-button"
 						class="flex justify-between"
 						hx-post={ fmt.Sprintf("/app/library/dashboard/feeds/sync?feedId=%s", f.ID) }
 						hx-target="#feeds-dropdown-content"
 						hx-swap="morph"
-						hx-disabled-elt="this"
 						if f.LastSyncStatus.IsSyncing() {
 							disabled
 						} else {
