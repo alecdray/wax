@@ -57,35 +57,39 @@ templ albumActionsModalContent(result library.DiscoverResultDTO) {
                 case library.DiscoverAlbumStateOnRadar:
                     <button
                         type="button"
-                        class="btn btn-sm btn-primary"
+                        class="btn btn-sm btn-primary btn-busy"
                         hx-post={ fmt.Sprintf("/app/library/albums/%s/library", result.AlbumID) }
                         hx-swap="none"
+                        hx-disabled-elt="this"
                         hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
                         data-testid="album-actions-modal-content-add-to-library"
                     >Add to library</button>
                     <button
                         type="button"
-                        class="btn btn-sm btn-soft btn-error"
+                        class="btn btn-sm btn-soft btn-error btn-busy"
                         hx-delete={ fmt.Sprintf("/app/library/albums/%s/radar", result.AlbumID) }
                         hx-swap="none"
+                        hx-disabled-elt="this"
                         hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
                         data-testid="album-actions-modal-content-remove-radar"
                     >Remove from radar</button>
                 case library.DiscoverAlbumStateRemoved:
                     <button
                         type="button"
-                        class="btn btn-sm btn-primary"
+                        class="btn btn-sm btn-primary btn-busy"
                         hx-post={ fmt.Sprintf("/app/library/albums/%s/library", result.AlbumID) }
                         hx-swap="none"
+                        hx-disabled-elt="this"
                         hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
                         data-testid="album-actions-modal-content-reacquire"
                     >Re-acquire</button>
                 default:
                     <button
                         type="button"
-                        class="btn btn-sm btn-primary"
+                        class="btn btn-sm btn-primary btn-busy"
                         hx-post={ fmt.Sprintf("/app/library/discover/radar?spotifyId=%s", result.SpotifyID) }
                         hx-swap="none"
+                        hx-disabled-elt="this"
                         hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
                         data-testid="album-actions-modal-content-add-radar"
                     >Add to radar</button>

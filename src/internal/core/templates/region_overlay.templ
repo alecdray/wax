@@ -1,0 +1,12 @@
+package templates
+
+// RegionOverlay is a dim + centered-spinner overlay for a data region that
+// reloads in place. Place it as the last child of a position:relative wrapper
+// and point the triggering control's hx-indicator at that wrapper. It rides on
+// HTMX's htmx-indicator class (opacity 0 at rest, 1 while the wrapper carries
+// htmx-request) so it needs no JS.
+templ RegionOverlay() {
+	<div class="region-overlay htmx-indicator" data-testid="region-overlay" aria-hidden="true">
+		<span class="loading loading-spinner loading-lg text-accent"></span>
+	</div>
+}

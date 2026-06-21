@@ -22,10 +22,11 @@ templ DiscogsSearchResultsFrag(albumID string, format models.ReleaseFormat, resu
 		for _, item := range results {
 			<div
 				data-testid="discogs-search-results-row"
-				class="flex items-center gap-2 p-1.5 rounded hover:bg-base-200 cursor-pointer text-xs"
+				class="flex items-center gap-2 p-1.5 rounded hover:bg-base-200 cursor-pointer text-xs btn-busy"
 				hx-get={ fmt.Sprintf("/app/library/albums/%s/formats/%s/discogs/releases/%d?label=%s&year=%s", albumID, string(format), item.ID, url.QueryEscape(firstLabel(item)), url.QueryEscape(item.Year)) }
 				hx-target={ fmt.Sprintf("#discogs-details-%s", string(format)) }
 				hx-swap="outerHTML"
+				hx-disabled-elt="this"
 			>
 				if item.Thumb != "" {
 					<img src={ item.Thumb } class="w-8 h-8 rounded flex-shrink-0" alt=""/>

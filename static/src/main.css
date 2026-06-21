@@ -112,3 +112,77 @@
 .ticker-container:hover .ticker-track.scrolling {
     animation-play-state: paused;
 }
+
+/* Global request progress bar — indeterminate; driven by static/public/progress-bar.js. */
+.htmx-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    width: 0;
+    background: var(--color-accent);
+    opacity: 0;
+    z-index: 100;
+    pointer-events: none;
+}
+.htmx-bar.loading {
+    opacity: 1;
+    width: 90%;
+    transition: width 8s cubic-bezier(0.1, 0.7, 0.1, 1);
+}
+.htmx-bar.done {
+    opacity: 0;
+    width: 100%;
+    transition: width 0.2s ease, opacity 0.4s ease 0.2s;
+}
+
+/* Shared spinner keyframe. */
+@keyframes wax-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Busy state for discrete action buttons. Shown while the button (or its
+   enclosing form) carries htmx-request; pairs with hx-disabled-elt. The label
+   is hidden and a centered spinner is drawn via ::after. */
+.btn-busy.htmx-request,
+.htmx-request .btn-busy {
+    color: transparent;
+    position: relative;
+    pointer-events: none;
+}
+.btn-busy.htmx-request img,
+.htmx-request .btn-busy img {
+    opacity: 0;
+}
+.btn-busy.htmx-request::after,
+.htmx-request .btn-busy::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1em;
+    height: 1em;
+    margin: -0.5em 0 0 -0.5em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    color: var(--color-base-content);
+    animation: wax-spin 0.6s linear infinite;
+}
+
+/* Dim + spinner overlay for a data region that reloads in place. The element
+   carries htmx-indicator (hidden at rest) and is revealed while the region
+   named by a control's hx-indicator carries htmx-request. Its wrapper must be
+   position:relative. */
+.region-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in oklab, var(--color-base-100) 55%, transparent);
+    z-index: 10;
+    pointer-events: none;
+}

@@ -29,8 +29,10 @@ templ RootComponent(props RootProps) {
       hx-ext="response-targets"
       hx-boost="true"
     >
+      <div id="global-progress" class="htmx-bar" aria-hidden="true"></div>
       { children... }
       @ModalContainer(false)
+      <script src="/static/progress-bar.js"></script>
     </body>
   </html>
 }

@@ -123,6 +123,16 @@ Body and UI text use DaisyUI's default stack. The brand mark uses a custom `.fon
 
 Custom keyframes live in `main.css` and are applied via Tailwind `animate-*` utilities or inline `style`. Animations exist for purposeful motion (the ticker, transitions); the codebase does not animate for its own sake.
 
+## Loading feedback utilities
+
+Three utilities cover the standard loading-feedback roles. Their CSS definitions live in `static/src/main.css`; this section describes what each one is for.
+
+- **`.htmx-bar`** — an app-wide indeterminate progress bar wired once on the body. Activates on every HTMX request automatically, providing a baseline "working" signal at near-zero cost.
+- **`.btn-busy`** — a busy state for discrete action buttons. Applied alongside `hx-disabled-elt`, it hides the button's label under a spinner while its request is in flight, preventing resubmission and confirming to the user that the action was registered.
+- **`.region-overlay` / `RegionOverlay` primitive** — a dim-and-centered-spinner overlay for a data region reloading in place. Applied to regions that refine content already on screen; preserves existing content in context rather than replacing it with a placeholder.
+
+See `static/CLAUDE.md` for the CSS definitions; see `docs/design/principles.md` ("Network actions show loading feedback") for the cross-cutting rule.
+
 ## When to add to `main.css`
 
 `main.css` is small on purpose. Add to it when:

@@ -30,6 +30,10 @@ Every templ component's top-level root element carries a `data-testid` derived f
 
 A region that is the target of an OOB swap is defined in exactly one shared templ component. Both the initial render and the OOB response render through that component, with the OOB caller setting `hx-swap-oob="true"` via an `isOOB` parameter. This keeps the region's id, class, testid, and structure single-sourced — drift between the two render paths is otherwise invisible until the moment of the swap. The mechanics and the OOB-only-element case are in [oob-swaps.md](oob-swaps.md).
 
+## Network actions show loading feedback
+
+Every user-triggered network action signals that it is working. A single app-wide indeterminate progress bar, wired once on the body, reacts to every HTMX request. Discrete one-shot actions additionally enter a busy, non-resubmittable state so the user sees the specific control was registered. Regions that reload data in place dim their existing content under a spinner overlay; append-style loads (pagination) show a trailing spinner instead, since dimming content that stays on screen would be wrong. All three patterns ride on HTMX's `htmx-request` / `htmx-indicator` classes and need no domain JavaScript. The rationale is in [`../adr/0002-loading-feedback-for-network-actions.md`](../adr/0002-loading-feedback-for-network-actions.md).
+
 ## Theme tokens, not raw colors
 
 Styling uses the DaisyUI theme tokens defined in `static/src/main.css` (`bg-base-100`, `text-primary-content`, `border-accent`, etc.), not hex literals or one-off CSS variables in markup. When a new color is needed, it is added to the theme as a semantic token, not embedded inline at the call site.

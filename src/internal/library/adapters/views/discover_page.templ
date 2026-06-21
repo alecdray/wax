@@ -50,6 +50,7 @@ templ DiscoverPage(props DiscoverPageProps) {
                             hx-trigger="keyup changed delay:300ms, search"
                             hx-target="#discover-results"
                             hx-swap="innerHTML scroll:#discover-results:top"
+                            hx-indicator="#discover-results-region"
                             data-testid="discover-page-search-input"
                             @input="value = $event.target.value"
                             @search="value = $event.target.value"
@@ -66,17 +67,21 @@ templ DiscoverPage(props DiscoverPageProps) {
                             @templates.Icon(templates.IconProps{Name: "x-circle-fill"})
                         </button>
                     </div>
-                    <div
-                        id="discover-results"
-                        class="flex-1 min-h-0 overflow-y-auto"
-                        data-testid="discover-page-results"
-                        hx-get="/app/library/discover/search"
-                        hx-include="#discover-search-input"
-                        hx-trigger="radarUpdated from:body, libraryUpdated from:body"
-                        hx-target="this"
-                        hx-swap="innerHTML"
-                    >
-                        @DiscoverSearchResultsFrag(props.SearchResults, props.Query)
+                    <div id="discover-results-region" class="relative flex-1 min-h-0">
+                        <div
+                            id="discover-results"
+                            class="h-full overflow-y-auto"
+                            data-testid="discover-page-results"
+                            hx-get="/app/library/discover/search"
+                            hx-include="#discover-search-input"
+                            hx-trigger="radarUpdated from:body, libraryUpdated from:body"
+                            hx-target="this"
+                            hx-swap="innerHTML"
+                            hx-indicator="#discover-results-region"
+                        >
+                            @DiscoverSearchResultsFrag(props.SearchResults, props.Query)
+                        </div>
+                        @templates.RegionOverlay()
                     </div>
                 </div>
             </div>

@@ -22,6 +22,7 @@ templ formatsModalContent(albumID string, defaultSearch string, formats []librar
 			data-testid="formats-modal-content-form"
 			hx-put={ fmt.Sprintf("/app/library/albums/%s/formats", albumID) }
 			hx-swap="none"
+			hx-disabled-elt="find button[type='submit']"
 		>
 			<div class="flex flex-col gap-3">
 				for _, f := range formats {
@@ -33,7 +34,7 @@ templ formatsModalContent(albumID string, defaultSearch string, formats []librar
 				}
 			</div>
 			<div class="modal-action mt-6">
-				<button type="submit" class="btn btn-primary btn-sm">Save</button>
+				<button type="submit" class="btn btn-primary btn-sm btn-busy">Save</button>
 			</div>
 		</form>
 	</div>
@@ -138,9 +139,13 @@ templ discogsSearchSection(albumID string, defaultSearch string, format models.R
 				hx-target={ fmt.Sprintf("#discogs-results-%s", string(format)) }
 				hx-swap="innerHTML"
 				hx-include="this"
+				hx-indicator={ fmt.Sprintf("#discogs-results-region-%s", string(format)) }
 			/>
 		</div>
-		<div id={ fmt.Sprintf("discogs-results-%s", string(format)) } class="flex flex-col gap-1 max-h-48 overflow-y-auto">
+		<div id={ fmt.Sprintf("discogs-results-region-%s", string(format)) } class="relative">
+			<div id={ fmt.Sprintf("discogs-results-%s", string(format)) } class="flex flex-col gap-1 max-h-48 overflow-y-auto">
+			</div>
+			@templates.RegionOverlay()
 		</div>
 	</div>
 }
