@@ -90,6 +90,15 @@ templ RatingConfirmFormFrag(album library.AlbumDTO, mode review.RatingMode, rati
 			</div>
 			@ratingConfirmError("")
 		</fieldset>
+		<button
+			data-testid="rating-confirm-form-open-questionnaire"
+			class="link link-hover text-subtle text-xs self-start"
+			type="button"
+			hx-get={ questionnaireOptInHref(album.ID, mode, rating) }
+			hx-disabled-elt="this"
+			hx-target="closest form"
+			hx-swap="outerHTML"
+		>Not sure? Help me score it</button>
 		<fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border px-4">
 			<legend class="fieldset-legend">Note <span class="font-normal text-subtle">(optional)</span></legend>
 			<textarea
@@ -114,14 +123,6 @@ templ RatingConfirmFormFrag(album library.AlbumDTO, mode review.RatingMode, rati
 			data-testid="rating-confirm-form-save"
 			hx-target-error="next .error"
 		>Save only</button>
-		<button
-			data-testid="rating-confirm-form-open-questionnaire"
-			class="btn btn-ghost btn-sm w-full border border-base-300"
-			type="button"
-			hx-get={ questionnaireOptInHref(album.ID, mode, rating) }
-			hx-target="closest form"
-			hx-swap="outerHTML"
-		>Help me score it</button>
 		<p class="label error text-error"></p>
 	</form>
 }

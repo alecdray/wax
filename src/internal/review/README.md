@@ -56,7 +56,7 @@ The modal entry route (`GET /app/review/rating-recommender`) always returns the 
 
 The form offers both save actions at all times: **Save & finalize** (the primary action, lands the album finalized) and **Save only** (lands it provisional). Because the lifecycle is determined by the action rather than the prior state, neither button is gated — both render in every state.
 
-The questionnaire is opt-in — a **Help me score it** button at the bottom of the form opens it. Submitting the questionnaire computes a score from the answers and re-renders the score-entry form with that score pre-filled; dismissing it restores the prior pre-fill. The questionnaire never writes a rating row on its own.
+The questionnaire is opt-in — a **Help me score it** link beneath the rating input opens it. Submitting the questionnaire computes a score from the answers and re-renders the score-entry form with that score pre-filled; dismissing it restores the prior pre-fill. The questionnaire never writes a rating row on its own.
 
 ## Historical state values
 
