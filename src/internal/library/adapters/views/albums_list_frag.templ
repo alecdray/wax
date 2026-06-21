@@ -3,6 +3,7 @@ package views
 import (
 	"fmt"
 	"github.com/alecdray/wax/src/internal/core/db/models"
+	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/library"
 	"net/url"
 	"slices"
@@ -196,7 +197,11 @@ templ AlbumsListBodyFrag(albums []library.AlbumDTO, offset int, sortBy string, s
 				hx-get={ buildAlbumsPageURL(offset+library.AlbumsPageSize, sortBy, sortDir, fp) }
 				hx-trigger="revealed"
 				hx-swap="outerHTML"
-			></li>
+			>
+				<div class="htmx-indicator flex justify-center py-4" data-testid="albums-list-pagination-spinner">
+					<span class="loading loading-spinner loading-md text-accent"></span>
+				</div>
+			</li>
 		}
 	}
 }
@@ -220,6 +225,7 @@ templ emptyResultState(sortBy, sortDir string, fp library.FilterParams) {
 				class="btn btn-sm btn-outline"
 				hx-get="/app/library/dashboard/albums-table"
 				hx-target="#album-list"
+				hx-indicator="#album-list-results"
 				hx-swap="outerHTML"
 				hx-push-url={ dashboardURL }
 			>
@@ -336,6 +342,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 				hx-get={ buildAlbumsTableURLForInput(sortBy, sortDir, fp) }
 				hx-trigger="keyup changed delay:300ms, search"
 				hx-target="#album-list"
+				hx-indicator="#album-list-results"
 				hx-swap="outerHTML"
 				hx-push-url="true"
 			/>
@@ -364,6 +371,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 				<form
 					hx-get="/app/library/dashboard/albums-table"
 					hx-target="#album-list"
+					hx-indicator="#album-list-results"
 					hx-swap="outerHTML"
 					hx-push-url="true"
 					@submit="open = false"
@@ -452,6 +460,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 				<form
 					hx-get="/app/library/dashboard/albums-table"
 					hx-target="#album-list"
+					hx-indicator="#album-list-results"
 					hx-swap="outerHTML"
 					hx-push-url="true"
 					@submit="open = false"
@@ -547,6 +556,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 				<form
 					hx-get="/app/library/dashboard/albums-table"
 					hx-target="#album-list"
+					hx-indicator="#album-list-results"
 					hx-swap="outerHTML"
 					hx-push-url="true"
 					@submit="open = false"
@@ -623,6 +633,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 					<form
 						hx-get="/app/library/dashboard/albums-table"
 						hx-target="#album-list"
+						hx-indicator="#album-list-results"
 						hx-swap="outerHTML"
 						hx-push-url="true"
 						@submit="open = false"
@@ -750,6 +761,7 @@ templ unifiedSearchBarBadges(sortBy, sortDir string, fp library.FilterParams) {
 				class="btn btn-xs btn-ghost hover-fade-in"
 				hx-get="/app/library/dashboard/albums-table"
 				hx-target="#album-list"
+				hx-indicator="#album-list-results"
 				hx-swap="outerHTML"
 				hx-push-url={ dashboardURL }
 			>
@@ -779,8 +791,11 @@ templ AlbumsListFrag(albums []library.AlbumDTO, sortBy string, sortDir string, f
 		hx-swap="outerHTML"
 	>
 		@unifiedSearchBar(sortBy, sortDir, fp, artists)
-		<ul class="list px-4">
-			@AlbumsListBodyFrag(albums, 0, sortBy, sortDir, fp)
-		</ul>
+		<div id="album-list-results" class="relative">
+			<ul class="list px-4">
+				@AlbumsListBodyFrag(albums, 0, sortBy, sortDir, fp)
+			</ul>
+			@templates.RegionOverlay()
+		</div>
 	</div>
 }
