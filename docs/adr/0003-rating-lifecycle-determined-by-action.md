@@ -1,0 +1,5 @@
+# Rating lifecycle state is determined by the save action
+
+The album rating lifecycle previously treated finalization as a one-way promotion reachable only from a provisional state, with the plain save path forbidden from changing state at all. That made the modal's two save actions behave differently depending on hidden prior state, and left "finalize" unavailable from an unrated album. The lifecycle is now a pure function of the action taken: saving always lands the album in the provisional state, finalizing always lands it in the finalized state, and both work from any prior state. Saving a finalized album therefore demotes it back to provisional — the save action is the only path that un-finalizes.
+
+This makes the two modal actions predictable: the resulting state depends only on which button was pressed, never on where the album started. It also fits the product stance that a rating is a living value that can be reopened, not a one-way verdict. The cost is that finalization is no longer a latch — a later save reopens it — which is the intended behaviour, not an edge case.

@@ -2,7 +2,6 @@ package views
 
 import (
 	"fmt"
-	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/library"
 	"github.com/alecdray/wax/src/internal/review"
 	"strconv"
@@ -40,12 +39,6 @@ func questionnaireOptInHref(albumID string, mode review.RatingMode, rating *floa
 	return base
 }
 
-// canFinalize reports whether the album's current rating state allows the
-// manual finalize action — only provisional albums show the Finalize button.
-func canFinalize(album library.AlbumDTO) bool {
-	return album.RatingState != nil && album.RatingState.State == review.RatingStateProvisional
-}
-
 templ RatingConfirmFormFrag(album library.AlbumDTO, mode review.RatingMode, rating *float64) {
 	<form
 		data-testid="rating-confirm-form"
@@ -57,19 +50,6 @@ templ RatingConfirmFormFrag(album library.AlbumDTO, mode review.RatingMode, rati
 		<input type="hidden" name="mode" value={ string(mode) }/>
 		<div class="flex items-center gap-2">
 			<p class="max-w-[75%] text-ellipsis text-nowrap overflow-hidden">{ album.Title }</p>
-			<div class="flex gap-1">
-				<button
-					data-testid="rating-confirm-form-open-questionnaire"
-					class="btn btn-ghost btn-sm btn-square text-base"
-					type="button"
-					title="Open questionnaire"
-					hx-get={ questionnaireOptInHref(album.ID, mode, rating) }
-					hx-target="closest form"
-					hx-swap="outerHTML"
-				>
-					@templates.Icon(templates.IconProps{Name: "question-circle"})
-				</button>
-			</div>
 		</div>
 		<fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border px-4">
 			<legend class="fieldset-legend">Rating</legend>
@@ -110,6 +90,15 @@ templ RatingConfirmFormFrag(album library.AlbumDTO, mode review.RatingMode, rati
 			</div>
 			@ratingConfirmError("")
 		</fieldset>
+		<button
+			data-testid="rating-confirm-form-open-questionnaire"
+			class="link link-hover text-subtle text-xs self-start"
+			type="button"
+			hx-get={ questionnaireOptInHref(album.ID, mode, rating) }
+			hx-disabled-elt="this"
+			hx-target="closest form"
+			hx-swap="outerHTML"
+		>Not sure? Help me score it</button>
 		<fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border px-4">
 			<legend class="fieldset-legend">Note <span class="font-normal text-subtle">(optional)</span></legend>
 			<textarea
@@ -122,20 +111,18 @@ templ RatingConfirmFormFrag(album library.AlbumDTO, mode review.RatingMode, rati
 		</fieldset>
 		<button
 			class="btn btn-primary btn-sm w-full btn-busy"
-			type="submit"
-			data-testid="rating-confirm-form-lock-in"
+			type="button"
+			data-testid="rating-confirm-form-finalize"
+			hx-post={ fmt.Sprintf("/app/review/rating-recommender/rating/finalize?albumId=%s", album.ID) }
+			hx-disabled-elt="this"
 			hx-target-error="next .error"
-		>Lock in</button>
-		if canFinalize(album) {
-			<button
-				class="btn btn-soft btn-sm w-full btn-busy"
-				type="button"
-				data-testid="rating-confirm-form-finalize"
-				hx-post={ fmt.Sprintf("/app/review/rating-recommender/rating/finalize?albumId=%s", album.ID) }
-				hx-disabled-elt="this"
-				hx-target-error="next .error"
-			>Finalize</button>
-		}
+		>Save &amp; finalize</button>
+		<button
+			class="btn btn-soft btn-sm w-full btn-busy"
+			type="submit"
+			data-testid="rating-confirm-form-save"
+			hx-target-error="next .error"
+		>Save only</button>
 		<p class="label error text-error"></p>
 	</form>
 }

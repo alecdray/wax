@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { loginAs } from '../helpers/auth';
 import {
   getAlbumTitle,
@@ -42,7 +42,7 @@ async function submitRating(page: any, score: string, note?: string) {
   if (note !== undefined) {
     await dialog.getByTestId('rating-confirm-form-note').fill(note);
   }
-  await dialog.getByTestId('rating-confirm-form-lock-in').click();
+  await dialog.getByTestId('rating-confirm-form-save').click();
   await expect(page.locator('dialog[open]')).toHaveCount(0);
 }
 
@@ -223,7 +223,7 @@ test('Saving a rating with a note', async ({ context, page }) => {
   await expect(page.getByTestId('album-rating-history-note').first()).toContainText('A great listen.');
 });
 
-test('Saving on a finalized album keeps it finalized in one submission', async ({ context, page }) => {
+test('Save only on a finalized album demotes it to provisional', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
   expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
 
@@ -231,59 +231,38 @@ test('Saving on a finalized album keeps it finalized in one submission', async (
   await page.goto(`/app/library/albums/${albumId}`);
   await setupFinalized(page, '7.0');
 
-  // Save a different score on the now-finalized album — single submission, no
-  // confirmation prompt, no extra round-trip.
+  // Save a different score on the now-finalized album via Save only — a single
+  // submission with no confirmation prompt. Save only always demotes a
+  // finalized album to provisional.
   await openModal(page);
   const dialog = page.locator('dialog[open]');
   await dialog.getByTestId('rating-confirm-form-input').fill('7.5');
-  await dialog.getByTestId('rating-confirm-form-lock-in').click();
+  await dialog.getByTestId('rating-confirm-form-save').click();
   await expect(page.locator('dialog[open]')).toHaveCount(0);
 
-  // Reopen the modal and confirm the album is still finalized: opening it
-  // again must not show the Finalize button (only provisional albums do).
-  await openModal(page);
-  const dialog2 = page.locator('dialog[open]');
-  await expect(dialog2.getByTestId('rating-confirm-form-finalize')).toHaveCount(0);
-  await expect(dialog2.getByTestId('rating-confirm-form-input')).toHaveValue('7.5');
+  // The detail-page score badge renders the provisional state-icon only when
+  // the album is provisional — its presence confirms the demotion.
+  await page.goto(`/app/library/albums/${albumId}`);
+  await expect(page.getByTestId('album-score-badge-state-icon')).toBeVisible();
 });
 
-test('Finalize button is visible on the score-entry form for a provisional album', async ({ context, page }) => {
+test('Both save buttons are visible on the score-entry form regardless of state', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
   expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto(`/app/library/albums/${albumId}`);
-  await setupProvisional(page, '6.0');
 
-  await openModal(page);
-  const dialog = page.locator('dialog[open]');
-  await expect(dialog.getByTestId('rating-confirm-form-finalize')).toBeVisible();
-});
-
-test('Finalize button is hidden on the score-entry form for an unrated album', async ({ context, page }) => {
-  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
-  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
-
-  await loginAs(context, userId!);
-  await page.goto(`/app/library/albums/${albumId}`);
-  await resetToUnrated(page);
-
-  await openModal(page);
-  const dialog = page.locator('dialog[open]');
-  await expect(dialog.getByTestId('rating-confirm-form-finalize')).toHaveCount(0);
-});
-
-test('Finalize button is hidden on the score-entry form for a finalized album', async ({ context, page }) => {
-  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
-  expect(albumId, 'E2E_TEST_ALBUM_ID must be set').toBeTruthy();
-
-  await loginAs(context, userId!);
-  await page.goto(`/app/library/albums/${albumId}`);
-  await setupFinalized(page, '8.0');
-
-  await openModal(page);
-  const dialog = page.locator('dialog[open]');
-  await expect(dialog.getByTestId('rating-confirm-form-finalize')).toHaveCount(0);
+  // Each setup helper ends in page.reload(), which tears down any open dialog,
+  // so the next iteration starts from a clean, modal-free page.
+  for (const setup of [resetToUnrated, (p: Page) => setupProvisional(p, '6.0'), (p: Page) => setupFinalized(p, '8.0')]) {
+    await setup(page);
+    await expect(page.locator('dialog[open]')).toHaveCount(0);
+    await openModal(page);
+    const dialog = page.locator('dialog[open]');
+    await expect(dialog.getByTestId('rating-confirm-form-finalize')).toBeVisible();
+    await expect(dialog.getByTestId('rating-confirm-form-save')).toBeVisible();
+  }
 });
 
 test('Clicking Finalize promotes the album in one submission', async ({ context, page }) => {
@@ -305,9 +284,10 @@ test('Clicking Finalize promotes the album in one submission', async ({ context,
   const scores = await page.getByTestId('album-rating-history-score').allTextContents();
   expect(scores.some((s) => s.startsWith('8'))).toBe(true);
 
-  // Album is now finalized: reopening the modal hides the Finalize button.
-  await openModal(page);
-  await expect(page.locator('dialog[open]').getByTestId('rating-confirm-form-finalize')).toHaveCount(0);
+  // Album is now finalized: the detail-page score badge shows no provisional
+  // state-icon (the icon renders only while an album is provisional).
+  await page.goto(`/app/library/albums/${albumId}`);
+  await expect(page.getByTestId('album-score-badge-state-icon')).toHaveCount(0);
 });
 
 test('No delete button in the rating modal', async ({ context, page }) => {

@@ -2,17 +2,9 @@ package review
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/alecdray/wax/src/internal/core/db"
 )
-
-// ErrFinalizeRequiresProvisional is returned by FinalizeWithRating when called
-// for an album whose current rating-state is not provisional. The promotion to
-// finalized is only meaningful from a provisional starting state — finalized
-// albums stay finalized via the regular save path, and unrated albums cannot
-// be finalized directly.
-var ErrFinalizeRequiresProvisional = fmt.Errorf("finalize requires a provisional rating state")
 
 type Service struct {
 	db   *db.DB
@@ -58,29 +50,46 @@ func (s *Service) CreateRatingState(ctx context.Context, userID, albumID string)
 	return s.repo.InsertAlbumRatingState(ctx, userID, albumID, RatingStateProvisional)
 }
 
-func (s *Service) FinalizeRating(ctx context.Context, userID, albumID string) (*RatingStateDTO, error) {
-	return s.repo.UpdateAlbumRatingState(ctx, userID, albumID, RatingStateFinalized)
+// setRatingState upserts the album's rating-state row to the given lifecycle
+// value: insert a fresh row when none exists, update in place otherwise. The
+// resulting state is therefore a pure function of the value passed in,
+// independent of the prior state.
+func (s *Service) setRatingState(ctx context.Context, userID, albumID string, state RatingState) (*RatingStateDTO, error) {
+	current, err := s.repo.GetAlbumRatingState(ctx, userID, albumID)
+	if err != nil {
+		return nil, err
+	}
+	if current == nil {
+		return s.repo.InsertAlbumRatingState(ctx, userID, albumID, state)
+	}
+	return s.repo.UpdateAlbumRatingState(ctx, userID, albumID, state)
 }
 
-// FinalizeWithRating writes a new rating-log entry and promotes the album's
-// rating state from provisional to finalized in a single call. The current
-// state must be provisional — calls on an unrated or already-finalized album
-// return ErrFinalizeRequiresProvisional and write nothing.
-func (s *Service) FinalizeWithRating(ctx context.Context, userID, albumID string, rating float64, note string) (*AlbumRatingDTO, *RatingStateDTO, error) {
-	currentState, err := s.repo.GetAlbumRatingState(ctx, userID, albumID)
+// SaveRating writes a new rating-log entry with the supplied score and sets the
+// album's rating state to provisional, from any prior state. Saving a finalized
+// album demotes it to provisional — the save action is the only un-finalize
+// path. The resulting state is always provisional.
+func (s *Service) SaveRating(ctx context.Context, userID, albumID string, rating float64, note string) (*AlbumRatingDTO, *RatingStateDTO, error) {
+	logEntry, err := s.repo.InsertAlbumRatingLogEntry(ctx, userID, albumID, rating, note, RatingStateProvisional)
 	if err != nil {
 		return nil, nil, err
 	}
-	if currentState == nil || currentState.State != RatingStateProvisional {
-		return nil, nil, ErrFinalizeRequiresProvisional
+	newState, err := s.setRatingState(ctx, userID, albumID, RatingStateProvisional)
+	if err != nil {
+		return nil, nil, err
 	}
+	return logEntry, newState, nil
+}
 
+// FinalizeWithRating writes a new rating-log entry with the supplied score and
+// sets the album's rating state to finalized, from any prior state — unrated,
+// provisional, or already finalized. The resulting state is always finalized.
+func (s *Service) FinalizeWithRating(ctx context.Context, userID, albumID string, rating float64, note string) (*AlbumRatingDTO, *RatingStateDTO, error) {
 	logEntry, err := s.repo.InsertAlbumRatingLogEntry(ctx, userID, albumID, rating, note, RatingStateFinalized)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	newState, err := s.repo.UpdateAlbumRatingState(ctx, userID, albumID, RatingStateFinalized)
+	newState, err := s.setRatingState(ctx, userID, albumID, RatingStateFinalized)
 	if err != nil {
 		return nil, nil, err
 	}

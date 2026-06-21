@@ -214,10 +214,10 @@ func (h *HttpHandler) GetRatingConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// SubmitRatingRecommenderRating saves a new rating-log entry and leaves the
-// rating-state row's lifecycle value untouched. An unrated album implicitly
-// gets a provisional state row created on its first save; provisional and
-// finalized albums keep their current state value.
+// SubmitRatingRecommenderRating saves a new rating-log entry and sets the
+// album's rating state to provisional — creating the state row on first save,
+// and demoting a finalized album back to provisional. The resulting state is
+// always provisional.
 func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())
 
@@ -250,35 +250,16 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 		return
 	}
 
-	currentState, err := h.reviewService.GetRatingState(ctx, userID, albumID)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
+	if _, _, err := h.reviewService.SaveRating(ctx, userID, albumID, ratingVal, note); err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("failed to save rating: %w", err)})
 		return
-	}
-
-	logState := review.RatingStateProvisional
-	if currentState != nil {
-		logState = currentState.State
-	}
-
-	if _, err := h.reviewService.AddRating(ctx, userID, albumID, ratingVal, note, logState); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("failed to add rating: %w", err)})
-		return
-	}
-
-	if currentState == nil {
-		if _, err := h.reviewService.CreateRatingState(ctx, userID, albumID); err != nil {
-			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
-			return
-		}
 	}
 
 	h.renderRatingSaveResponse(ctx, w, albumID)
 }
 
-// SubmitRatingRecommenderFinalize promotes a provisional album to finalized
-// in the same submission that saves the score from the score-entry form. The
-// route rejects calls on albums that are not currently provisional.
+// SubmitRatingRecommenderFinalize saves the score from the score-entry form and
+// sets the album's rating state to finalized, from any prior state.
 func (h *HttpHandler) SubmitRatingRecommenderFinalize(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())
 
@@ -312,10 +293,6 @@ func (h *HttpHandler) SubmitRatingRecommenderFinalize(w http.ResponseWriter, r *
 	}
 
 	if _, _, err := h.reviewService.FinalizeWithRating(ctx, userID, albumID, ratingVal, note); err != nil {
-		if errors.Is(err, review.ErrFinalizeRequiresProvisional) {
-			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: err})
-			return
-		}
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: fmt.Errorf("failed to finalize: %w", err)})
 		return
 	}

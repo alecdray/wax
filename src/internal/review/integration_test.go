@@ -3,7 +3,6 @@ package review
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"testing"
 )
 
@@ -13,14 +12,10 @@ import (
 
 // --- Manual-transition state machine ---
 //
-// The live state machine has exactly four legitimate transitions:
-//   (no row)      -> provisional   via CreateRatingState (implicit on first save)
-//   provisional   -> finalized     via FinalizeRating / FinalizeWithRating
-//   provisional   -> provisional   via AddRating (re-rate save)
-//   finalized     -> finalized     via AddRating (re-rate save)
-//
-// Nothing in the live system writes 'stalled' to album_rating_state.state, and
-// nothing transitions provisional->finalized on a time trigger.
+// The save action always results in provisional state; FinalizeWithRating
+// always results in finalized state, from any prior state (unrated, provisional,
+// or finalized). Nothing in the live system writes 'stalled' to
+// album_rating_state.state, and nothing transitions state on a time trigger.
 
 func TestRatingLifecycle_FirstSaveCreatesProvisional(t *testing.T) {
 	svc, sqlDB := newTestService(t)
@@ -36,8 +31,8 @@ func TestRatingLifecycle_FirstSaveCreatesProvisional(t *testing.T) {
 		t.Fatalf("expected no state row before first save, got %+v", state)
 	}
 
-	// First save: mirror the handler's behaviour (AddRating then CreateRatingState
-	// when no state row exists).
+	// Seed a provisional album via the low-level primitives (AddRating +
+	// CreateRatingState) to establish the pre-condition.
 	if _, err := svc.AddRating(ctx, "u1", "a1", 7.0, "", RatingStateProvisional); err != nil {
 		t.Fatalf("AddRating: %v", err)
 	}
@@ -89,71 +84,51 @@ func TestRatingLifecycle_RerateLeavesProvisionalUntouched(t *testing.T) {
 	}
 }
 
-func TestRatingLifecycle_RerateLeavesFinalizedUntouched(t *testing.T) {
+func TestRatingLifecycle_SaveDemotesFinalizedToProvisional(t *testing.T) {
 	svc, sqlDB := newTestService(t)
 	ctx := context.Background()
 	seedUserAndAlbum(t, sqlDB, "u1", "a1")
 
-	if _, err := svc.AddRating(ctx, "u1", "a1", 6.0, "", RatingStateProvisional); err != nil {
-		t.Fatalf("initial AddRating: %v", err)
-	}
-	if _, err := svc.CreateRatingState(ctx, "u1", "a1"); err != nil {
-		t.Fatalf("CreateRatingState: %v", err)
-	}
 	if _, _, err := svc.FinalizeWithRating(ctx, "u1", "a1", 8.0, ""); err != nil {
-		t.Fatalf("FinalizeWithRating: %v", err)
+		t.Fatalf("seed finalize: %v", err)
 	}
-	beforeID := stateRowID(t, sqlDB, "u1", "a1")
-
-	// Re-rate the now-finalized album via the plain save path. The log carries
-	// the current (finalized) state on the new entry; the state row stays put.
-	if _, err := svc.AddRating(ctx, "u1", "a1", 9.0, "", RatingStateFinalized); err != nil {
-		t.Fatalf("re-rate AddRating: %v", err)
+	if _, _, err := svc.SaveRating(ctx, "u1", "a1", 9.0, ""); err != nil {
+		t.Fatalf("save: %v", err)
 	}
-
 	got, err := svc.GetRatingState(ctx, "u1", "a1")
 	if err != nil {
 		t.Fatalf("read state: %v", err)
 	}
-	if got == nil || got.State != RatingStateFinalized {
-		t.Fatalf("re-rate must leave state=finalized, got %+v", got)
-	}
-	if afterID := stateRowID(t, sqlDB, "u1", "a1"); afterID != beforeID {
-		t.Fatalf("state row identity changed: %q -> %q", beforeID, afterID)
+	if got == nil || got.State != RatingStateProvisional {
+		t.Fatalf("save must demote to provisional, got %+v", got)
 	}
 }
 
-func TestRatingLifecycle_PromotionFromProvisionalIsOnlyPathToFinalized(t *testing.T) {
+func TestRatingLifecycle_FinalizeWorksFromAnyState(t *testing.T) {
 	svc, sqlDB := newTestService(t)
 	ctx := context.Background()
 	seedUserAndAlbum(t, sqlDB, "u1", "a1")
 
-	// Unrated -> Finalize: rejected, no rows written.
-	if _, _, err := svc.FinalizeWithRating(ctx, "u1", "a1", 7.0, ""); !errors.Is(err, ErrFinalizeRequiresProvisional) {
-		t.Fatalf("unrated finalize: expected ErrFinalizeRequiresProvisional, got %v", err)
+	// Unrated -> Finalize: creates a finalized state row in one step.
+	if _, _, err := svc.FinalizeWithRating(ctx, "u1", "a1", 7.0, ""); err != nil {
+		t.Fatalf("unrated finalize: %v", err)
 	}
-	if cnt := stateRowCount(t, sqlDB, "u1", "a1"); cnt != 0 {
-		t.Fatalf("unrated finalize must not create a state row, got count=%d", cnt)
+	if cnt := stateRowCount(t, sqlDB, "u1", "a1"); cnt != 1 {
+		t.Fatalf("expected one state row after finalize, got %d", cnt)
+	}
+	if got, _ := svc.GetRatingState(ctx, "u1", "a1"); got == nil || got.State != RatingStateFinalized {
+		t.Fatalf("expected finalized after unrated finalize, got %+v", got)
 	}
 
-	// Establish provisional, then promote.
-	if _, err := svc.AddRating(ctx, "u1", "a1", 7.0, "", RatingStateProvisional); err != nil {
-		t.Fatalf("AddRating: %v", err)
-	}
-	if _, err := svc.CreateRatingState(ctx, "u1", "a1"); err != nil {
-		t.Fatalf("CreateRatingState: %v", err)
+	// Demote via save, then finalize again from provisional.
+	if _, _, err := svc.SaveRating(ctx, "u1", "a1", 6.0, ""); err != nil {
+		t.Fatalf("save (demote): %v", err)
 	}
 	if _, _, err := svc.FinalizeWithRating(ctx, "u1", "a1", 8.0, ""); err != nil {
-		t.Fatalf("FinalizeWithRating: %v", err)
+		t.Fatalf("re-finalize: %v", err)
 	}
-	got, err := svc.GetRatingState(ctx, "u1", "a1")
-	if err != nil || got == nil || got.State != RatingStateFinalized {
-		t.Fatalf("expected finalized after promotion, got state=%+v err=%v", got, err)
-	}
-
-	// Already-finalized -> Finalize: rejected.
-	if _, _, err := svc.FinalizeWithRating(ctx, "u1", "a1", 9.0, ""); !errors.Is(err, ErrFinalizeRequiresProvisional) {
-		t.Fatalf("already-finalized: expected ErrFinalizeRequiresProvisional, got %v", err)
+	if got, _ := svc.GetRatingState(ctx, "u1", "a1"); got == nil || got.State != RatingStateFinalized {
+		t.Fatalf("expected finalized, got %+v", got)
 	}
 }
 
@@ -173,14 +148,12 @@ func TestRatingLifecycle_LiveStateCheckRejectsStalled(t *testing.T) {
 	}
 }
 
-// --- Re-rate save path leaves the state value untouched (PC3) ---
+// --- Save action always ends provisional ---
 //
-// Exercises the precise call sequence used by the http handler's
-// SubmitRatingRecommenderRating path: GetRatingState, AddRating (carrying the
-// current state on the log row), then CreateRatingState only when no state row
-// existed. The state value must end the call equal to what it started at.
+// Exercises the service's SaveRating path: the state is always set to
+// provisional after a save, regardless of the album's prior state.
 
-func TestSaveFormPath_LeavesProvisionalStateValueUnchanged(t *testing.T) {
+func TestSaveFormPath_SaveOnProvisionalStaysProvisional(t *testing.T) {
 	svc, sqlDB := newTestService(t)
 	ctx := context.Background()
 	seedUserAndAlbum(t, sqlDB, "u1", "a1")
@@ -205,18 +178,11 @@ func TestSaveFormPath_LeavesProvisionalStateValueUnchanged(t *testing.T) {
 	}
 }
 
-func TestSaveFormPath_LeavesFinalizedStateValueUnchanged(t *testing.T) {
+func TestSaveFormPath_SaveOnFinalizedDemotesToProvisional(t *testing.T) {
 	svc, sqlDB := newTestService(t)
 	ctx := context.Background()
 	seedUserAndAlbum(t, sqlDB, "u1", "a1")
 
-	// Set up: finalized album.
-	if _, err := svc.AddRating(ctx, "u1", "a1", 7.0, "", RatingStateProvisional); err != nil {
-		t.Fatalf("setup AddRating: %v", err)
-	}
-	if _, err := svc.CreateRatingState(ctx, "u1", "a1"); err != nil {
-		t.Fatalf("setup CreateRatingState: %v", err)
-	}
 	if _, _, err := svc.FinalizeWithRating(ctx, "u1", "a1", 8.0, ""); err != nil {
 		t.Fatalf("setup FinalizeWithRating: %v", err)
 	}
@@ -227,8 +193,8 @@ func TestSaveFormPath_LeavesFinalizedStateValueUnchanged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read state: %v", err)
 	}
-	if got == nil || got.State != RatingStateFinalized {
-		t.Fatalf("save on finalized must leave state=finalized, got %+v", got)
+	if got == nil || got.State != RatingStateProvisional {
+		t.Fatalf("save on finalized must demote to provisional, got %+v", got)
 	}
 }
 
@@ -237,21 +203,8 @@ func TestSaveFormPath_LeavesFinalizedStateValueUnchanged(t *testing.T) {
 // here as a diff, not a silent drift.
 func runHandlerSaveFlow(t *testing.T, svc *Service, ctx context.Context, userID, albumID string, rating float64) {
 	t.Helper()
-	current, err := svc.GetRatingState(ctx, userID, albumID)
-	if err != nil {
-		t.Fatalf("GetRatingState: %v", err)
-	}
-	logState := RatingStateProvisional
-	if current != nil {
-		logState = current.State
-	}
-	if _, err := svc.AddRating(ctx, userID, albumID, rating, "", logState); err != nil {
-		t.Fatalf("AddRating: %v", err)
-	}
-	if current == nil {
-		if _, err := svc.CreateRatingState(ctx, userID, albumID); err != nil {
-			t.Fatalf("CreateRatingState: %v", err)
-		}
+	if _, _, err := svc.SaveRating(ctx, userID, albumID, rating, ""); err != nil {
+		t.Fatalf("SaveRating: %v", err)
 	}
 }
 

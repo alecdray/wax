@@ -37,42 +37,31 @@ Feature: Rating Log
 
   Scenario: Saving a rating
     Given a logged-in user on the score-entry form
-    When they enter a score between 0 and 10 and click Lock in
+    When they enter a score between 0 and 10 and click Save only
     Then the modal closes
 
   Scenario: Saving a rating with a note
     Given a logged-in user on the score-entry form
-    When they enter a score and a note and click Lock in
+    When they enter a score and a note and click Save only
     Then the modal closes
     And the album detail page shows the note on the rating history entry
 
-  Scenario: Saving on a finalized album keeps it finalized in one submission
-    Given a logged-in user who has finalized a rating for an album
-    When they open the modal, enter a new score, and click Lock in
-    Then the modal closes with no confirmation prompt
-    And the album remains finalized with the new score recorded
+  Scenario: Both save buttons are visible on the score-entry form regardless of state
+    Given a logged-in user viewing an album detail page
+    When they open the rating modal for an unrated, a provisional, and a finalized album
+    Then the score-entry form shows both Save & finalize and Save only in every case
 
-  Scenario: Finalize button is visible on the score-entry form for a provisional album
-    Given a logged-in user with a provisional rating for an album
-    When they open the rating modal for that album
-    Then the score-entry form shows the Finalize button
-
-  Scenario: Finalize button is hidden on the score-entry form for an unrated album
-    Given a logged-in user opening the rating modal for an unrated album
-    When the modal is shown
-    Then the score-entry form does not show the Finalize button
-
-  Scenario: Finalize button is hidden on the score-entry form for a finalized album
-    Given a logged-in user who has finalized a rating for an album
-    When they open the rating modal for that album
-    Then the score-entry form does not show the Finalize button
+  Scenario: Save only on a finalized album demotes it to provisional
+    Given a logged-in user with a finalized rating on an album
+    When they open the modal, enter a new score, and click Save only
+    Then the album is provisional afterward
 
   Scenario: Clicking Finalize promotes the album in one submission
     Given a logged-in user on the score-entry form for a provisional album
     When they enter a score and click Finalize
     Then the modal closes with no confirmation prompt
     And a new rating-log entry is recorded with the entered score
-    And the album is shown as finalized
+    And the album is finalized afterward
 
   Scenario: No delete button in the rating modal
     Given a logged-in user opening the rating modal for an album
