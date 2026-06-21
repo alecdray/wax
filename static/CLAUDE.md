@@ -72,7 +72,7 @@ When updating BI's pinned version, replace both files at the same time and verif
 
 ## Custom keyframes
 
-`main.css` defines a `ticker-scroll` keyframe used by the ticker primitive. Add a brief note here when a new keyframe lands; keyframes are global and should not multiply.
+`main.css` defines a `ticker-scroll` keyframe used by the ticker primitive, and a `wax-spin` keyframe used by the action-button busy state (`.btn-busy`). Add a brief note here when a new keyframe lands; keyframes are global and should not multiply.
 
 ## After editing
 
