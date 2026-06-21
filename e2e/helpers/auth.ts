@@ -24,7 +24,7 @@ function buildJWT(userId: string, secret: string): string {
     iss: 'wax',
     iat: now,
     nbf: now,
-    exp: now + 86400, // 1 day, matching jwtTTL in jwt.go
+    exp: now + 86400, // 1 day — ample for a test run; the app's own jwtTTL is independent
     user_id: userId,
   }));
 
