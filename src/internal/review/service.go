@@ -50,10 +50,6 @@ func (s *Service) CreateRatingState(ctx context.Context, userID, albumID string)
 	return s.repo.InsertAlbumRatingState(ctx, userID, albumID, RatingStateProvisional)
 }
 
-func (s *Service) FinalizeRating(ctx context.Context, userID, albumID string) (*RatingStateDTO, error) {
-	return s.repo.UpdateAlbumRatingState(ctx, userID, albumID, RatingStateFinalized)
-}
-
 // setRatingState upserts the album's rating-state row to the given lifecycle
 // value: insert a fresh row when none exists, update in place otherwise. The
 // resulting state is therefore a pure function of the value passed in,

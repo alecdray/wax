@@ -31,8 +31,8 @@ func TestRatingLifecycle_FirstSaveCreatesProvisional(t *testing.T) {
 		t.Fatalf("expected no state row before first save, got %+v", state)
 	}
 
-	// First save: mirror the handler's behaviour (AddRating then CreateRatingState
-	// when no state row exists).
+	// Seed a provisional album via the low-level primitives (AddRating +
+	// CreateRatingState) to establish the pre-condition.
 	if _, err := svc.AddRating(ctx, "u1", "a1", 7.0, "", RatingStateProvisional); err != nil {
 		t.Fatalf("AddRating: %v", err)
 	}
