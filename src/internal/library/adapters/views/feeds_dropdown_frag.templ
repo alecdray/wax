@@ -92,6 +92,7 @@ templ FeedsDropdownContentFrag(feeds []feed.FeedDTO) {
 						hx-post={ fmt.Sprintf("/app/library/dashboard/feeds/sync?feedId=%s", f.ID) }
 						hx-target="#feeds-dropdown-content"
 						hx-swap="morph"
+						hx-disabled-elt="this"
 						if f.LastSyncStatus.IsSyncing() {
 							disabled
 						} else {

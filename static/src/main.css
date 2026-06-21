@@ -136,3 +136,35 @@
     transition: width 0.2s ease, opacity 0.4s ease 0.2s;
 }
 
+/* Shared spinner keyframe. */
+@keyframes wax-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Busy state for discrete action buttons. Shown while the button (or its
+   enclosing form) carries htmx-request; pairs with hx-disabled-elt. The label
+   is hidden and a centered spinner is drawn via ::after. */
+.btn-busy.htmx-request,
+.htmx-request .btn-busy {
+    color: transparent;
+    position: relative;
+    pointer-events: none;
+}
+.btn-busy.htmx-request::after,
+.htmx-request .btn-busy::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1em;
+    height: 1em;
+    margin: -0.5em 0 0 -0.5em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    color: var(--color-base-content);
+    animation: wax-spin 0.6s linear infinite;
+}
+

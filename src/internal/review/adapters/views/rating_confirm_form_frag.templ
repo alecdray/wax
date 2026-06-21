@@ -52,6 +52,7 @@ templ RatingConfirmFormFrag(album library.AlbumDTO, mode review.RatingMode, rati
 		class="flex flex-col gap-4"
 		hx-ext="morph"
 		hx-post={ fmt.Sprintf("/app/review/rating-recommender/rating?albumId=%s", album.ID) }
+		hx-disabled-elt="find button[type='submit']"
 	>
 		<input type="hidden" name="mode" value={ string(mode) }/>
 		<div class="flex items-center gap-2">
@@ -120,17 +121,18 @@ templ RatingConfirmFormFrag(album library.AlbumDTO, mode review.RatingMode, rati
 			></textarea>
 		</fieldset>
 		<button
-			class="btn btn-primary btn-sm w-full"
+			class="btn btn-primary btn-sm w-full btn-busy"
 			type="submit"
 			data-testid="rating-confirm-form-lock-in"
 			hx-target-error="next .error"
 		>Lock in</button>
 		if canFinalize(album) {
 			<button
-				class="btn btn-soft btn-sm w-full"
-				type="submit"
+				class="btn btn-soft btn-sm w-full btn-busy"
+				type="button"
 				data-testid="rating-confirm-form-finalize"
 				hx-post={ fmt.Sprintf("/app/review/rating-recommender/rating/finalize?albumId=%s", album.ID) }
+				hx-disabled-elt="this"
 				hx-target-error="next .error"
 			>Finalize</button>
 		}

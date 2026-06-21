@@ -48,6 +48,7 @@ templ BaseQuestionsFormFrag(albumId string, mode review.RatingMode, questions re
 		hx-post={ fmt.Sprintf("/app/review/rating-recommender/questions?albumId=%s&mode=%s", albumId, string(mode)) }
 		hx-swap="outerHTML"
 		class="flex flex-col gap-8"
+		hx-disabled-elt="find button[type='submit']"
 	>
 		<div class="flex justify-end">
 			<button
@@ -65,7 +66,7 @@ templ BaseQuestionsFormFrag(albumId string, mode review.RatingMode, questions re
 		for _, q := range questions {
 			@baseQuestionFieldset(q)
 		}
-		<button class="btn btn-primary btn-sm" type="submit" data-testid="base-questions-form-submit">Next</button>
+		<button class="btn btn-primary btn-sm btn-busy" type="submit" data-testid="base-questions-form-submit">Next</button>
 	</form>
 }
 

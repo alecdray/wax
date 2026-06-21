@@ -177,7 +177,7 @@ templ TagsFormFrag(album library.AlbumDTO, allTags []tags.TagDTO, tagGroups []*t
     <button
       type="submit"
       data-testid="tags-form-save"
-      class="btn btn-primary btn-sm w-full"
+      class="btn btn-primary btn-sm w-full btn-busy"
     >Save Tags</button>
   </div>
 }
@@ -187,6 +187,7 @@ templ TagsFormWrapperFrag(album library.AlbumDTO, allTags []tags.TagDTO, tagGrou
     data-testid="tags-form-wrapper"
     class="flex flex-col gap-2"
     hx-post={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
+    hx-disabled-elt="find button[type='submit']"
   >
     @TagsFormFrag(album, allTags, tagGroups, suggestions)
   </form>

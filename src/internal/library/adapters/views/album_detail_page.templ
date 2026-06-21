@@ -121,11 +121,12 @@ templ AlbumDetailPage(album library.AlbumDTO) {
 				}
 			<div class="flex justify-center pt-4 pb-2">
 				<button
-					class="btn btn-soft btn-error"
+					class="btn btn-soft btn-error btn-busy"
 					data-testid="album-detail-page-remove"
 					hx-delete={ fmt.Sprintf("/app/library/albums/%s", album.ID) }
 					hx-confirm="Remove this album from your library?"
 					hx-swap="none"
+					hx-disabled-elt="this"
 				>
 					Remove from library
 				</button>
