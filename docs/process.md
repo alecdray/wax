@@ -15,7 +15,12 @@ Capture the design **by creating or editing the affected canonical docs in place
 ADRs, architecture docs, the data model, module READMEs — **not** as a separate spec file.
 
 Validate and sharpen the write-up with a grilling pass (`/grill-with-docs`), which tests it against the
-existing domain language and recorded decisions and updates the docs inline as decisions crystallise.
+existing domain language and recorded decisions and updates the docs inline as decisions crystallise. Grill
+against the **full** set of canonical docs — the architecture rules and archetypes, design rules, the testing
+gate and e2e conventions, the ADR log, the affected module READMEs and `CLAUDE.md`s, and the product docs
+(vision, roadmap, backlog) — not only the files the feature edits. The documentation map in
+[`../.claude/CLAUDE.md`](../.claude/CLAUDE.md) lists where each lives; any conflict with them is resolved
+before leaving this phase.
 
 Scratch exploration may use temp docs; only the codified result lands in the repo.
 

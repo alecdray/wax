@@ -700,11 +700,61 @@ func (h *HttpHandler) GetDiscoverPage(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	radarInboxPlaylistID, err := h.feedService.RadarInboxPlaylistID(ctx, userId)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to get radar inbox state: %w", err),
+		})
+		return
+	}
 	views.DiscoverPage(views.DiscoverPageProps{
-		RadarAlbums:   radar,
-		Query:         "",
-		SearchResults: nil,
+		RadarAlbums:          radar,
+		Query:                "",
+		SearchResults:        nil,
+		RadarInboxPlaylistID: radarInboxPlaylistID,
 	}).Render(r.Context(), w)
+}
+
+// PostEnableRadarInbox opts the user into the Spotify radar inbox, creating their
+// "wax radar" playlist, and swaps the control to show its link. If Spotify denies
+// the request for missing playlist scope (a user connected before the scope was
+// requested), the browser is redirected into re-authentication.
+func (h *HttpHandler) PostEnableRadarInbox(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+	userId, err := ctx.UserId()
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get user ID: %w", err),
+		})
+		return
+	}
+
+	playlistID, err := h.feedService.EnableRadarInbox(ctx, userId)
+	if errors.Is(err, spotify.ErrInsufficientScope) {
+		app, appErr := ctx.App()
+		if appErr != nil {
+			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+				Status: http.StatusInternalServerError,
+				Err:    fmt.Errorf("failed to get app for re-auth: %w", appErr),
+			})
+			return
+		}
+		// Send the user through Spotify OAuth again to grant the playlist scope.
+		w.Header().Set("HX-Redirect", h.spotifyAuth.AuthURL(app.Config().StateCode))
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to enable radar inbox: %w", err),
+		})
+		return
+	}
+
+	views.RadarInboxControlFrag(playlistID).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetDiscoverRadar(w http.ResponseWriter, r *http.Request) {

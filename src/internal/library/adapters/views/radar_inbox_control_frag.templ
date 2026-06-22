@@ -1,0 +1,34 @@
+package views
+
+import "fmt"
+
+// RadarInboxControlFrag renders the Spotify radar inbox opt-in. Before enabling
+// it shows a button; once enabled it shows a link to the user's "wax radar"
+// playlist. The handler swaps this fragment in place on enable.
+templ RadarInboxControlFrag(playlistID string) {
+	<div id="radar-inbox-control" class="flex-shrink-0" data-testid="radar-inbox-control">
+		if playlistID == "" {
+			<button
+				type="button"
+				class="btn btn-soft btn-xs btn-busy"
+				hx-post="/app/library/discover/radar-inbox/enable"
+				hx-target="#radar-inbox-control"
+				hx-swap="outerHTML"
+				hx-disabled-elt="this"
+				data-testid="radar-inbox-enable"
+			>
+				Enable Spotify radar
+			</button>
+		} else {
+			<a
+				href={ templ.SafeURL(fmt.Sprintf("https://open.spotify.com/playlist/%s", playlistID)) }
+				target="_blank"
+				rel="noopener noreferrer"
+				class="text-xs text-subtle hover-fade-in"
+				data-testid="radar-inbox-link"
+			>
+				Add albums to your <span class="font-semibold">wax radar</span> playlist on Spotify to send them here →
+			</a>
+		}
+	</div>
+}

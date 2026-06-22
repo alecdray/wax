@@ -106,6 +106,7 @@ type Feed struct {
 	LastSyncCompletedAt sql.NullTime
 	LastSyncStartedAt   sql.NullTime
 	LastSyncStatus      models.FeedSyncStatus
+	SourceRef           sql.NullString
 }
 
 type GooseDbVersion struct {

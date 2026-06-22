@@ -13,7 +13,7 @@ The user's music library: albums, artists, tracks, releases, and the user's rela
 Two independent relationship dimensions exist between a user and an album:
 
 - **Ownership** — per-format: wishlist, owned, or removed. An album appears in the library when at least one of its formats is owned or wishlisted.
-- **Radar** — a "watching this" bookmark for albums *not* in the library. Independent of ownership; bringing the album into the library clears its radar entry.
+- **Radar** — a "watching this" bookmark. An album is radar-eligible unless it is currently owned or wishlisted; a `removed` album can be put (back) on the radar ([ADR 0005](../../../docs/adr/0005-radar-eligibility-excludes-only-owned-wishlisted.md)). Owning or wishlisting an album clears its radar entry. Albums reach the radar through in-app actions or from a Spotify-side inbox playlist the user opts into, which a periodic sync ingests; an inbox track whose album is already owned or wishlisted is dropped without a radar entry. See [ADR 0004](../../../docs/adr/0004-spotify-radar-playlist-entry.md).
 
 ## See also
 

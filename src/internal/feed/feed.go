@@ -18,6 +18,9 @@ type FeedDTO struct {
 	LastSyncStatus      models.FeedSyncStatus
 	LastSyncCompletedAt *time.Time
 	LastSyncStartedAt   *time.Time
+	// SourceRef is the external source handle a feed kind needs, where it needs
+	// one — for the radar inbox feed, the Spotify playlist id. nil otherwise.
+	SourceRef *string
 }
 
 func (f FeedDTO) IsSyncStale() bool {

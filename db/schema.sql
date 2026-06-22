@@ -59,8 +59,9 @@ CREATE TABLE user_artists (
 CREATE TABLE feeds (
     id text primary key,
     user_id text not null references users(id) on delete cascade,
-    kind text not null check(kind in ('spotify')),
+    kind text not null check(kind in ('spotify', 'spotify_radar')),
     created_at datetime not null default current_timestamp, last_sync_completed_at datetime, last_sync_started_at datetime, last_sync_status text default 'none' check(last_sync_status in ('none', 'success', 'failure', 'pending')),
+    source_ref text,
     unique(user_id, kind)
 );
 CREATE TABLE IF NOT EXISTS "album_artists" (

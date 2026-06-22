@@ -15,7 +15,7 @@ import (
 const createFeed = `-- name: CreateFeed :one
 insert into feeds (user_id, kind)
 values (?, ?)
-returning id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status
+returning id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref
 `
 
 type CreateFeedParams struct {
@@ -34,12 +34,13 @@ func (q *Queries) CreateFeed(ctx context.Context, arg CreateFeedParams) (Feed, e
 		&i.LastSyncCompletedAt,
 		&i.LastSyncStartedAt,
 		&i.LastSyncStatus,
+		&i.SourceRef,
 	)
 	return i, err
 }
 
 const getFeedByID = `-- name: GetFeedByID :one
-select id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status from feeds where id = ? and user_id = ?
+select id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref from feeds where id = ? and user_id = ?
 `
 
 type GetFeedByIDParams struct {
@@ -58,12 +59,13 @@ func (q *Queries) GetFeedByID(ctx context.Context, arg GetFeedByIDParams) (Feed,
 		&i.LastSyncCompletedAt,
 		&i.LastSyncStartedAt,
 		&i.LastSyncStatus,
+		&i.SourceRef,
 	)
 	return i, err
 }
 
 const getFeedsByUserId = `-- name: GetFeedsByUserId :many
-select id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status from feeds where user_id = ?
+select id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref from feeds where user_id = ?
 `
 
 func (q *Queries) GetFeedsByUserId(ctx context.Context, userID string) ([]Feed, error) {
@@ -83,6 +85,7 @@ func (q *Queries) GetFeedsByUserId(ctx context.Context, userID string) ([]Feed, 
 			&i.LastSyncCompletedAt,
 			&i.LastSyncStartedAt,
 			&i.LastSyncStatus,
+			&i.SourceRef,
 		); err != nil {
 			return nil, err
 		}
@@ -98,7 +101,7 @@ func (q *Queries) GetFeedsByUserId(ctx context.Context, userID string) ([]Feed, 
 }
 
 const getStaleFeedsBatch = `-- name: GetStaleFeedsBatch :many
-SELECT id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status FROM feeds
+SELECT id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref FROM feeds
 WHERE last_sync_completed_at IS NOT NULL
 AND last_sync_completed_at < datetime('now', ?)
 AND kind = ?
@@ -128,6 +131,7 @@ func (q *Queries) GetStaleFeedsBatch(ctx context.Context, arg GetStaleFeedsBatch
 			&i.LastSyncCompletedAt,
 			&i.LastSyncStartedAt,
 			&i.LastSyncStatus,
+			&i.SourceRef,
 		); err != nil {
 			return nil, err
 		}
@@ -142,13 +146,71 @@ func (q *Queries) GetStaleFeedsBatch(ctx context.Context, arg GetStaleFeedsBatch
 	return items, nil
 }
 
+const getSyncableRadarFeeds = `-- name: GetSyncableRadarFeeds :many
+SELECT id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref FROM feeds
+WHERE kind = 'spotify_radar' AND source_ref IS NOT NULL
+ORDER BY last_sync_completed_at ASC
+LIMIT 10
+`
+
+// Radar inbox feeds eligible to sync: any with a playlist handle. Unlike
+// saved-album feeds there is no staleness window. The inbox is polled each cron
+// tick (skipping in-flight ones in the task) so added albums land promptly, and
+// never-synced feeds are picked up immediately. Least-recently-synced first.
+func (q *Queries) GetSyncableRadarFeeds(ctx context.Context) ([]Feed, error) {
+	rows, err := q.db.QueryContext(ctx, getSyncableRadarFeeds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Feed
+	for rows.Next() {
+		var i Feed
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Kind,
+			&i.CreatedAt,
+			&i.LastSyncCompletedAt,
+			&i.LastSyncStartedAt,
+			&i.LastSyncStatus,
+			&i.SourceRef,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const setFeedSourceRef = `-- name: SetFeedSourceRef :exec
+UPDATE feeds SET source_ref = ? WHERE id = ?
+`
+
+type SetFeedSourceRefParams struct {
+	SourceRef sql.NullString
+	ID        string
+}
+
+// Sets (or, with NULL, clears) a feed's external source handle.
+func (q *Queries) SetFeedSourceRef(ctx context.Context, arg SetFeedSourceRefParams) error {
+	_, err := q.db.ExecContext(ctx, setFeedSourceRef, arg.SourceRef, arg.ID)
+	return err
+}
+
 const updateFeed = `-- name: UpdateFeed :one
 UPDATE feeds
 SET last_sync_completed_at = COALESCE(?, last_sync_completed_at),
     last_sync_started_at = COALESCE(?, last_sync_started_at),
     last_sync_status = COALESCE(?, last_sync_status)
 WHERE id = ?
-RETURNING id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status
+RETURNING id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref
 `
 
 type UpdateFeedParams struct {
@@ -174,6 +236,7 @@ func (q *Queries) UpdateFeed(ctx context.Context, arg UpdateFeedParams) (Feed, e
 		&i.LastSyncCompletedAt,
 		&i.LastSyncStartedAt,
 		&i.LastSyncStatus,
+		&i.SourceRef,
 	)
 	return i, err
 }
@@ -184,7 +247,7 @@ VALUES (?, ?, ?)
 ON CONFLICT (user_id, kind) DO UPDATE SET
     user_id = excluded.user_id,
     kind = excluded.kind
-RETURNING id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status
+RETURNING id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref
 `
 
 type UpsertFeedParams struct {
@@ -204,6 +267,7 @@ func (q *Queries) UpsertFeed(ctx context.Context, arg UpsertFeedParams) (Feed, e
 		&i.LastSyncCompletedAt,
 		&i.LastSyncStartedAt,
 		&i.LastSyncStatus,
+		&i.SourceRef,
 	)
 	return i, err
 }

@@ -43,6 +43,10 @@ func feedDTOFromModel(model sqlc.Feed) *FeedDTO {
 		dto.LastSyncCompletedAt = &model.LastSyncCompletedAt.Time
 	}
 
+	if model.SourceRef.Valid {
+		dto.SourceRef = &model.SourceRef.String
+	}
+
 	return dto
 }
 
@@ -95,6 +99,29 @@ func (r *Repo) UpdateFeed(ctx context.Context, feed FeedDTO) (*FeedDTO, error) {
 		return nil, err
 	}
 	return feedDTOFromModel(model), nil
+}
+
+// SetFeedSourceRef stores a feed's external source handle. An empty sourceRef
+// clears it (stored as NULL).
+func (r *Repo) SetFeedSourceRef(ctx context.Context, feedID, sourceRef string) error {
+	return r.q.SetFeedSourceRef(ctx, sqlc.SetFeedSourceRefParams{
+		SourceRef: sqlx.NewNullString(sourceRef),
+		ID:        feedID,
+	})
+}
+
+// GetSyncableRadarFeeds returns radar inbox feeds eligible to sync (those with a
+// playlist handle), least-recently-synced first.
+func (r *Repo) GetSyncableRadarFeeds(ctx context.Context) ([]FeedDTO, error) {
+	feeds, err := r.q.GetSyncableRadarFeeds(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]FeedDTO, 0, len(feeds))
+	for _, f := range feeds {
+		out = append(out, *feedDTOFromModel(f))
+	}
+	return out, nil
 }
 
 // GetStaleFeedsBatch returns the batch of feeds the database considers stale
