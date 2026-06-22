@@ -256,6 +256,36 @@ func (s *Service) CreateRadarPlaylist(ctx contextx.ContextX, userId string) (str
 	return id, nil
 }
 
+// PlaylistInLibrary reports whether the playlist is still in the user's library
+// (i.e. followed / shown in /me/playlists). Spotify has no true playlist delete —
+// "deleting" a playlist only unfollows it, after which it stays readable by the
+// owner via the API (no 404) but leaves /me/playlists. This is how the radar sync
+// tells that the user removed the inbox.
+func (s *Service) PlaylistInLibrary(ctx contextx.ContextX, userId, playlistID string) (bool, error) {
+	client, err := s.Client(ctx, userId)
+	if err != nil {
+		return false, err
+	}
+	const limit = 50
+	offset := 0
+	for {
+		page, err := client.CurrentUsersPlaylists(ctx, spotify.Limit(limit), spotify.Offset(offset))
+		if err != nil {
+			return false, fmt.Errorf("failed to list playlists: %w", err)
+		}
+		for _, pl := range page.Playlists {
+			if pl.ID.String() == playlistID {
+				return true, nil
+			}
+		}
+		if len(page.Playlists) < limit {
+			break
+		}
+		offset += len(page.Playlists)
+	}
+	return false, nil
+}
+
 // FindRadarPlaylist returns the id of the user's existing "wax radar" playlist,
 // or "" if none is found. Lets enabling be idempotent and avoid creating a
 // duplicate when a playlist already exists. Requires playlist-read scope.
