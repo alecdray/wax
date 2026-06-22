@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alecdray/wax/src/internal/core/app"
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/user"
 
@@ -18,6 +19,18 @@ const (
 	radarPlaylistName        = "wax radar"
 	radarPlaylistDescription = "Add albums here to send them to your wax radar."
 )
+
+// qualifiedRadarPlaylistName returns the radar inbox playlist name, suffixed with
+// the environment for non-prod so a Spotify account connected to both a local/dev
+// instance and prod gets distinct playlists (and find-or-create matches the right
+// one) rather than colliding on a single "wax radar".
+func qualifiedRadarPlaylistName(ctx contextx.ContextX) string {
+	a, err := ctx.App()
+	if err != nil || a.Config().Env == app.EnvProd {
+		return radarPlaylistName
+	}
+	return fmt.Sprintf("%s (%s)", radarPlaylistName, a.Config().Env)
+}
 
 // ErrPlaylistNotFound is returned by GetPlaylistItems when the playlist no
 // longer exists on Spotify (HTTP 404) — e.g. the user deleted it.
@@ -236,7 +249,7 @@ func (s *Service) CreateRadarPlaylist(ctx contextx.ContextX, userId string) (str
 	if err != nil {
 		return "", fmt.Errorf("failed to get token: %w", err)
 	}
-	id, err := s.client.CreatePlaylist(ctx, token.AccessToken, radarPlaylistName, radarPlaylistDescription)
+	id, err := s.client.CreatePlaylist(ctx, token.AccessToken, qualifiedRadarPlaylistName(ctx), radarPlaylistDescription)
 	if err != nil {
 		return "", fmt.Errorf("failed to create radar playlist: %w", err)
 	}
@@ -251,6 +264,7 @@ func (s *Service) FindRadarPlaylist(ctx contextx.ContextX, userId string) (strin
 	if err != nil {
 		return "", err
 	}
+	name := qualifiedRadarPlaylistName(ctx)
 	const limit = 50
 	offset := 0
 	for {
@@ -262,7 +276,7 @@ func (s *Service) FindRadarPlaylist(ctx contextx.ContextX, userId string) (strin
 			return "", fmt.Errorf("failed to list playlists: %w", err)
 		}
 		for _, pl := range page.Playlists {
-			if pl.Name == radarPlaylistName {
+			if pl.Name == name {
 				return pl.ID.String(), nil
 			}
 		}
