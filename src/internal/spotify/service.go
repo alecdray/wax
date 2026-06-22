@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/alecdray/wax/src/internal/core/contextx"
@@ -27,13 +28,15 @@ var ErrPlaylistNotFound = errors.New("spotify playlist not found")
 // requested tries to create the radar playlist. The caller re-authenticates.
 var ErrInsufficientScope = errors.New("spotify request denied for insufficient scope")
 
-// spotifyStatus reports the HTTP status of a Spotify API error, if it is one.
-func spotifyStatus(err error) (int, bool) {
+// isInsufficientScope reports whether err is specifically a Spotify
+// missing-scope rejection — a 403 whose message mentions scope. Other 403s
+// ("Forbidden", app/account restrictions) are NOT scope problems and must not
+// be treated as re-authable, or the caller loops the user through OAuth forever.
+func isInsufficientScope(err error) bool {
 	var spotifyErr spotify.Error
-	if errors.As(err, &spotifyErr) {
-		return spotifyErr.Status, true
-	}
-	return 0, false
+	return errors.As(err, &spotifyErr) &&
+		spotifyErr.Status == http.StatusForbidden &&
+		strings.Contains(strings.ToLower(spotifyErr.Message), "scope")
 }
 
 // PlaylistItem is a minimal view of one track in a playlist: the track's own id
@@ -229,18 +232,46 @@ func (s *Service) CreateRadarPlaylist(ctx contextx.ContextX, userId string) (str
 	if err != nil {
 		return "", err
 	}
-	me, err := client.CurrentUser(ctx)
+	token, err := client.Token()
 	if err != nil {
-		return "", fmt.Errorf("failed to get current spotify user: %w", err)
+		return "", fmt.Errorf("failed to get token: %w", err)
 	}
-	playlist, err := client.CreatePlaylistForUser(ctx, me.ID, radarPlaylistName, radarPlaylistDescription, false, false)
+	id, err := s.client.CreatePlaylist(ctx, token.AccessToken, radarPlaylistName, radarPlaylistDescription)
 	if err != nil {
-		if status, ok := spotifyStatus(err); ok && status == http.StatusForbidden {
-			return "", ErrInsufficientScope
-		}
 		return "", fmt.Errorf("failed to create radar playlist: %w", err)
 	}
-	return playlist.ID.String(), nil
+	return id, nil
+}
+
+// FindRadarPlaylist returns the id of the user's existing "wax radar" playlist,
+// or "" if none is found. Lets enabling be idempotent and avoid creating a
+// duplicate when a playlist already exists. Requires playlist-read scope.
+func (s *Service) FindRadarPlaylist(ctx contextx.ContextX, userId string) (string, error) {
+	client, err := s.Client(ctx, userId)
+	if err != nil {
+		return "", err
+	}
+	const limit = 50
+	offset := 0
+	for {
+		page, err := client.CurrentUsersPlaylists(ctx, spotify.Limit(limit), spotify.Offset(offset))
+		if err != nil {
+			if isInsufficientScope(err) {
+				return "", ErrInsufficientScope
+			}
+			return "", fmt.Errorf("failed to list playlists: %w", err)
+		}
+		for _, pl := range page.Playlists {
+			if pl.Name == radarPlaylistName {
+				return pl.ID.String(), nil
+			}
+		}
+		if len(page.Playlists) < limit {
+			break
+		}
+		offset += len(page.Playlists)
+	}
+	return "", nil
 }
 
 // GetPlaylistItems returns the playlist's tracks as minimal PlaylistItems,
@@ -251,33 +282,11 @@ func (s *Service) GetPlaylistItems(ctx contextx.ContextX, userId, playlistID str
 	if err != nil {
 		return nil, err
 	}
-	const limit = 100
-	items := make([]PlaylistItem, 0)
-	offset := 0
-	for {
-		page, err := client.GetPlaylistItems(ctx, spotify.ID(playlistID), spotify.Limit(limit), spotify.Offset(offset))
-		if err != nil {
-			var spotifyErr spotify.Error
-			if errors.As(err, &spotifyErr) && spotifyErr.Status == http.StatusNotFound {
-				return nil, ErrPlaylistNotFound
-			}
-			return nil, fmt.Errorf("failed to get playlist items: %w", err)
-		}
-		for _, it := range page.Items {
-			if it.Track.Track == nil {
-				continue // episode, local file, or unavailable track
-			}
-			items = append(items, PlaylistItem{
-				TrackID:        it.Track.Track.ID.String(),
-				AlbumSpotifyID: it.Track.Track.Album.ID.String(),
-			})
-		}
-		if len(page.Items) < limit {
-			break
-		}
-		offset += len(page.Items)
+	token, err := client.Token()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get token: %w", err)
 	}
-	return items, nil
+	return s.client.GetPlaylistItems(ctx, token.AccessToken, playlistID)
 }
 
 // RemovePlaylistTracks removes the given tracks (by track id) from the playlist,
@@ -290,20 +299,11 @@ func (s *Service) RemovePlaylistTracks(ctx contextx.ContextX, userId, playlistID
 	if err != nil {
 		return err
 	}
-	ids := make([]spotify.ID, len(trackIDs))
-	for i, id := range trackIDs {
-		ids[i] = spotify.ID(id)
+	token, err := client.Token()
+	if err != nil {
+		return fmt.Errorf("failed to get token: %w", err)
 	}
-	for start := 0; start < len(ids); start += 100 {
-		end := start + 100
-		if end > len(ids) {
-			end = len(ids)
-		}
-		if _, err := client.RemoveTracksFromPlaylist(ctx, spotify.ID(playlistID), ids[start:end]...); err != nil {
-			return fmt.Errorf("failed to remove tracks from playlist: %w", err)
-		}
-	}
-	return nil
+	return s.client.RemovePlaylistItems(ctx, token.AccessToken, playlistID, trackIDs)
 }
 
 // GetFullAlbum returns one Spotify album by ID, including artists and tracks.

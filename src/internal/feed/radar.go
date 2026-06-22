@@ -139,16 +139,34 @@ func (s *Service) EnableRadarInbox(ctx contextx.ContextX, userID string) (string
 	if err != nil {
 		return "", fmt.Errorf("failed to upsert radar feed: %w", err)
 	}
+	slog.Info("radar inbox enable: start", "user", userID, "feed", feed.ID, "existing_source_ref", feed.SourceRef)
 	if feed.SourceRef != nil && *feed.SourceRef != "" {
 		return *feed.SourceRef, nil
 	}
 
-	playlistID, err := s.spotifyService.CreateRadarPlaylist(ctx, userID)
+	// Reuse an existing "wax radar" playlist if the user already has one
+	// (idempotent re-enable / recovery); only create when none exists.
+	playlistID, err := s.spotifyService.FindRadarPlaylist(ctx, userID)
 	if err != nil {
-		return "", fmt.Errorf("failed to create radar playlist: %w", err)
+		slog.Error("radar inbox enable: find playlist failed", "feed", feed.ID, "error", err)
+		return "", fmt.Errorf("failed to find radar playlist: %w", err)
+	}
+	if playlistID == "" {
+		playlistID, err = s.spotifyService.CreateRadarPlaylist(ctx, userID)
+		if err != nil {
+			slog.Error("radar inbox enable: create playlist failed", "feed", feed.ID, "error", err)
+			return "", fmt.Errorf("failed to create radar playlist: %w", err)
+		}
+		slog.Info("radar inbox enable: created playlist", "feed", feed.ID, "playlist", playlistID)
+	} else {
+		slog.Info("radar inbox enable: reusing existing playlist", "feed", feed.ID, "playlist", playlistID)
+	}
+	if playlistID == "" {
+		return "", fmt.Errorf("spotify returned an empty radar playlist id")
 	}
 	if err := s.repo.SetFeedSourceRef(ctx, feed.ID, playlistID); err != nil {
 		return "", fmt.Errorf("failed to store radar playlist handle: %w", err)
 	}
+	slog.Info("radar inbox enable: stored handle", "feed", feed.ID, "playlist", playlistID)
 	return playlistID, nil
 }

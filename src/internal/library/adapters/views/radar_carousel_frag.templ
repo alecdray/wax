@@ -5,12 +5,15 @@ import (
     "github.com/alecdray/wax/src/internal/library"
 )
 
+// The carousel refreshes on in-session radar changes (radarUpdated) and also
+// polls, so albums ingested by the background radar-inbox sync appear without a
+// manual reload.
 templ RadarCarouselFrag(albums []library.AlbumDTO, isOOB bool) {
     <div
         id="radar-carousel"
         class="w-full flex-shrink-0"
         hx-get="/app/library/discover/radar"
-        hx-trigger="radarUpdated from:body"
+        hx-trigger="radarUpdated from:body, every 30s"
         hx-swap="outerHTML"
         if isOOB {
             hx-swap-oob="true"

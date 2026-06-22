@@ -708,11 +708,20 @@ func (h *HttpHandler) GetDiscoverPage(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	feeds, err := h.feedService.GetUsersFeeds(ctx, userId)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to get feeds: %w", err),
+		})
+		return
+	}
 	views.DiscoverPage(views.DiscoverPageProps{
 		RadarAlbums:          radar,
 		Query:                "",
 		SearchResults:        nil,
 		RadarInboxPlaylistID: radarInboxPlaylistID,
+		Feeds:                feeds,
 	}).Render(r.Context(), w)
 }
 
@@ -741,20 +750,23 @@ func (h *HttpHandler) PostEnableRadarInbox(w http.ResponseWriter, r *http.Reques
 			})
 			return
 		}
-		// Send the user through Spotify OAuth again to grant the playlist scope.
-		w.Header().Set("HX-Redirect", h.spotifyAuth.AuthURL(app.Config().StateCode))
+		// Send the user through Spotify OAuth again to grant the playlist scope,
+		// and remember to return them to discover afterwards so they can finish
+		// enabling rather than landing on the dashboard.
+		httpx.SetPostAuthRedirect(w, "/app/library/discover")
+		w.Header().Set("HX-Redirect", h.spotifyAuth.AuthURLForcingConsent(app.Config().StateCode))
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    fmt.Errorf("failed to enable radar inbox: %w", err),
-		})
+		// Not a missing-scope problem (those re-auth above). Surface it inline
+		// rather than looping the user or failing silently. The underlying
+		// Spotify error is already logged in the service layer.
+		views.RadarInboxControlFrag("", "Couldn’t enable — Spotify refused the request. Reconnect Spotify and try again.").Render(r.Context(), w)
 		return
 	}
 
-	views.RadarInboxControlFrag(playlistID).Render(r.Context(), w)
+	views.RadarInboxControlFrag(playlistID, "").Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetDiscoverRadar(w http.ResponseWriter, r *http.Request) {

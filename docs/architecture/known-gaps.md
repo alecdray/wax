@@ -4,4 +4,6 @@ This doc tracks current architectural violations in the codebase — places wher
 
 Gaps are tracked here (and not enumerated inside the archetype docs themselves) so the rule docs stay durable and conceptual, while the concrete list of divergences lives in one searchable place.
 
-_No known gaps are currently tracked._
+## Vendored Spotify SDK is behind the February 2026 API migration
+
+The pinned `github.com/zmb3/spotify/v2@v2.4.3` SDK still calls API paths that Spotify removed/renamed in its February 2026 migration (e.g. `POST /users/{id}/playlists`, `/playlists/{id}/tracks`, `PUT/DELETE /me/albums`). Those now return 403 for Development-mode apps, so the affected writes are hand-rolled against the migrated endpoints in `spotify/client.go` instead of going through the SDK. Closing the gap means upgrading (or replacing) the SDK to a version that targets the current endpoints, then folding the hand-rolled calls back behind it. Until then, `spotify/client.go` is the source of truth for those writes — see [`src/internal/spotify/CLAUDE.md`](../../src/internal/spotify/CLAUDE.md).

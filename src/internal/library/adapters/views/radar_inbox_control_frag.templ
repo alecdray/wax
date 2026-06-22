@@ -3,11 +3,22 @@ package views
 import "fmt"
 
 // RadarInboxControlFrag renders the Spotify radar inbox opt-in. Before enabling
-// it shows a button; once enabled it shows a link to the user's "wax radar"
-// playlist. The handler swaps this fragment in place on enable.
-templ RadarInboxControlFrag(playlistID string) {
-	<div id="radar-inbox-control" class="flex-shrink-0" data-testid="radar-inbox-control">
-		if playlistID == "" {
+// it shows a button (with an inline error beneath it if a previous attempt
+// failed); once enabled it shows a link to the user's "wax radar" playlist. The
+// handler swaps this fragment in place on enable.
+templ RadarInboxControlFrag(playlistID string, errMsg string) {
+	<div id="radar-inbox-control" class="flex flex-col items-end gap-1 flex-shrink-0" data-testid="radar-inbox-control">
+		if playlistID != "" {
+			<a
+				href={ templ.SafeURL(fmt.Sprintf("https://open.spotify.com/playlist/%s", playlistID)) }
+				target="_blank"
+				rel="noopener noreferrer"
+				class="text-xs text-subtle hover-fade-in"
+				data-testid="radar-inbox-link"
+			>
+				Add albums to your <span class="font-semibold">wax radar</span> playlist on Spotify to send them here →
+			</a>
+		} else {
 			<button
 				type="button"
 				class="btn btn-soft btn-xs btn-busy"
@@ -19,16 +30,9 @@ templ RadarInboxControlFrag(playlistID string) {
 			>
 				Enable Spotify radar
 			</button>
-		} else {
-			<a
-				href={ templ.SafeURL(fmt.Sprintf("https://open.spotify.com/playlist/%s", playlistID)) }
-				target="_blank"
-				rel="noopener noreferrer"
-				class="text-xs text-subtle hover-fade-in"
-				data-testid="radar-inbox-link"
-			>
-				Add albums to your <span class="font-semibold">wax radar</span> playlist on Spotify to send them here →
-			</a>
+			if errMsg != "" {
+				<span class="text-xs text-error" data-testid="radar-inbox-error">{ errMsg }</span>
+			}
 		}
 	</div>
 }
