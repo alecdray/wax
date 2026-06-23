@@ -17,3 +17,8 @@ SELECT * FROM users WHERE spotify_id = ?;
 -- name: GetUsersWithSpotifyToken :many
 SELECT * FROM users
 WHERE spotify_refresh_token IS NOT NULL AND deleted_at IS NULL;
+
+-- name: SetSpotifyAccessToken :exec
+UPDATE users
+SET spotify_access_token = ?, spotify_access_token_expires_at = ?
+WHERE id = ?;

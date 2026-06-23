@@ -3,10 +3,15 @@ package httpx
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/a-h/templ"
+
+	"github.com/alecdray/wax/src/internal/spotify"
 )
 
 // unauthorizedRedirectPath is the public auth route that renders the
@@ -68,6 +73,18 @@ type HandleErrorResponseProps struct {
 func HandleErrorResponse(ctx context.Context, w http.ResponseWriter, props HandleErrorResponseProps) {
 	if props.Status == 0 {
 		props.Status = http.StatusInternalServerError
+	}
+
+	// A refusal from the shared Spotify rate-limit guard is transient and
+	// user-actionable, not a server fault: surface it as 429 + Retry-After so a
+	// user-initiated action fails fast with a clear signal rather than a generic
+	// 500. Background syncs never reach here — they back off via the feed. ADR 0006.
+	var rateLimited *spotify.ErrRateLimited
+	if errors.As(props.Err, &rateLimited) {
+		props.Status = http.StatusTooManyRequests
+		if secs := int(rateLimited.RetryAfter.Round(time.Second).Seconds()); secs > 0 {
+			w.Header().Set("Retry-After", strconv.Itoa(secs))
+		}
 	}
 
 	w.WriteHeader(props.Status)

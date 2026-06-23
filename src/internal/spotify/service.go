@@ -3,6 +3,7 @@ package spotify
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/alecdray/wax/src/internal/user"
 
 	spotify "github.com/zmb3/spotify/v2"
+	"golang.org/x/oauth2"
 )
 
 // Radar inbox playlist identity. The playlist is private and Wax-managed.
@@ -68,11 +70,15 @@ type Service struct {
 
 func NewService(userService *user.Service, spotifyAuthService *AuthService) *Service {
 	return &Service{
-		client:             NewClient(),
+		client:             NewClient(spotifyAuthService.guard),
 		userService:        userService,
 		spotifyAuthService: spotifyAuthService,
 	}
 }
+
+// accessTokenExpiryBuffer is how far before a cached token's expiry we treat it
+// as stale, so a token doesn't lapse mid-operation.
+const accessTokenExpiryBuffer = time.Minute
 
 func (s *Service) Client(ctx contextx.ContextX, userId string) (*spotify.Client, error) {
 	user, err := s.userService.GetUserById(ctx, userId)
@@ -84,18 +90,36 @@ func (s *Service) Client(ctx contextx.ContextX, userId string) (*spotify.Client,
 	if err != nil {
 		return nil, fmt.Errorf("failed to get app: %w", err)
 	}
+	secret := app.Config().SpotifyTokenSecret
 
-	userRefreshToken := user.SpotifyRefreshToken(app.Config().SpotifyTokenSecret)
+	userRefreshToken := user.SpotifyRefreshToken(secret)
 	if userRefreshToken == nil {
 		return nil, fmt.Errorf("user has no spotify refresh token")
 	}
 
-	client, err := s.spotifyAuthService.GetClientFromRefreshToken(ctx, *userRefreshToken)
+	// Reuse a cached access token while it is comfortably valid, so routine
+	// syncs don't spend rate-limit budget on a token exchange per call.
+	if token, expiresAt, ok := user.CachedSpotifyAccessToken(secret); ok &&
+		time.Now().Add(accessTokenExpiryBuffer).Before(expiresAt) {
+		return s.spotifyAuthService.ClientFromToken(ctx, &oauth2.Token{
+			AccessToken:  token,
+			RefreshToken: *userRefreshToken,
+			Expiry:       expiresAt,
+		}), nil
+	}
+
+	// Otherwise exchange the refresh token and cache the new access token.
+	token, err := s.spotifyAuthService.RefreshAccessToken(ctx, *userRefreshToken)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrFailedToGetToken, err)
 	}
+	if !token.Expiry.IsZero() {
+		if err := s.userService.SetSpotifyAccessToken(ctx, userId, token.AccessToken, token.Expiry); err != nil {
+			slog.Warn("failed to cache spotify access token", "user", userId, "error", err)
+		}
+	}
 
-	return client, nil
+	return s.spotifyAuthService.ClientFromToken(ctx, token), nil
 }
 
 func (s *Service) GetUser(ctx contextx.ContextX, userId string) (*spotify.PrivateUser, error) {

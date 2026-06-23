@@ -167,18 +167,9 @@ func (s *Service) SyncSpotifyFeed(ctx contextx.ContextX, feed FeedDTO) (*FeedDTO
 	return &feed, nil
 }
 
-func (s *Service) GetStaleSpotifyFeeds(ctx context.Context) ([]FeedDTO, error) {
-	feeds, err := s.repo.GetStaleFeedsBatch(ctx, models.FeedKindSpotify, MinStaleDuration)
-	if err != nil {
-		return nil, err
-	}
-
-	staleFeeds := make([]FeedDTO, 0, len(feeds))
-	for _, f := range feeds {
-		if f.Kind == models.FeedKindSpotify && f.IsSyncStale() {
-			staleFeeds = append(staleFeeds, f)
-		}
-	}
-
-	return staleFeeds, nil
+// GetDueSpotifyFeeds returns the saved-album feeds that are due to sync now
+// (next_sync_at has passed or is unset). A just-failed feed is held back by its
+// backoff and so is excluded until its next eligible time.
+func (s *Service) GetDueSpotifyFeeds(ctx context.Context) ([]FeedDTO, error) {
+	return s.repo.GetDueFeedsBatch(ctx, models.FeedKindSpotify)
 }

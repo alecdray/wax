@@ -42,13 +42,13 @@ func NewSyncStaleSpotifyFeedsTask(feedService *Service) task.Task {
 }
 
 func (t SyncStaleSpotifyFeedsTask) Run(ctx contextx.ContextX) error {
-	staleFeeds, err := t.feedService.GetStaleSpotifyFeeds(ctx)
+	dueFeeds, err := t.feedService.GetDueSpotifyFeeds(ctx)
 	if err != nil {
-		err = fmt.Errorf("failed to get stale feeds: %w", err)
+		err = fmt.Errorf("failed to get due feeds: %w", err)
 		return err
 	}
 
-	for _, feed := range staleFeeds {
+	for _, feed := range dueFeeds {
 		if feed.LastSyncStatus.IsSyncing() {
 			continue
 		}
