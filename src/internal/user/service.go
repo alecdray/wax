@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/cryptox"
@@ -44,6 +45,23 @@ func (s *Service) UpsertSpotifyUser(ctx contextx.ContextX, spotifyId string, spo
 	}
 
 	return s.repo.UpsertSpotifyUser(ctx, spotifyId, encryptedSpotifyRefreshToken)
+}
+
+// SetSpotifyAccessToken encrypts and persists a user's Spotify access token and
+// its expiry, so subsequent calls can reuse it until it expires instead of
+// exchanging the refresh token every time.
+func (s *Service) SetSpotifyAccessToken(ctx contextx.ContextX, userID, accessToken string, expiresAt time.Time) error {
+	app, err := ctx.App()
+	if err != nil {
+		return fmt.Errorf("failed to get app: %w", err)
+	}
+
+	encrypted, err := cryptox.SymmetricEncrypt(accessToken, app.Config().SpotifyTokenSecret)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt spotify access token: %w", err)
+	}
+
+	return s.repo.SetSpotifyAccessToken(ctx, userID, encrypted, expiresAt)
 }
 
 func (s *Service) GetUserFromCtx(ctx contextx.ContextX) (*UserDTO, error) {

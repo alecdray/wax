@@ -2,7 +2,6 @@ package feed
 
 import (
 	"context"
-	"time"
 
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/db/sqlc"
@@ -46,6 +45,12 @@ func feedDTOFromModel(model sqlc.Feed) *FeedDTO {
 	if model.SourceRef.Valid {
 		dto.SourceRef = &model.SourceRef.String
 	}
+
+	if model.NextSyncAt.Valid {
+		dto.NextSyncAt = &model.NextSyncAt.Time
+	}
+
+	dto.ConsecutiveFailures = int(model.ConsecutiveFailures)
 
 	return dto
 }
@@ -94,6 +99,8 @@ func (r *Repo) UpdateFeed(ctx context.Context, feed FeedDTO) (*FeedDTO, error) {
 		LastSyncStatus:      feed.LastSyncStatus,
 		LastSyncStartedAt:   sqlx.NewNullTime(feed.LastSyncStartedAt),
 		LastSyncCompletedAt: sqlx.NewNullTime(feed.LastSyncCompletedAt),
+		NextSyncAt:          sqlx.NewNullTime(feed.NextSyncAt),
+		ConsecutiveFailures: int64(feed.ConsecutiveFailures),
 	})
 	if err != nil {
 		return nil, err
@@ -129,13 +136,10 @@ func (r *Repo) GetSyncableRadarFeeds(ctx context.Context) ([]FeedDTO, error) {
 	return out, nil
 }
 
-// GetStaleFeedsBatch returns the batch of feeds the database considers stale
-// for the given kind. Callers may apply additional filtering.
-func (r *Repo) GetStaleFeedsBatch(ctx context.Context, kind models.FeedKind, minStaleDuration time.Duration) ([]FeedDTO, error) {
-	feeds, err := r.q.GetStaleFeedsBatch(ctx, sqlc.GetStaleFeedsBatchParams{
-		Datetime: sqlx.DurationToSQLiteDatetime(minStaleDuration),
-		Kind:     kind,
-	})
+// GetDueFeedsBatch returns the batch of feeds of the given kind that are due to
+// sync (next_sync_at has passed or is unset).
+func (r *Repo) GetDueFeedsBatch(ctx context.Context, kind models.FeedKind) ([]FeedDTO, error) {
+	feeds, err := r.q.GetDueFeedsBatch(ctx, kind)
 	if err != nil {
 		return nil, err
 	}

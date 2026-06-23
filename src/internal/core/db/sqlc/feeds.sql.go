@@ -15,7 +15,7 @@ import (
 const createFeed = `-- name: CreateFeed :one
 insert into feeds (user_id, kind)
 values (?, ?)
-returning id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref
+returning id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref, next_sync_at, consecutive_failures
 `
 
 type CreateFeedParams struct {
@@ -35,6 +35,8 @@ func (q *Queries) CreateFeed(ctx context.Context, arg CreateFeedParams) (Feed, e
 		&i.LastSyncStartedAt,
 		&i.LastSyncStatus,
 		&i.SourceRef,
+		&i.NextSyncAt,
+		&i.ConsecutiveFailures,
 	)
 	return i, err
 }
@@ -48,8 +50,54 @@ func (q *Queries) DeleteFeed(ctx context.Context, id string) error {
 	return err
 }
 
+const getDueFeedsBatch = `-- name: GetDueFeedsBatch :many
+SELECT id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref, next_sync_at, consecutive_failures FROM feeds
+WHERE kind = ?
+AND (next_sync_at IS NULL OR next_sync_at <= datetime('now'))
+ORDER BY next_sync_at ASC
+LIMIT 10
+`
+
+// Feeds of a kind that are due to sync: next_sync_at has passed, or is NULL
+// (never scheduled, so sync immediately). A just-failed feed has next_sync_at
+// pushed into the future by its backoff, so it is not re-picked until then.
+// Soonest-due first; NULL (never scheduled) sorts ahead of the rest.
+func (q *Queries) GetDueFeedsBatch(ctx context.Context, kind models.FeedKind) ([]Feed, error) {
+	rows, err := q.db.QueryContext(ctx, getDueFeedsBatch, kind)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Feed
+	for rows.Next() {
+		var i Feed
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Kind,
+			&i.CreatedAt,
+			&i.LastSyncCompletedAt,
+			&i.LastSyncStartedAt,
+			&i.LastSyncStatus,
+			&i.SourceRef,
+			&i.NextSyncAt,
+			&i.ConsecutiveFailures,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getFeedByID = `-- name: GetFeedByID :one
-select id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref from feeds where id = ? and user_id = ?
+select id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref, next_sync_at, consecutive_failures from feeds where id = ? and user_id = ?
 `
 
 type GetFeedByIDParams struct {
@@ -69,12 +117,14 @@ func (q *Queries) GetFeedByID(ctx context.Context, arg GetFeedByIDParams) (Feed,
 		&i.LastSyncStartedAt,
 		&i.LastSyncStatus,
 		&i.SourceRef,
+		&i.NextSyncAt,
+		&i.ConsecutiveFailures,
 	)
 	return i, err
 }
 
 const getFeedsByUserId = `-- name: GetFeedsByUserId :many
-select id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref from feeds where user_id = ?
+select id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref, next_sync_at, consecutive_failures from feeds where user_id = ?
 `
 
 func (q *Queries) GetFeedsByUserId(ctx context.Context, userID string) ([]Feed, error) {
@@ -95,52 +145,8 @@ func (q *Queries) GetFeedsByUserId(ctx context.Context, userID string) ([]Feed, 
 			&i.LastSyncStartedAt,
 			&i.LastSyncStatus,
 			&i.SourceRef,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getStaleFeedsBatch = `-- name: GetStaleFeedsBatch :many
-SELECT id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref FROM feeds
-WHERE last_sync_completed_at IS NOT NULL
-AND last_sync_completed_at < datetime('now', ?)
-AND kind = ?
-ORDER BY last_sync_completed_at ASC
-LIMIT 10
-`
-
-type GetStaleFeedsBatchParams struct {
-	Datetime interface{}
-	Kind     models.FeedKind
-}
-
-func (q *Queries) GetStaleFeedsBatch(ctx context.Context, arg GetStaleFeedsBatchParams) ([]Feed, error) {
-	rows, err := q.db.QueryContext(ctx, getStaleFeedsBatch, arg.Datetime, arg.Kind)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Feed
-	for rows.Next() {
-		var i Feed
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.Kind,
-			&i.CreatedAt,
-			&i.LastSyncCompletedAt,
-			&i.LastSyncStartedAt,
-			&i.LastSyncStatus,
-			&i.SourceRef,
+			&i.NextSyncAt,
+			&i.ConsecutiveFailures,
 		); err != nil {
 			return nil, err
 		}
@@ -156,16 +162,16 @@ func (q *Queries) GetStaleFeedsBatch(ctx context.Context, arg GetStaleFeedsBatch
 }
 
 const getSyncableRadarFeeds = `-- name: GetSyncableRadarFeeds :many
-SELECT id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref FROM feeds
+SELECT id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref, next_sync_at, consecutive_failures FROM feeds
 WHERE kind = 'spotify_radar' AND source_ref IS NOT NULL
-ORDER BY last_sync_completed_at ASC
+AND (next_sync_at IS NULL OR next_sync_at <= datetime('now'))
+ORDER BY next_sync_at ASC
 LIMIT 10
 `
 
-// Radar inbox feeds eligible to sync: any with a playlist handle. Unlike
-// saved-album feeds there is no staleness window. The inbox is polled each cron
-// tick (skipping in-flight ones in the task) so added albums land promptly, and
-// never-synced feeds are picked up immediately. Least-recently-synced first.
+// Radar inbox feeds due to sync: those with a playlist handle whose next_sync_at
+// has passed (or is NULL). Same due-ness rule as GetDueFeedsBatch, so a failed
+// radar feed backs off instead of being re-read every tick.
 func (q *Queries) GetSyncableRadarFeeds(ctx context.Context) ([]Feed, error) {
 	rows, err := q.db.QueryContext(ctx, getSyncableRadarFeeds)
 	if err != nil {
@@ -184,6 +190,8 @@ func (q *Queries) GetSyncableRadarFeeds(ctx context.Context) ([]Feed, error) {
 			&i.LastSyncStartedAt,
 			&i.LastSyncStatus,
 			&i.SourceRef,
+			&i.NextSyncAt,
+			&i.ConsecutiveFailures,
 		); err != nil {
 			return nil, err
 		}
@@ -217,15 +225,19 @@ const updateFeed = `-- name: UpdateFeed :one
 UPDATE feeds
 SET last_sync_completed_at = COALESCE(?, last_sync_completed_at),
     last_sync_started_at = COALESCE(?, last_sync_started_at),
-    last_sync_status = COALESCE(?, last_sync_status)
+    last_sync_status = COALESCE(?, last_sync_status),
+    next_sync_at = ?,
+    consecutive_failures = ?
 WHERE id = ?
-RETURNING id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref
+RETURNING id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref, next_sync_at, consecutive_failures
 `
 
 type UpdateFeedParams struct {
 	LastSyncCompletedAt sql.NullTime
 	LastSyncStartedAt   sql.NullTime
 	LastSyncStatus      models.FeedSyncStatus
+	NextSyncAt          sql.NullTime
+	ConsecutiveFailures int64
 	ID                  string
 }
 
@@ -234,6 +246,8 @@ func (q *Queries) UpdateFeed(ctx context.Context, arg UpdateFeedParams) (Feed, e
 		arg.LastSyncCompletedAt,
 		arg.LastSyncStartedAt,
 		arg.LastSyncStatus,
+		arg.NextSyncAt,
+		arg.ConsecutiveFailures,
 		arg.ID,
 	)
 	var i Feed
@@ -246,6 +260,8 @@ func (q *Queries) UpdateFeed(ctx context.Context, arg UpdateFeedParams) (Feed, e
 		&i.LastSyncStartedAt,
 		&i.LastSyncStatus,
 		&i.SourceRef,
+		&i.NextSyncAt,
+		&i.ConsecutiveFailures,
 	)
 	return i, err
 }
@@ -256,7 +272,7 @@ VALUES (?, ?, ?)
 ON CONFLICT (user_id, kind) DO UPDATE SET
     user_id = excluded.user_id,
     kind = excluded.kind
-RETURNING id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref
+RETURNING id, user_id, kind, created_at, last_sync_completed_at, last_sync_started_at, last_sync_status, source_ref, next_sync_at, consecutive_failures
 `
 
 type UpsertFeedParams struct {
@@ -277,6 +293,8 @@ func (q *Queries) UpsertFeed(ctx context.Context, arg UpsertFeedParams) (Feed, e
 		&i.LastSyncStartedAt,
 		&i.LastSyncStatus,
 		&i.SourceRef,
+		&i.NextSyncAt,
+		&i.ConsecutiveFailures,
 	)
 	return i, err
 }

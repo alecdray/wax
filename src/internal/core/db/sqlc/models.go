@@ -107,6 +107,8 @@ type Feed struct {
 	LastSyncStartedAt   sql.NullTime
 	LastSyncStatus      models.FeedSyncStatus
 	SourceRef           sql.NullString
+	NextSyncAt          sql.NullTime
+	ConsecutiveFailures int64
 }
 
 type GooseDbVersion struct {
@@ -164,11 +166,13 @@ type TrackPlay struct {
 }
 
 type User struct {
-	ID                  string
-	SpotifyID           string
-	CreatedAt           time.Time
-	DeletedAt           sql.NullTime
-	SpotifyRefreshToken sql.NullString
+	ID                          string
+	SpotifyID                   string
+	CreatedAt                   time.Time
+	DeletedAt                   sql.NullTime
+	SpotifyRefreshToken         sql.NullString
+	SpotifyAccessToken          sql.NullString
+	SpotifyAccessTokenExpiresAt sql.NullTime
 }
 
 type UserAlbumRadar struct {

@@ -10,7 +10,7 @@ CREATE TABLE users (
     spotify_id text not null unique,
     created_at datetime not null default current_timestamp,
     deleted_at datetime
-, spotify_refresh_token text);
+, spotify_refresh_token text, spotify_access_token text, spotify_access_token_expires_at datetime);
 CREATE TABLE artists (
     id text primary key,
     spotify_id text not null unique,
@@ -55,14 +55,6 @@ CREATE TABLE user_artists (
     added_at datetime not null default current_timestamp,
     deleted_at datetime,
     unique(user_id, artist_id)
-);
-CREATE TABLE feeds (
-    id text primary key,
-    user_id text not null references users(id) on delete cascade,
-    kind text not null check(kind in ('spotify', 'spotify_radar')),
-    created_at datetime not null default current_timestamp, last_sync_completed_at datetime, last_sync_started_at datetime, last_sync_status text default 'none' check(last_sync_status in ('none', 'success', 'failure', 'pending')),
-    source_ref text,
-    unique(user_id, kind)
 );
 CREATE TABLE IF NOT EXISTS "album_artists" (
     album_id text not null references albums(id) on delete cascade,
@@ -172,4 +164,15 @@ CREATE TABLE IF NOT EXISTS "album_rating_state" (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, album_id)
+);
+CREATE TABLE IF NOT EXISTS "feeds" (
+    id text primary key,
+    user_id text not null references users(id) on delete cascade,
+    kind text not null check(kind in ('spotify', 'spotify_radar')),
+    created_at datetime not null default current_timestamp,
+    last_sync_completed_at datetime,
+    last_sync_started_at datetime,
+    last_sync_status text default 'none' check(last_sync_status in ('none', 'success', 'failure', 'pending')),
+    source_ref text, next_sync_at datetime, consecutive_failures integer not null default 0,
+    unique(user_id, kind)
 );

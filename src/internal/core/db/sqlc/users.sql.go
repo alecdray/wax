@@ -12,7 +12,7 @@ import (
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, spotify_id) VALUES (?, ?)
-RETURNING id, spotify_id, created_at, deleted_at, spotify_refresh_token
+RETURNING id, spotify_id, created_at, deleted_at, spotify_refresh_token, spotify_access_token, spotify_access_token_expires_at
 `
 
 type CreateUserParams struct {
@@ -29,12 +29,14 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.DeletedAt,
 		&i.SpotifyRefreshToken,
+		&i.SpotifyAccessToken,
+		&i.SpotifyAccessTokenExpiresAt,
 	)
 	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, spotify_id, created_at, deleted_at, spotify_refresh_token FROM users WHERE id = ?
+SELECT id, spotify_id, created_at, deleted_at, spotify_refresh_token, spotify_access_token, spotify_access_token_expires_at FROM users WHERE id = ?
 `
 
 func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
@@ -46,12 +48,14 @@ func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
 		&i.CreatedAt,
 		&i.DeletedAt,
 		&i.SpotifyRefreshToken,
+		&i.SpotifyAccessToken,
+		&i.SpotifyAccessTokenExpiresAt,
 	)
 	return i, err
 }
 
 const getUserBySpotifyId = `-- name: GetUserBySpotifyId :one
-SELECT id, spotify_id, created_at, deleted_at, spotify_refresh_token FROM users WHERE spotify_id = ?
+SELECT id, spotify_id, created_at, deleted_at, spotify_refresh_token, spotify_access_token, spotify_access_token_expires_at FROM users WHERE spotify_id = ?
 `
 
 func (q *Queries) GetUserBySpotifyId(ctx context.Context, spotifyID string) (User, error) {
@@ -63,12 +67,14 @@ func (q *Queries) GetUserBySpotifyId(ctx context.Context, spotifyID string) (Use
 		&i.CreatedAt,
 		&i.DeletedAt,
 		&i.SpotifyRefreshToken,
+		&i.SpotifyAccessToken,
+		&i.SpotifyAccessTokenExpiresAt,
 	)
 	return i, err
 }
 
 const getUsersWithSpotifyToken = `-- name: GetUsersWithSpotifyToken :many
-SELECT id, spotify_id, created_at, deleted_at, spotify_refresh_token FROM users
+SELECT id, spotify_id, created_at, deleted_at, spotify_refresh_token, spotify_access_token, spotify_access_token_expires_at FROM users
 WHERE spotify_refresh_token IS NOT NULL AND deleted_at IS NULL
 `
 
@@ -87,6 +93,8 @@ func (q *Queries) GetUsersWithSpotifyToken(ctx context.Context) ([]User, error) 
 			&i.CreatedAt,
 			&i.DeletedAt,
 			&i.SpotifyRefreshToken,
+			&i.SpotifyAccessToken,
+			&i.SpotifyAccessTokenExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -101,11 +109,28 @@ func (q *Queries) GetUsersWithSpotifyToken(ctx context.Context) ([]User, error) 
 	return items, nil
 }
 
+const setSpotifyAccessToken = `-- name: SetSpotifyAccessToken :exec
+UPDATE users
+SET spotify_access_token = ?, spotify_access_token_expires_at = ?
+WHERE id = ?
+`
+
+type SetSpotifyAccessTokenParams struct {
+	SpotifyAccessToken          sql.NullString
+	SpotifyAccessTokenExpiresAt sql.NullTime
+	ID                          string
+}
+
+func (q *Queries) SetSpotifyAccessToken(ctx context.Context, arg SetSpotifyAccessTokenParams) error {
+	_, err := q.db.ExecContext(ctx, setSpotifyAccessToken, arg.SpotifyAccessToken, arg.SpotifyAccessTokenExpiresAt, arg.ID)
+	return err
+}
+
 const upsertSpotifyUser = `-- name: UpsertSpotifyUser :one
 INSERT INTO users (id, spotify_id, spotify_refresh_token) VALUES (?, ?, ?)
 ON CONFLICT (spotify_id)
 DO UPDATE SET spotify_id = EXCLUDED.spotify_id, spotify_refresh_token = coalesce(EXCLUDED.spotify_refresh_token, spotify_refresh_token)
-RETURNING id, spotify_id, created_at, deleted_at, spotify_refresh_token
+RETURNING id, spotify_id, created_at, deleted_at, spotify_refresh_token, spotify_access_token, spotify_access_token_expires_at
 `
 
 type UpsertSpotifyUserParams struct {
@@ -123,6 +148,8 @@ func (q *Queries) UpsertSpotifyUser(ctx context.Context, arg UpsertSpotifyUserPa
 		&i.CreatedAt,
 		&i.DeletedAt,
 		&i.SpotifyRefreshToken,
+		&i.SpotifyAccessToken,
+		&i.SpotifyAccessTokenExpiresAt,
 	)
 	return i, err
 }

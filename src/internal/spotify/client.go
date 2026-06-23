@@ -17,10 +17,17 @@ const apiOrigin = "https://api.spotify.com"
 // Client owns low-level HTTP calls to the Spotify Web API for endpoints
 // not covered by the vendor SDK. SDK-backed calls flow through the
 // per-user *spotify.Client built by AuthService.
-type Client struct{}
+//
+// Its httpClient's transport is the shared rate-limit guard, so these raw
+// calls and the SDK calls draw on one per-app rate-limit view. A 429 (or an
+// already-open Retry-After window) surfaces as *ErrRateLimited, wrapped by the
+// "request failed" errors below.
+type Client struct {
+	httpClient *http.Client
+}
 
-func NewClient() *Client {
-	return &Client{}
+func NewClient(transport http.RoundTripper) *Client {
+	return &Client{httpClient: &http.Client{Transport: transport}}
 }
 
 // RemoveAlbum removes a single album from the authenticated user's saved
@@ -35,7 +42,7 @@ func (c *Client) RemoveAlbum(ctx contextx.ContextX, accessToken, spotifyId strin
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("request failed: %w", err)
 	}
@@ -64,7 +71,7 @@ func (c *Client) PlaylistFollowed(ctx contextx.ContextX, accessToken, playlistID
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return false, fmt.Errorf("request failed: %w", err)
 	}
@@ -96,7 +103,7 @@ func (c *Client) CreatePlaylist(ctx contextx.ContextX, accessToken, name, descri
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("request failed: %w", err)
 	}
@@ -128,7 +135,7 @@ func (c *Client) GetPlaylistItems(ctx contextx.ContextX, accessToken, playlistID
 		}
 		req.Header.Set("Authorization", "Bearer "+accessToken)
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := c.httpClient.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("request failed: %w", err)
 		}
@@ -195,7 +202,7 @@ func (c *Client) RemovePlaylistItems(ctx contextx.ContextX, accessToken, playlis
 		req.Header.Set("Authorization", "Bearer "+accessToken)
 		req.Header.Set("Content-Type", "application/json")
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := c.httpClient.Do(req)
 		if err != nil {
 			return fmt.Errorf("request failed: %w", err)
 		}
