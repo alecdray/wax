@@ -31,7 +31,8 @@ Feature: Discover
     Given a logged-in user on the discover page with a search value entered and results showing
     When they activate the clear control
     Then the search input is empty
-    And the results panel shows the same empty-query message as a fresh visit
+    And the radar grid returns as the main region, as on a fresh visit
+    And the results panel is hidden
     And the search input is focused, ready for the next keystroke
 
   Scenario: Typing several characters quickly issues a single search after the debounce
@@ -45,22 +46,23 @@ Feature: Discover
     Then a search request fires straight away rather than waiting for the debounce
 
   Scenario: A library change refreshes the discover results panel
-    Given a logged-in user on the discover page
+    Given a logged-in user on the discover page who has searched and sees results
     When a library-change event occurs on the page
     Then the results panel re-fetches and re-renders without a full page reload
 
-  Scenario: A new search result swaps into the same panel and leaves the rest of the page intact
-    Given a logged-in user on the discover page with the radar visible above the search bar
+  Scenario: Searching swaps the radar grid out for the results panel
+    Given a logged-in user on the discover page seeing their radar grid
     When they search for an album
-    Then the new results appear inside the results panel only
-    And the radar above the search bar remains in place
+    Then the new results appear inside the results panel
+    And the radar grid is hidden while the search is active
 
   Scenario: A new search result scrolls the results panel back to the top
     Given a logged-in user on the discover page who has searched and scrolled the results down
     When they run a new search
     Then the results panel is scrolled to the top after the new results swap in
 
-  Scenario: Erasing the query back to empty restores the same empty-query message as a fresh visit
-    Given a logged-in user who has just loaded the discover page and sees the empty-query message
+  Scenario: Erasing the query back to empty restores the radar grid
+    Given a logged-in user who has just loaded the discover page and sees their radar grid
     When they type a query and then erase it back to empty with the keyboard
-    Then the empty-query message reappears in the results panel
+    Then the radar grid returns as the main region
+    And the results panel is hidden

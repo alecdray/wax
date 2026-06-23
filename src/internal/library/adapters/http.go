@@ -814,7 +814,7 @@ func (h *HttpHandler) GetDiscoverRadar(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	views.RadarCarouselFrag(radar, false).Render(r.Context(), w)
+	views.RadarGridFrag(radar, false).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetAlbumActionsModal(w http.ResponseWriter, r *http.Request) {
