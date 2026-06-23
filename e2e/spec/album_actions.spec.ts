@@ -9,12 +9,12 @@ test('Opening the actions modal for a non-library album from a discover search r
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
-  await page.goto('/app/library/discover');
+  await page.goto('/app/library/radar');
 
   // Search for albums by a high-recall artist so we get plenty of hits to
-  // pick from. As in discover.spec.ts we pressSequentially to fire keyup
+  // pick from. As in radar.spec.ts we pressSequentially to fire keyup
   // events for the debounced hx-trigger.
-  await page.getByTestId('discover-page-search-input').pressSequentially('the beatles');
+  await page.getByTestId('radar-page-search-input').pressSequentially('the beatles');
   await expect(page.getByTestId('discover-search-results')).toBeVisible();
 
   // Find the first result that is NOT already in the user's library — only

@@ -430,7 +430,7 @@ func (l *Library) tracks() []TrackDTO {
 }
 
 // DiscoverAlbumState describes whether the caller already has a relationship
-// with an album (used to render Spotify search results in /discover).
+// with an album (used to render the radar page's Spotify search results).
 type DiscoverAlbumState string
 
 const (
@@ -448,7 +448,7 @@ type UserAlbumStateRow struct {
 	State   DiscoverAlbumState
 }
 
-// DiscoverResultDTO is one row in the /discover page's search results.
+// DiscoverResultDTO is one row in the radar page's search results.
 // AlbumID is empty when State == "none" (the album has no wax row yet).
 type DiscoverResultDTO struct {
 	SpotifyID string

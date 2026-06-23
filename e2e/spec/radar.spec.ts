@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginAs } from '../helpers/auth';
 
-// Scenarios from e2e/feat/discover.feature
+// Scenarios from e2e/feat/radar.feature
 
 const userId = process.env.E2E_TEST_USER_ID;
 
@@ -9,26 +9,26 @@ test('Searching Spotify for an album returns matching results', async ({ context
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
-  await page.goto('/app/library/discover');
+  await page.goto('/app/library/radar');
 
-  await expect(page.getByTestId('discover-page-search-input')).toBeVisible();
+  await expect(page.getByTestId('radar-page-search-input')).toBeVisible();
 
   // Typing fires hx-get with a 300ms debounce on the `keyup` event; the
-  // response swaps innerHTML of #discover-results, replacing the empty-query
+  // response swaps innerHTML of #radar-results, replacing the empty-query
   // placeholder with either the results list or a no-hits message. We use
   // pressSequentially (not fill) so real keyup events are emitted, and wait
   // on the observable DOM signal: the results list appearing.
-  await page.getByTestId('discover-page-search-input').pressSequentially('the beatles');
+  await page.getByTestId('radar-page-search-input').pressSequentially('the beatles');
 
   await expect(page.getByTestId('discover-search-results')).toBeVisible();
   await expect(page.getByTestId('discover-search-result-row').first()).toBeVisible();
 });
 
-test('Visiting the discover page shows the radar', async ({ context, page }) => {
+test('Visiting the radar page shows the radar', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
-  await page.goto('/app/library/discover');
+  await page.goto('/app/library/radar');
 
   await expect(page.getByTestId('radar-grid')).toBeVisible();
 
@@ -43,11 +43,11 @@ test('Visiting the discover page shows the radar', async ({ context, page }) => 
   }
 });
 
-test('The discover page offers the Spotify radar inbox control', async ({ context, page }) => {
+test('The radar page offers the Spotify radar inbox control', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
-  await page.goto('/app/library/discover');
+  await page.goto('/app/library/radar');
 
   await expect(page.getByTestId('radar-inbox-control')).toBeVisible();
 
@@ -66,15 +66,15 @@ test('A clear control is offered only while the search has a value', async ({ co
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
-  await page.goto('/app/library/discover');
+  await page.goto('/app/library/radar');
 
-  await expect(page.getByTestId('discover-page-search-input')).toBeVisible();
-  await expect(page.getByTestId('discover-page-search-clear')).not.toBeVisible();
+  await expect(page.getByTestId('radar-page-search-input')).toBeVisible();
+  await expect(page.getByTestId('radar-page-search-clear')).not.toBeVisible();
 
   const query = 'the beatles';
-  const input = page.getByTestId('discover-page-search-input');
+  const input = page.getByTestId('radar-page-search-input');
   await input.pressSequentially(query);
-  await expect(page.getByTestId('discover-page-search-clear')).toBeVisible();
+  await expect(page.getByTestId('radar-page-search-clear')).toBeVisible();
 
   await input.focus();
   for (let i = 0; i < query.length; i++) {
@@ -82,16 +82,16 @@ test('A clear control is offered only while the search has a value', async ({ co
   }
 
   await expect(input).toHaveValue('');
-  await expect(page.getByTestId('discover-page-search-clear')).not.toBeVisible();
+  await expect(page.getByTestId('radar-page-search-clear')).not.toBeVisible();
 });
 
 test('Activating the clear control resets the search to its empty state', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
-  await page.goto('/app/library/discover');
+  await page.goto('/app/library/radar');
 
-  const input = page.getByTestId('discover-page-search-input');
+  const input = page.getByTestId('radar-page-search-input');
   await input.pressSequentially('the beatles');
 
   // Wait until results have swapped in and the radar grid has given up the main
@@ -99,11 +99,11 @@ test('Activating the clear control resets the search to its empty state', async 
   await expect(page.getByTestId('discover-search-results')).toBeVisible();
   await expect(page.getByTestId('radar-grid')).not.toBeVisible();
 
-  await page.getByTestId('discover-page-search-clear').click();
+  await page.getByTestId('radar-page-search-clear').click();
 
   await expect(input).toHaveValue('');
   await expect(page.getByTestId('radar-grid')).toBeVisible();
-  await expect(page.getByTestId('discover-page-results')).not.toBeVisible();
+  await expect(page.getByTestId('radar-page-results')).not.toBeVisible();
   await expect(input).toBeFocused();
 });
 
@@ -111,8 +111,8 @@ test('Typing several characters quickly issues a single search after the debounc
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
-  await page.goto('/app/library/discover');
-  await expect(page.getByTestId('discover-page-search-input')).toBeVisible();
+  await page.goto('/app/library/radar');
+  await expect(page.getByTestId('radar-page-search-input')).toBeVisible();
 
   // Count every search request the page fires so we can assert that a burst of
   // keystrokes collapses into a single network round-trip (the contract of the
@@ -120,17 +120,17 @@ test('Typing several characters quickly issues a single search after the debounc
   // its own request.
   let searchRequests = 0;
   page.on('request', (req) => {
-    if (req.url().includes('/app/library/discover/search')) {
+    if (req.url().includes('/app/library/radar/search')) {
       searchRequests++;
     }
   });
 
   const query = 'beatles';
   const responsePromise = page.waitForResponse((res) =>
-    res.url().includes('/app/library/discover/search') &&
+    res.url().includes('/app/library/radar/search') &&
     res.url().includes(`q=${encodeURIComponent(query)}`),
   );
-  await page.getByTestId('discover-page-search-input').pressSequentially(query);
+  await page.getByTestId('radar-page-search-input').pressSequentially(query);
   await responsePromise;
 
   // The results swap is the observable signal that the debounced request has
@@ -144,8 +144,8 @@ test('Submitting the search bypasses the debounce and fires immediately', async 
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
-  await page.goto('/app/library/discover');
-  const input = page.getByTestId('discover-page-search-input');
+  await page.goto('/app/library/radar');
+  const input = page.getByTestId('radar-page-search-input');
   await expect(input).toBeVisible();
 
   // Type one character — on its own this would be delayed 300ms by the
@@ -158,7 +158,7 @@ test('Submitting the search bypasses the debounce and fires immediately', async 
   await page.keyboard.type('b');
 
   const requestPromise = page.waitForRequest(
-    (req) => req.url().includes('/app/library/discover/search') && req.url().includes('q=b'),
+    (req) => req.url().includes('/app/library/radar/search') && req.url().includes('q=b'),
     { timeout: 250 },
   );
   const start = Date.now();
@@ -170,21 +170,21 @@ test('Submitting the search bypasses the debounce and fires immediately', async 
   expect(elapsed, 'search-event request must be sent before the 300ms debounce').toBeLessThan(300);
 });
 
-test('A library change refreshes the discover results panel', async ({ context, page }) => {
+test('A library change refreshes the search results panel', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
-  await page.goto('/app/library/discover');
+  await page.goto('/app/library/radar');
 
   // Search so the results panel is the active main region.
-  await page.getByTestId('discover-page-search-input').pressSequentially('beatles');
+  await page.getByTestId('radar-page-search-input').pressSequentially('beatles');
   await expect(page.getByTestId('discover-search-results')).toBeVisible();
 
   // The results panel listens for `libraryUpdated` and `radarUpdated` on body
   // and re-fetches its contents. Dispatching the event mirrors what the
   // server does via HX-Trigger after a library- or radar-changing action.
   const responsePromise = page.waitForResponse((res) =>
-    res.url().includes('/app/library/discover/search'),
+    res.url().includes('/app/library/radar/search'),
   );
   await page.evaluate(() => {
     document.body.dispatchEvent(new CustomEvent('libraryUpdated', { bubbles: true }));
@@ -193,7 +193,7 @@ test('A library change refreshes the discover results panel', async ({ context, 
 
   // Re-render leaves the results panel in place, still showing the results for
   // the current query.
-  await expect(page.getByTestId('discover-page-results')).toBeVisible();
+  await expect(page.getByTestId('radar-page-results')).toBeVisible();
   await expect(page.getByTestId('discover-search-results')).toBeVisible();
 });
 
@@ -201,15 +201,15 @@ test('Searching swaps the radar grid out for the results panel', async ({ contex
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
-  await page.goto('/app/library/discover');
+  await page.goto('/app/library/radar');
 
   // Radar grid is the main region on a fresh visit.
   await expect(page.getByTestId('radar-grid')).toBeVisible();
 
-  await page.getByTestId('discover-page-search-input').pressSequentially('beatles');
+  await page.getByTestId('radar-page-search-input').pressSequentially('beatles');
 
   // Results land inside the dedicated panel...
-  const panel = page.getByTestId('discover-page-results');
+  const panel = page.getByTestId('radar-page-results');
   await expect(panel.getByTestId('discover-search-results')).toBeVisible();
 
   // ...and the radar grid yields the main region while the search is active.
@@ -220,17 +220,17 @@ test('A new search result scrolls the results panel back to the top', async ({ c
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
-  await page.goto('/app/library/discover');
+  await page.goto('/app/library/radar');
 
-  const input = page.getByTestId('discover-page-search-input');
+  const input = page.getByTestId('radar-page-search-input');
   await input.pressSequentially('beatles');
   await expect(page.getByTestId('discover-search-results')).toBeVisible();
   await expect(page.getByTestId('discover-search-result-row').first()).toBeVisible();
 
-  const panel = page.getByTestId('discover-page-results');
+  const panel = page.getByTestId('radar-page-results');
 
   // Force the panel into an overflowing layout for the duration of this test
-  // so its scrollTop can move off zero. The hx-swap "scroll:#discover-results:top"
+  // so its scrollTop can move off zero. The hx-swap "scroll:#radar-results:top"
   // directive in the running page targets this element; we just need the
   // element to have somewhere to scroll back from.
   await panel.evaluate((el) => {
@@ -244,7 +244,7 @@ test('A new search result scrolls the results panel back to the top', async ({ c
 
   // Run a new search by appending more characters; wait for the swap to land.
   const responsePromise = page.waitForResponse((res) =>
-    res.url().includes('/app/library/discover/search') && res.url().includes('q=beatles%20s'),
+    res.url().includes('/app/library/radar/search') && res.url().includes('q=beatles%20s'),
   );
   await input.pressSequentially(' s');
   await responsePromise;
@@ -260,12 +260,12 @@ test('Erasing the query back to empty restores the radar grid', async ({ context
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
-  await page.goto('/app/library/discover');
+  await page.goto('/app/library/radar');
 
   // Radar grid is the main region on a fresh visit.
   await expect(page.getByTestId('radar-grid')).toBeVisible();
 
-  const input = page.getByTestId('discover-page-search-input');
+  const input = page.getByTestId('radar-page-search-input');
   const query = 'beatles';
   await input.pressSequentially(query);
   await expect(page.getByTestId('discover-search-results')).toBeVisible();
@@ -281,5 +281,5 @@ test('Erasing the query back to empty restores the radar grid', async ({ context
 
   // The radar grid returns as the main region; the results panel is hidden.
   await expect(page.getByTestId('radar-grid')).toBeVisible();
-  await expect(page.getByTestId('discover-page-results')).not.toBeVisible();
+  await expect(page.getByTestId('radar-page-results')).not.toBeVisible();
 });

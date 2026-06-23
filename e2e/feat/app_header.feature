@@ -6,4 +6,4 @@ Feature: App header
 
   Scenario: The app header appears on every authenticated page
     Given a logged-in user
-    Then the header with the wordmark and feeds control is present on the dashboard, discover, and album-detail pages
+    Then the header with the wordmark and feeds control is present on the dashboard, radar, and album-detail pages

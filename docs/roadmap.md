@@ -10,7 +10,7 @@ Planned features in rough priority order. See each module's README for what's al
 | **Shelves** | Organize albums into named custom shelves |
 | **Stats & Insights** | Analytics across library, listening history, ratings, ranklists, and shelves |
 | **Notifications** | In-app notifications for events (sync, activity) |
-| **Wishlist surfaces** | Wishlist status exists in the data model; dedicated UI surfaces (a wishlist view, add-to-wishlist affordances on discover) need to land |
+| **Wishlist surfaces** | Wishlist status exists in the data model; dedicated UI surfaces (a wishlist view, add-to-wishlist affordances on the radar page) need to land |
 | **Linked Albums** | Connect albums to each other, building a personal music graph |
 | **Library Search** | Search/filter box on the dashboard to find albums in the library by title or artist |
 | **Filter/Sort UX polish** | The chip-based filter and sort UI is functional but visually rough — dialog styling, chip bar layout, and interaction patterns need iteration |

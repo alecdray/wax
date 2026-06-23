@@ -1,0 +1,5 @@
+# The watchlist destination is named Radar; "discover" names only its album-search mechanic
+
+The top-level destination built around a user's radar — the albums they've flagged to listen to later — is named **Radar**, matching its navigation label. The Spotify album-search affordance on that page, used to find new albums to add to the radar, retains the name **discover**.
+
+The page was originally framed around the search and called "Discover," with the radar as a secondary region. In practice the radar is the page's primary, always-present content and the search merely feeds it, so the destination takes the radar's name. "Discover" is kept for the search itself — its results and their in-library/on-radar states — because that word describes finding albums, a narrower thing than the destination. Reusing "radar" for the search too would collide with the established radar concept — the watchlist, its eligibility rules, and its Spotify entry point (ADRs 0004, 0005) — and erase a distinction worth keeping.

@@ -383,7 +383,7 @@ func (s *Service) AddAlbumToRadar(ctx context.Context, userID, albumID string) e
 
 // GetRadarAlbums returns the caller's radar entries as fully-populated
 // AlbumDTOs (artists set; tracks/releases left empty — radar entries have no
-// release rows). Used by the discover page's radar carousel.
+// release rows). Used by the radar page's grid.
 func (s *Service) GetRadarAlbums(ctx context.Context, userID string) ([]AlbumDTO, error) {
 	_, albums, err := s.repo.GetRadarAlbums(ctx, userID)
 	if err != nil {
@@ -546,7 +546,8 @@ func (s *Service) GetAlbumSpotifyID(ctx contextx.ContextX, albumID string) (stri
 
 // GetAlbumActionsResult resolves a Spotify ID into a DiscoverResultDTO with
 // state, AlbumID (when known to wax), title, image, and artists. Used to
-// render the album-actions modal opened from any discover surface.
+// render the album-actions modal opened from any surface showing an
+// out-of-library album.
 //
 // If the album exists in wax (any state), metadata is read from the local DB.
 // Otherwise (state=none), it falls back to fetching from Spotify.

@@ -101,7 +101,7 @@ func (s *Service) SyncSpotifyRadarFeed(ctx contextx.ContextX, feed FeedDTO) (*Fe
 	if errors.Is(ingestErr, spotify.ErrPlaylistNotFound) {
 		// The user removed the playlist (opt-out). That is not a failure — delete
 		// the feed so it disappears cleanly rather than lingering as a failed
-		// entry; the discover control returns to Enable, and re-enabling recreates.
+		// entry; the radar inbox control returns to Enable, and re-enabling recreates.
 		if err := s.repo.DeleteFeed(ctx, feed.ID); err != nil {
 			return nil, fmt.Errorf("failed to delete radar feed after playlist removal: %w", err)
 		}

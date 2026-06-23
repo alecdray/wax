@@ -14,7 +14,7 @@ test('The app header appears on every authenticated page', async ({ context, pag
 
   const paths = [
     '/app/library/dashboard',
-    '/app/library/discover',
+    '/app/library/radar',
     `/app/library/albums/${albumId}`,
   ];
 

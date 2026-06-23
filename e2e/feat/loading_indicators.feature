@@ -11,11 +11,11 @@ Feature: Loading indicators
 
   Scenario: Discover search results region carries a loading overlay
     Given I am logged in
-    When I visit the discover page
-    Then the discover results region contains a region overlay element
+    When I visit the radar page
+    Then the search results region contains a region overlay element
 
   Scenario: Add-to-library button declares the disable-on-request contract
-    Given I am logged in and on the discover page
+    Given I am logged in and on the radar page
     When I search for an album not already in my library
     And I open the album actions modal for that album
     Then the primary action button has the hx-disabled-elt="this" attribute

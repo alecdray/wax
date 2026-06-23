@@ -8,7 +8,7 @@ import (
     "github.com/alecdray/wax/src/internal/library"
 )
 
-type DiscoverPageProps struct {
+type RadarPageProps struct {
     RadarAlbums  []library.AlbumDTO
     Query        string
     SearchResults []library.DiscoverResultDTO
@@ -26,16 +26,20 @@ func jsString(s string) string {
     return string(b)
 }
 
-templ DiscoverPage(props DiscoverPageProps) {
+// RadarPage is the user's radar destination: their watchlist grid plus a Spotify
+// album search to add to it. The search affordance is the "discover" mechanic —
+// its results, DTOs, and testids keep that name (see ADR 0008); the page itself
+// is the radar.
+templ RadarPage(props RadarPageProps) {
     @templates.PageLayoutComponent(templates.PageLayoutProps{
-        Title:     templates.CreatePageTitle("Discover"),
-        ActiveNav: "discover",
+        Title:     templates.CreatePageTitle("Radar"),
+        ActiveNav: "radar",
     }) {
         // Fill the viewport above the fixed h-14 (3.5rem) bottom nav (not the whole
         // viewport, or the page double-scrolls). Keeps the grid/results the only
         // scrollers. (Safe-area inset under the bar is a minor over-reach; verify
         // on a notched device when the app can run.)
-        <div data-testid="discover-page" class="w-full h-[calc(100dvh-3.5rem)] flex flex-col" hx-history="false">
+        <div data-testid="radar-page" class="w-full h-[calc(100dvh-3.5rem)] flex flex-col" hx-history="false">
             @LibraryAppHeaderFrag(props.Feeds)
             <div
                 class="flex flex-col py-4 gap-4 items-center w-full flex-1 min-h-0"
@@ -48,19 +52,19 @@ templ DiscoverPage(props DiscoverPageProps) {
                     <div class="relative w-full max-w-3xl min-w-0">
                         <input
                             x-ref="input"
-                            id="discover-search-input"
+                            id="radar-search-input"
                             name="q"
                             type="search"
                             class="input input-bordered w-full pr-10"
                             placeholder="Search Spotify for albums..."
                             value={ props.Query }
                             autocomplete="off"
-                            hx-get="/app/library/discover/search"
+                            hx-get="/app/library/radar/search"
                             hx-trigger="keyup changed delay:300ms, search"
-                            hx-target="#discover-results"
-                            hx-swap="innerHTML scroll:#discover-results:top"
-                            hx-indicator="#discover-results-region"
-                            data-testid="discover-page-search-input"
+                            hx-target="#radar-results"
+                            hx-swap="innerHTML scroll:#radar-results:top"
+                            hx-indicator="#radar-results-region"
+                            data-testid="radar-page-search-input"
                             @input="value = $event.target.value"
                             @search="value = $event.target.value"
                         />
@@ -70,7 +74,7 @@ templ DiscoverPage(props DiscoverPageProps) {
                             x-cloak
                             class="absolute inset-y-0 right-0 flex items-center justify-center w-10 text-subtle hover:text-default cursor-pointer"
                             aria-label="Clear search"
-                            data-testid="discover-page-search-clear"
+                            data-testid="radar-page-search-clear"
                             @click="$refs.input.value = ''; value = ''; $refs.input.dispatchEvent(new Event('search')); $refs.input.focus()"
                         >
                             @templates.Icon(templates.IconProps{Name: "x-circle-fill"})
@@ -86,7 +90,7 @@ templ DiscoverPage(props DiscoverPageProps) {
                     x-show="value.length === 0"
                     x-cloak
                     class="w-full flex flex-col gap-2 flex-1 min-h-0 px-4"
-                    data-testid="discover-radar-region"
+                    data-testid="radar-region"
                 >
                     <div class="px-1 flex-shrink-0">
                         <span class="text-xs font-semibold uppercase tracking-widest text-default">On Radar</span>
@@ -97,21 +101,21 @@ templ DiscoverPage(props DiscoverPageProps) {
                 </div>
                 // Search results — shown on demand, only while a query is present.
                 <div
-                    id="discover-results-region"
+                    id="radar-results-region"
                     x-show="value.length > 0"
                     x-cloak
                     class="relative w-full max-w-3xl flex-1 min-h-0 px-4"
                 >
                     <div
-                        id="discover-results"
+                        id="radar-results"
                         class="h-full overflow-y-auto"
-                        data-testid="discover-page-results"
-                        hx-get="/app/library/discover/search"
-                        hx-include="#discover-search-input"
+                        data-testid="radar-page-results"
+                        hx-get="/app/library/radar/search"
+                        hx-include="#radar-search-input"
                         hx-trigger="radarUpdated from:body, libraryUpdated from:body"
                         hx-target="this"
                         hx-swap="innerHTML"
-                        hx-indicator="#discover-results-region"
+                        hx-indicator="#radar-results-region"
                     >
                         @DiscoverSearchResultsFrag(props.SearchResults, props.Query)
                     </div>

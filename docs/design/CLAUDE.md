@@ -19,7 +19,7 @@ Before listing concrete names, ask: *if a new instance is added next month, will
 ### What's not OK
 
 - *"Primitives like `layout`, `navbar`, `modal`, `tooltip`, ..."* — a roster of current instances.
-- *"Pages: dashboard, album_detail, discover, ..."* — a list of current module pages.
+- *"Pages: dashboard, album_detail, radar, ..."* — a list of current module pages.
 - *"Theme tokens: `--color-primary`, `--color-accent`, `--color-base-100`, ..."* — a list that rots as tokens are added.
 
 For these, write conceptually (*"any primitive in `core/templates/`"*, *"any page templ in a module's `adapters/`"*, *"the theme tokens defined in `static/src/main.css`"*) and let the live source be the registry.

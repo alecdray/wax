@@ -38,7 +38,7 @@ templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 					} else {
 						<button
 							type="button"
-							hx-get={ fmt.Sprintf("/app/library/discover/album-menu?spotifyId=%s", album.SpotifyID) }
+							hx-get={ fmt.Sprintf("/app/library/radar/album-menu?spotifyId=%s", album.SpotifyID) }
 							hx-swap="none"
 							class="flex flex-col items-center gap-1 hover-fade-out w-26 cursor-pointer"
 							data-testid="carousel-strip-discover-card"

@@ -87,7 +87,7 @@ templ albumActionsModalContent(result library.DiscoverResultDTO) {
                     <button
                         type="button"
                         class="btn btn-sm btn-primary btn-busy"
-                        hx-post={ fmt.Sprintf("/app/library/discover/radar?spotifyId=%s", result.SpotifyID) }
+                        hx-post={ fmt.Sprintf("/app/library/radar/grid?spotifyId=%s", result.SpotifyID) }
                         hx-swap="none"
                         hx-disabled-elt="this"
                         hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
