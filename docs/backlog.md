@@ -54,6 +54,12 @@ When the shared Spotify guard is paused ([ADR 0006](adr/0006-spotify-rate-limit-
 
 Next: decide the app-wide transient-error display mechanism (a global `htmx:responseError` listener that raises a toast keyed off the 429, or the response-targets extension) and render a "Spotify is rate-limiting us, try again shortly" toast. This is a cross-cutting error-UX decision, not Spotify-specific, so it should be designed once for all transient errors.
 
+## `auth` module is missing its archetype-required README
+
+The `auth` domain module has `service.go` and `CLAUDE.md` but no `README.md`, which the domain-module archetype requires. Pre-existing on `main`; surfaced by the audit during the Spotify rate-limit branch (which added `user/README.md` but left `auth` untouched, since it did not change auth's behaviour).
+
+Next: write `auth/README.md` covering the module's responsibility — JWT issuance, login orchestration, and the Spotify OAuth callback flow.
+
 ## `core/CLAUDE.md` enumerates sub-packages (exhaustive-list rot)
 
 `src/internal/core/CLAUDE.md` lists every `core/*` sub-package (app, contextx, cryptox, db, httpx, sqlx, task, templates, timex, utils) under "Sub-packages". This is the exact "no exhaustive lists" violation that `docs/architecture/CLAUDE.md` warns against — the list goes stale silently the moment a sub-package is added or renamed. Pre-existing on `main`; surfaced by the docs-audit during the Spotify rate-limit branch.
