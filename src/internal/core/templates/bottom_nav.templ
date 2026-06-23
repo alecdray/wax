@@ -1,0 +1,68 @@
+package templates
+
+// BottomNav is the app's primary navigation chrome: a fixed bottom bar shown on
+// every authenticated page and at every viewport size (ADR 0007). It is a
+// domain-free primitive — `active` names the current top-level destination
+// ("library" | "discover" | ""), nothing more. The shared layout renders it.
+//
+// Because the bar is fixed, scrolling page content must reserve trailing space
+// for it (the bar's height plus the iOS safe-area inset); that spacing is set at
+// each page's call site, not here.
+templ BottomNav(active string) {
+	<nav
+		data-testid="bottom-nav"
+		class="fixed inset-x-0 bottom-0 z-20 bg-base-100 border-t border-base-300 pb-[env(safe-area-inset-bottom)]"
+	>
+		<div class="max-w-md mx-auto grid grid-cols-3 h-14">
+			@bottomNavTab("library", active == "library", templ.SafeURL("/app/library/dashboard"), "collection", "Library")
+			@bottomNavTab("discover", active == "discover", templ.SafeURL("/app/library/discover"), "compass", "Discover")
+			@bottomNavProfileTab()
+		</div>
+	</nav>
+}
+
+// bottomNavTab is one destination tab. Active state is marked semantically with
+// aria-current="page" and a filled icon at full text strength; the testid is
+// stable across both states (see docs/design/testids.md "Selected state").
+templ bottomNavTab(role string, active bool, href templ.SafeURL, icon string, label string) {
+	if active {
+		<a
+			href={ href }
+			aria-current="page"
+			data-testid={ "bottom-nav-" + role }
+			class="flex flex-col items-center justify-center gap-0.5 text-xl text-default"
+		>
+			@Icon(IconProps{Name: icon, Style: IconStyleFill})
+			<span class="text-xs font-medium">{ label }</span>
+		</a>
+	} else {
+		<a
+			href={ href }
+			data-testid={ "bottom-nav-" + role }
+			class="flex flex-col items-center justify-center gap-0.5 text-xl text-muted hover-fade-in"
+		>
+			@Icon(IconProps{Name: icon, Style: IconStyleOutline})
+			<span class="text-xs">{ label }</span>
+		</a>
+	}
+}
+
+// bottomNavProfileTab is the account menu. It opens upward (dropdown-top) and
+// holds the account actions. (Brand identity — the wordmark — lives in the
+// top app header, not here.)
+templ bottomNavProfileTab() {
+	<div class="dropdown dropdown-top dropdown-end flex">
+		<div
+			tabindex="0"
+			role="button"
+			data-testid="bottom-nav-profile"
+			class="flex flex-col items-center justify-center gap-0.5 w-full text-xl text-muted hover-fade-in cursor-pointer"
+		>
+			@Icon(IconProps{Name: "person-circle"})
+			<span class="text-xs">Profile</span>
+		</div>
+		<ul tabindex="0" class="dropdown-content z-[1] menu menu-compact bg-base-100 rounded-box w-40 shadow-xl border border-base-300 mb-2 mr-2">
+			<li><a href="/logout" class="text-xs" data-testid="bottom-nav-logout">Logout</a></li>
+		</ul>
+	</div>
+}

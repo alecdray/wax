@@ -8,6 +8,10 @@ const port = process.env.PORT || '4691';
 export default defineConfig({
   testDir: './e2e/spec',
   fullyParallel: false,
+  // One worker: specs share a single SQLite DB with no per-test isolation, so
+  // running spec files across parallel workers lets rating/library tests race on
+  // the same user's state. Serial execution keeps the suite deterministic.
+  workers: 1,
   retries: 0,
   use: {
     baseURL: `http://127.0.0.1:${port}`,

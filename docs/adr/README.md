@@ -12,6 +12,7 @@ Short entries that capture **why** a decision was made, when the rationale would
 | [0004](0004-spotify-radar-playlist-entry.md) | A dedicated Spotify playlist is the radar's Spotify-side entry point | Albums reach the radar from inside Spotify via an opt-in, Wax-managed playlist; a periodic sync derives albums from its tracks, adds them, and removes only the tracks it ingested. |
 | [0005](0005-radar-eligibility-excludes-only-owned-wishlisted.md) | Radar eligibility excludes only owned and wishlisted albums | An album is radar-eligible unless owned or wishlisted; a `removed` album can return to the radar, aligning the implementation with the documented "not in the library" definition. |
 | [0006](0006-spotify-rate-limit-guard.md) | Spotify calls flow through a shared rate-limit guard that honors Retry-After | One process-wide guard paces all Spotify calls and pauses them for the `Retry-After` window on a 429; failed syncs back off, user actions fail fast while paused, and the access token is cached until expiry. |
+| [0007](0007-bottom-nav-all-viewports.md) | Navigation is a bottom bar on all viewports | A single fixed bottom bar replaces the top header's navigation on every viewport incl. desktop; it carries the top-level destinations plus an account menu and is a domain-free layout-owned primitive, while a slim library-owned top header keeps the wordmark and feed sync-status visible on every authenticated page. |
 
 ## Format
 

@@ -1,17 +1,19 @@
 package templates
 
 type PageLayoutProps struct {
-  Title  string
-  Navbar templ.Component
+  Title string
+  // ActiveNav names the current top-level destination ("library" | "discover").
+  // Leave empty for chrome-less pages (e.g. login) to suppress the bottom nav.
+  ActiveNav string
 }
 
 templ PageLayoutComponent(props PageLayoutProps) {
   @RootComponent(RootProps{
     Title: props.Title,
   }) {
-    if props.Navbar != nil {
-      @props.Navbar
-    }
     { children... }
+    if props.ActiveNav != "" {
+      @BottomNav(props.ActiveNav)
+    }
   }
 }

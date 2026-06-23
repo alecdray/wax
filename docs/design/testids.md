@@ -39,6 +39,10 @@ Two narrow exceptions:
 
 Conditional branches (`if`/`else`/`switch` where exactly one root renders) are not multi-root — they are one root that varies by branch, and each branch gets its own variant postfix.
 
+## Selected state
+
+Active / selected state — the current nav tab, a chosen option — is marked semantically with `aria-current` (`page` for navigation, `true` otherwise), not with a `-active` testid variant. The element keeps one stable testid across both states and tests assert the state through the attribute. The branch-variant rule above is for genuinely different rendered roots, not for one element toggling selected.
+
 ## Out-of-band swap targets
 
 OOB swap fragments don't define their own HTML — they compose a shared region templ. The testid lives on that region in exactly one place, and is inherited by both the initial render and the OOB swap. See [oob-swaps.md](oob-swaps.md).

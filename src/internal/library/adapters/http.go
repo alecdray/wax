@@ -340,7 +340,15 @@ func (h *HttpHandler) GetAlbumDetailPage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	views.AlbumDetailPage(*album).Render(r.Context(), w)
+	// Feeds drive the app header's sync-status control, shown on every
+	// authenticated library page.
+	feeds, err := h.feedService.GetUsersFeeds(ctx, userId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	views.AlbumDetailPage(*album, feeds).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) DeleteAlbum(w http.ResponseWriter, r *http.Request) {

@@ -14,7 +14,7 @@ Use semantic token names in markup — never hex literals, never `--color-*` var
 
 Wax uses **Bootstrap Icons** (MIT, ~2000 icons) as its single icon source. The vendored CSS and font live under `static/`; the layout primitive loads them. All icons in the app are emitted by the single `Icon` primitive in `core/templates/icons.templ` — call sites pass the BI catalog name (without the `bi-` prefix) and an optional `IconStyle` (Outline or Fill). Sizing comes from the parent's `text-{size}`; color comes from the parent's text color (BI inherits `currentColor`).
 
-**Outline / fill convention.** Outline is the default presentation; Fill marks the current page or selected state. Used wherever a UI surface has a paired notion of "this one vs the others" (today: the nav header). Most icons are decorative or single-meaning — for those, leave `Style` at its default.
+**Outline / fill convention.** Outline is the default presentation; Fill marks the current page or selected state. Used wherever a UI surface has a paired notion of "this one vs the others" (today: the active tab in the bottom nav, which also carries `aria-current="page"`). Most icons are decorative or single-meaning — for those, leave `Style` at its default.
 
 **Single-variant icons.** Some BI icons exist in only one style (`vinyl`, `cassette`, `arrow-repeat`, etc.). Check BI's catalog before passing `Fill` for an icon name; if no `-fill` variant exists, omit the prop.
 

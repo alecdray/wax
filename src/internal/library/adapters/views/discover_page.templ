@@ -28,12 +28,15 @@ func jsString(s string) string {
 
 templ DiscoverPage(props DiscoverPageProps) {
     @templates.PageLayoutComponent(templates.PageLayoutProps{
-        Title:  templates.CreatePageTitle("Discover"),
-        Navbar: LibraryHeaderBarFrag(HeaderBarProps{Active: "discover", ShowFeeds: true, Feeds: props.Feeds}),
+        Title:     templates.CreatePageTitle("Discover"),
+        ActiveNav: "discover",
     }) {
-        // Fill the viewport below the sticky h-11 navbar (not the whole viewport,
-        // or the page double-scrolls). Keeps the grid/results the only scrollers.
-        <div data-testid="discover-page" class="w-full h-[calc(100dvh-2.75rem)] flex flex-col" hx-history="false">
+        // Fill the viewport above the fixed h-14 (3.5rem) bottom nav (not the whole
+        // viewport, or the page double-scrolls). Keeps the grid/results the only
+        // scrollers. (Safe-area inset under the bar is a minor over-reach; verify
+        // on a notched device when the app can run.)
+        <div data-testid="discover-page" class="w-full h-[calc(100dvh-3.5rem)] flex flex-col" hx-history="false">
+            @LibraryAppHeaderFrag(props.Feeds)
             <div
                 class="flex flex-col py-4 gap-4 items-center w-full flex-1 min-h-0"
                 x-data={ "{ value: " + jsString(props.Query) + " }" }

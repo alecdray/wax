@@ -28,9 +28,9 @@ Next: when a third backfill is on the horizon, pick a convention (probably the c
 
 ## E2E suite SQLite contention / shared-test-data flakiness
 
-Running `task test/e2e` at the default (multi-worker) parallelism intermittently fails with `database is locked` because spec files run in parallel against one SQLite DB while helpers issue direct `sqlite3` CLI writes (no `busy_timeout`/WAL on the app connection; many specs share one test album/user). This is pre-existing and orthogonal to feature work.
+Specs share a single SQLite DB with no per-test isolation, and helpers issue direct `sqlite3` CLI writes (no `busy_timeout`/WAL on the app connection; many specs share one test album/user). Run across parallel workers the suite both deadlocks (`database is locked`) and races rating/library tests on the same user's state. `playwright.config.ts` now pins `workers: 1`, which makes the suite deterministic — but only by giving up parallelism; the underlying lack of isolation remains.
 
-Next: consider enabling WAL + `busy_timeout` on the SQLite DSN in `core/db`, setting `workers: 1` (or sharding) in `playwright.config.ts`, or isolating per-spec test data. The suite passes deterministically at `--workers=1`.
+Next: to restore parallelism, enable WAL + `busy_timeout` on the SQLite DSN in `core/db` and isolate per-spec test data (or shard a DB per worker), then lift the `workers: 1` pin. Until then, serial is the safe default.
 
 ## Migrate existing raw `HX-Trigger` header writes to `httpx.SetHXTrigger`
 

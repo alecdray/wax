@@ -7,7 +7,7 @@ Feature: Auth edges
 
   Scenario: Logged-in user logs out and returns to the login page
     Given a logged-in user is on the library dashboard
-    When they open the user menu and click "Logout"
+    When they open the Profile menu and click "Logout"
     Then they are returned to the login page
 
   Scenario: Unauthenticated user is shown the unauthorized page on a protected route
