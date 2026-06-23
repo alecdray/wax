@@ -6,7 +6,7 @@ This directory is the **composition root** of the application. There is exactly 
 
 - Build all services in `NewServices(app, db)` (manual DI).
 - Set up the root `*httpx.Mux` and any sub-muxes (e.g. authenticated `/app/` sub-mux with JWT middleware, mounted via `rootMux.Use("/app/", appMux)`).
-- Register cron tasks with the `core/task` task manager.
+- Register cron tasks with the `core/task` task manager. The Spotify-polling crons are registered **only when `Env == EnvProd`** — non-prod instances share prod's Spotify rate-limit budget, so local/dev rely on manual (ad-hoc) syncs instead.
 - Call each domain module's `adapters.RegisterRoutes(mux, handler)` to register routes — one call per module.
 - Run lifecycle: open DB, start task manager, start HTTP listener, handle shutdown.
 

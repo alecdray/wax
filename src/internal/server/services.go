@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/alecdray/wax/src/internal/auth"
-	"github.com/alecdray/wax/src/internal/core/app"
+	appConfig "github.com/alecdray/wax/src/internal/core/app"
 	"github.com/alecdray/wax/src/internal/core/db"
 	"github.com/alecdray/wax/src/internal/core/task"
 	"github.com/alecdray/wax/src/internal/discogs"
@@ -40,7 +40,7 @@ type services struct {
 	auth             *auth.Service
 }
 
-func NewServices(app app.App, db *db.DB) *services {
+func NewServices(app appConfig.App, db *db.DB) *services {
 	s := &services{}
 
 	s.taskManager = task.NewTaskManager(db, slog.Default())
@@ -84,9 +84,6 @@ func NewServices(app app.App, db *db.DB) *services {
 	s.spotify = spotify.NewService(s.user, s.spotifyAuth)
 
 	s.listeningHistory = listeninghistory.NewService(db, s.spotify)
-	s.taskManager.RegisterCronTask(
-		listeninghistory.NewSyncListeningHistoryTask(s.listeningHistory),
-	)
 
 	s.tags = tags.NewService(db)
 
@@ -97,14 +94,23 @@ func NewServices(app app.App, db *db.DB) *services {
 	s.library = library.NewService(db, s.spotify, s.listeningHistory, s.tags, s.notes, s.review)
 
 	s.feed = feed.NewService(db, s.spotify, s.library)
-	s.taskManager.RegisterCronTask(
-		feed.NewSyncStaleSpotifyFeedsTask(s.feed),
-	)
-	s.taskManager.RegisterCronTask(
-		feed.NewSyncStaleSpotifyRadarFeedsTask(s.feed),
-	)
 
 	s.auth = auth.NewService(s.spotifyAuth, s.user, s.feed)
+
+	// Cron tasks poll the Spotify Web API. Every non-prod instance shares the
+	// same Spotify app credentials and therefore the same rate-limit budget, so
+	// only prod runs them — local/dev rely on manual (ad-hoc) syncs instead.
+	if app.Config().Env == appConfig.EnvProd {
+		s.taskManager.RegisterCronTask(
+			listeninghistory.NewSyncListeningHistoryTask(s.listeningHistory),
+		)
+		s.taskManager.RegisterCronTask(
+			feed.NewSyncStaleSpotifyFeedsTask(s.feed),
+		)
+		s.taskManager.RegisterCronTask(
+			feed.NewSyncStaleSpotifyRadarFeedsTask(s.feed),
+		)
+	}
 
 	return s
 }
