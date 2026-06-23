@@ -11,7 +11,7 @@ test('Triggering a feed sync from the dashboard shows a syncing indicator', asyn
   await loginAs(context, userId!);
   await page.goto('/app/library/dashboard');
 
-  // Open the feeds dropdown from the header.
+  // Open the feeds dropdown — the feeds control in the app header.
   await page.getByTestId('feeds-dropdown-button').click();
   const dropdown = page.getByTestId('feeds-dropdown-content');
   await expect(dropdown).toBeVisible();

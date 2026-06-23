@@ -11,9 +11,9 @@ test('Logged-in user logs out and returns to the login page', async ({ context, 
   await loginAs(context, userId!);
   await page.goto('/app/library/dashboard');
 
-  // Open the user menu in the header, then click the logout entry.
-  await page.getByTestId('library-header-bar-user-menu').click();
-  const logout = page.getByTestId('library-header-bar-logout');
+  // Open the Profile menu in the bottom nav, then click the logout entry.
+  await page.getByTestId('bottom-nav-profile').click();
+  const logout = page.getByTestId('bottom-nav-logout');
   await expect(logout).toBeVisible();
   await logout.click();
 
