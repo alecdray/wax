@@ -77,6 +77,8 @@ func NewServices(app app.App, db *db.DB) *services {
 		spotifyauth.ScopeUserLibraryRead,
 		spotifyauth.ScopeUserLibraryModify,
 		spotifyauth.ScopeUserReadRecentlyPlayed,
+		spotifyauth.ScopePlaylistReadPrivate,
+		spotifyauth.ScopePlaylistModifyPrivate,
 	)
 
 	s.spotify = spotify.NewService(s.user, s.spotifyAuth)
@@ -97,6 +99,9 @@ func NewServices(app app.App, db *db.DB) *services {
 	s.feed = feed.NewService(db, s.spotify, s.library)
 	s.taskManager.RegisterCronTask(
 		feed.NewSyncStaleSpotifyFeedsTask(s.feed),
+	)
+	s.taskManager.RegisterCronTask(
+		feed.NewSyncStaleSpotifyRadarFeedsTask(s.feed),
 	)
 
 	s.auth = auth.NewService(s.spotifyAuth, s.user, s.feed)

@@ -36,14 +36,15 @@ WHERE user_id = ?
   AND album_id = ?
   AND status = 'owned';
 
--- name: HasAnyUserReleaseForAlbum :one
--- Reports whether the user has any user_release row for the album, regardless
--- of status. Used to gate radar adds: radar is strictly pre-decision, so any
--- existing decision (owned, wishlist, removed) disqualifies the album.
+-- name: HasOwnedOrWishlistedReleaseForAlbum :one
+-- Reports whether the user currently owns or wishlists the album, i.e. it is in
+-- the library. Used to gate radar adds (ADR 0005): owned/wishlisted albums are
+-- not radar-eligible, but a `removed` album is and so does not count here.
 SELECT EXISTS (
     SELECT 1 FROM user_releases ur
     JOIN releases r ON r.id = ur.release_id
     WHERE ur.user_id = ? AND r.album_id = ?
+      AND ur.status IN ('owned', 'wishlist')
 ) AS has_release;
 
 -- name: GetWishlistReleases :many

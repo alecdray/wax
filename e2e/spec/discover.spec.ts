@@ -43,6 +43,25 @@ test('Visiting the discover page shows the radar', async ({ context, page }) => 
   }
 });
 
+test('The discover page offers the Spotify radar inbox control', async ({ context, page }) => {
+  expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
+
+  await loginAs(context, userId!);
+  await page.goto('/app/library/discover');
+
+  await expect(page.getByTestId('radar-inbox-control')).toBeVisible();
+
+  // The control is in one of two states depending on whether this user has
+  // already opted in: the enable button, or a link to their radar playlist.
+  const enable = page.getByTestId('radar-inbox-enable');
+  const link = page.getByTestId('radar-inbox-link');
+  if ((await enable.count()) > 0) {
+    await expect(enable).toBeVisible();
+  } else {
+    await expect(link).toBeVisible();
+  }
+});
+
 test('A clear control is offered only while the search has a value', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 

@@ -108,5 +108,11 @@ func (h *HttpHandler) AuthorizeSpotify(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx = ctx.WithApp(a)
 
-	http.Redirect(w, r.WithContext(ctx), "/", http.StatusSeeOther)
+	// If this (re)auth was started by an action that needed a scope (e.g.
+	// enabling the radar inbox), return the user to where they began.
+	dest := "/"
+	if returnTo := httpx.TakePostAuthRedirect(w, r); returnTo != "" {
+		dest = returnTo
+	}
+	http.Redirect(w, r.WithContext(ctx), dest, http.StatusSeeOther)
 }

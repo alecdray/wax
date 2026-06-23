@@ -14,6 +14,10 @@ Feature: Discover
     When they navigate to the discover page
     Then they see their radar — either the albums currently on it or an empty-state message inviting them to add some
 
+  Scenario: The discover page offers the Spotify radar inbox control
+    Given a logged-in user on the discover page
+    Then the radar inbox control is shown — either an enable button or a link to their radar playlist
+
   Scenario: A clear control is offered only while the search has a value
     Given a logged-in user on the discover page
     When they have not yet typed anything

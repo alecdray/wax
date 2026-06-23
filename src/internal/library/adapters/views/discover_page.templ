@@ -4,6 +4,7 @@ import (
     "encoding/json"
 
     "github.com/alecdray/wax/src/internal/core/templates"
+    "github.com/alecdray/wax/src/internal/feed"
     "github.com/alecdray/wax/src/internal/library"
 )
 
@@ -11,6 +12,10 @@ type DiscoverPageProps struct {
     RadarAlbums  []library.AlbumDTO
     Query        string
     SearchResults []library.DiscoverResultDTO
+    // RadarInboxPlaylistID is the user's radar inbox playlist id, or "" if the
+    // Spotify radar inbox is not enabled.
+    RadarInboxPlaylistID string
+    Feeds                []feed.FeedDTO
 }
 
 func jsString(s string) string {
@@ -24,12 +29,15 @@ func jsString(s string) string {
 templ DiscoverPage(props DiscoverPageProps) {
     @templates.PageLayoutComponent(templates.PageLayoutProps{
         Title:  templates.CreatePageTitle("Discover"),
-        Navbar: LibraryHeaderBarFrag(HeaderBarProps{Active: "discover"}),
+        Navbar: LibraryHeaderBarFrag(HeaderBarProps{Active: "discover", ShowFeeds: true, Feeds: props.Feeds}),
     }) {
         <div data-testid="discover-page" class="w-full h-dvh flex flex-col" hx-history="false">
             <div class="flex flex-col py-4 gap-6 items-center w-full flex-1 min-h-0">
                 <div class="w-full flex flex-col gap-1 flex-shrink-0 px-4">
-                    <span class="text-xs font-semibold uppercase tracking-widest text-default px-1">On Radar</span>
+                    <div class="flex items-center justify-between gap-2 px-1">
+                        <span class="text-xs font-semibold uppercase tracking-widest text-default">On Radar</span>
+                        @RadarInboxControlFrag(props.RadarInboxPlaylistID, "")
+                    </div>
                     @RadarCarouselFrag(props.RadarAlbums, false)
                 </div>
                 <div class="w-full max-w-3xl flex flex-col gap-3 flex-1 min-h-0 px-4">

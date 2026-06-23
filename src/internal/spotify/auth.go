@@ -33,6 +33,15 @@ func NewAuthService(clientID, clientSecret, redirectURI string, scopes ...string
 	}
 }
 
+// AuthURLForcingConsent returns the OAuth authorization URL with show_dialog=true,
+// forcing Spotify to display the consent screen. Without this, Spotify silently
+// re-uses a user's existing authorization and never grants scopes added since
+// then (e.g. the playlist scopes the radar inbox needs), so the refreshed token
+// keeps the old, narrower scope set.
+func (auth *AuthService) AuthURLForcingConsent(state string) string {
+	return auth.AuthURL(state, spotifyauth.ShowDialog)
+}
+
 func (auth *AuthService) GetClientFromCallback(ctx contextx.ContextX, state string, r *http.Request) (*spotify.Client, error) {
 	token, err := auth.Token(ctx, state, r)
 	if err != nil {

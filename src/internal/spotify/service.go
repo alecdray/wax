@@ -1,14 +1,64 @@
 package spotify
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
+	"github.com/alecdray/wax/src/internal/core/app"
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/user"
 
 	spotify "github.com/zmb3/spotify/v2"
 )
+
+// Radar inbox playlist identity. The playlist is private and Wax-managed.
+const (
+	radarPlaylistName        = "wax radar inbox"
+	radarPlaylistDescription = "Add albums here to send them to your wax radar."
+)
+
+// qualifiedRadarPlaylistName returns the radar inbox playlist name, suffixed with
+// the environment for non-prod so a Spotify account connected to both a local/dev
+// instance and prod gets distinct playlists (and find-or-create matches the right
+// one) rather than colliding on a single "wax radar".
+func qualifiedRadarPlaylistName(ctx contextx.ContextX) string {
+	a, err := ctx.App()
+	if err != nil || a.Config().Env == app.EnvProd {
+		return radarPlaylistName
+	}
+	return fmt.Sprintf("%s (%s)", radarPlaylistName, a.Config().Env)
+}
+
+// ErrPlaylistNotFound is returned by GetPlaylistItems when the playlist no
+// longer exists on Spotify (HTTP 404) — e.g. the user deleted it.
+var ErrPlaylistNotFound = errors.New("spotify playlist not found")
+
+// ErrInsufficientScope is returned when Spotify rejects a request for lack of a
+// granted scope (HTTP 403) — e.g. a user connected before playlist scopes were
+// requested tries to create the radar playlist. The caller re-authenticates.
+var ErrInsufficientScope = errors.New("spotify request denied for insufficient scope")
+
+// isInsufficientScope reports whether err is specifically a Spotify
+// missing-scope rejection — a 403 whose message mentions scope. Other 403s
+// ("Forbidden", app/account restrictions) are NOT scope problems and must not
+// be treated as re-authable, or the caller loops the user through OAuth forever.
+func isInsufficientScope(err error) bool {
+	var spotifyErr spotify.Error
+	return errors.As(err, &spotifyErr) &&
+		spotifyErr.Status == http.StatusForbidden &&
+		strings.Contains(strings.ToLower(spotifyErr.Message), "scope")
+}
+
+// PlaylistItem is a minimal view of one track in a playlist: the track's own id
+// (used to remove it) and the spotify id of the album it belongs to. AlbumSpotifyID
+// is empty for local files or tracks unavailable in the market.
+type PlaylistItem struct {
+	TrackID        string
+	AlbumSpotifyID string
+}
 
 type Service struct {
 	client             *Client
@@ -186,6 +236,103 @@ func (s *Service) GetUsersSavedTracks(ctx contextx.ContextX, userId string) ([]s
 		offset += len(tracks.Tracks)
 	}
 	return collectedTracks, nil
+}
+
+// CreateRadarPlaylist creates the user's private "wax radar" inbox playlist and
+// returns its id. Requires playlist-modify scope.
+func (s *Service) CreateRadarPlaylist(ctx contextx.ContextX, userId string) (string, error) {
+	client, err := s.Client(ctx, userId)
+	if err != nil {
+		return "", err
+	}
+	token, err := client.Token()
+	if err != nil {
+		return "", fmt.Errorf("failed to get token: %w", err)
+	}
+	id, err := s.client.CreatePlaylist(ctx, token.AccessToken, qualifiedRadarPlaylistName(ctx), radarPlaylistDescription)
+	if err != nil {
+		return "", fmt.Errorf("failed to create radar playlist: %w", err)
+	}
+	return id, nil
+}
+
+// PlaylistFollowed reports whether the playlist is still in the user's library.
+// "Deleting" a playlist in Spotify only unfollows it (it stays readable by the
+// owner, so no 404); this one-call check flips to false when that happens.
+func (s *Service) PlaylistFollowed(ctx contextx.ContextX, userId, playlistID string) (bool, error) {
+	client, err := s.Client(ctx, userId)
+	if err != nil {
+		return false, err
+	}
+	token, err := client.Token()
+	if err != nil {
+		return false, fmt.Errorf("failed to get token: %w", err)
+	}
+	return s.client.PlaylistFollowed(ctx, token.AccessToken, playlistID)
+}
+
+// FindRadarPlaylist returns the id of the user's existing "wax radar" playlist,
+// or "" if none is found. Lets enabling be idempotent and avoid creating a
+// duplicate when a playlist already exists. Requires playlist-read scope.
+func (s *Service) FindRadarPlaylist(ctx contextx.ContextX, userId string) (string, error) {
+	client, err := s.Client(ctx, userId)
+	if err != nil {
+		return "", err
+	}
+	name := qualifiedRadarPlaylistName(ctx)
+	const limit = 50
+	offset := 0
+	for {
+		page, err := client.CurrentUsersPlaylists(ctx, spotify.Limit(limit), spotify.Offset(offset))
+		if err != nil {
+			if isInsufficientScope(err) {
+				return "", ErrInsufficientScope
+			}
+			return "", fmt.Errorf("failed to list playlists: %w", err)
+		}
+		for _, pl := range page.Playlists {
+			if pl.Name == name {
+				return pl.ID.String(), nil
+			}
+		}
+		if len(page.Playlists) < limit {
+			break
+		}
+		offset += len(page.Playlists)
+	}
+	return "", nil
+}
+
+// GetPlaylistItems returns the playlist's tracks as minimal PlaylistItems,
+// paginated. Local files and unavailable tracks are skipped. Returns
+// ErrPlaylistNotFound if the playlist no longer exists.
+func (s *Service) GetPlaylistItems(ctx contextx.ContextX, userId, playlistID string) ([]PlaylistItem, error) {
+	client, err := s.Client(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+	token, err := client.Token()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get token: %w", err)
+	}
+	return s.client.GetPlaylistItems(ctx, token.AccessToken, playlistID)
+}
+
+// RemovePlaylistTracks removes the given tracks (by track id) from the playlist,
+// batching at the Spotify per-request cap of 100. A no-op for an empty list.
+func (s *Service) RemovePlaylistTracks(ctx contextx.ContextX, userId, playlistID string, trackIDs []string) error {
+	if len(trackIDs) == 0 {
+		return nil
+	}
+	client, err := s.Client(ctx, userId)
+	if err != nil {
+		return err
+	}
+	token, err := client.Token()
+	if err != nil {
+		return fmt.Errorf("failed to get token: %w", err)
+	}
+	return s.client.RemovePlaylistItems(ctx, token.AccessToken, playlistID, trackIDs)
 }
 
 // GetFullAlbum returns one Spotify album by ID, including artists and tracks.

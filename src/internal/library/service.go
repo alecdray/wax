@@ -355,17 +355,19 @@ func (s *Service) AddReleaseToWishlist(ctx context.Context, userID, albumID stri
 	return resultID, err
 }
 
-// ErrAlbumAlreadyDecided is returned by AddAlbumToRadar when the user has any
-// user_release row (owned, wishlist, or removed) for the album. Radar is
-// strictly pre-decision, so any existing decision disqualifies the album.
-var ErrAlbumAlreadyDecided = errors.New("album already has a user release; cannot add to radar")
+// ErrAlbumAlreadyDecided is returned by AddAlbumToRadar (and AddSpotifyAlbumToRadar)
+// when the user currently owns or wishlists the album, i.e. it is in the library.
+// A `removed` album does not trigger this — it is radar-eligible (ADR 0005). The
+// radar-inbox sync relies on this distinction: ErrAlbumAlreadyDecided means
+// "already handled, drop the track", while other errors leave the track to retry.
+var ErrAlbumAlreadyDecided = errors.New("album is already owned or wishlisted; cannot add to radar")
 
 // AddAlbumToRadar adds an album to the user's radar (pre-decision queue).
-// Refuses if the album already has any user_release row.
+// Refuses with ErrAlbumAlreadyDecided if the album is already owned or wishlisted.
 func (s *Service) AddAlbumToRadar(ctx context.Context, userID, albumID string) error {
 	return s.db.WithTx(func(tx *db.DB) error {
 		txRepo := NewRepo(tx.Queries())
-		hasRelease, err := txRepo.HasAnyUserReleaseForAlbum(ctx, userID, albumID)
+		hasRelease, err := txRepo.HasOwnedOrWishlistedReleaseForAlbum(ctx, userID, albumID)
 		if err != nil {
 			return fmt.Errorf("failed to check user releases: %w", err)
 		}
@@ -612,7 +614,7 @@ func (s *Service) AddSpotifyAlbumToRadar(ctx contextx.ContextX, userID, spotifyI
 		if err != nil {
 			return fmt.Errorf("failed to import album metadata: %w", err)
 		}
-		hasRelease, err := txRepo.HasAnyUserReleaseForAlbum(ctx, userID, imported.ID)
+		hasRelease, err := txRepo.HasOwnedOrWishlistedReleaseForAlbum(ctx, userID, imported.ID)
 		if err != nil {
 			return fmt.Errorf("failed to check user releases: %w", err)
 		}

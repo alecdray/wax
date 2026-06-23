@@ -19,6 +19,8 @@ func RegisterRoutes(mux *httpx.Mux, h *HttpHandler) {
 	mux.Handle("GET /app/library/discover/search", httpx.HandlerFunc(h.GetDiscoverSearch))
 	mux.Handle("GET /app/library/discover/radar", httpx.HandlerFunc(h.GetDiscoverRadar))
 	mux.Handle("POST /app/library/discover/radar", httpx.HandlerFunc(h.PostDiscoverRadar))
+	mux.Handle("GET /app/library/discover/radar-inbox", httpx.HandlerFunc(h.GetRadarInbox))
+	mux.Handle("POST /app/library/discover/radar-inbox/enable", httpx.HandlerFunc(h.PostEnableRadarInbox))
 	mux.Handle("GET /app/library/discover/album-menu", httpx.HandlerFunc(h.GetAlbumActionsModal))
 
 	mux.Handle("GET /app/library/album-surfaces", httpx.HandlerFunc(h.GetAlbumSurfaces))

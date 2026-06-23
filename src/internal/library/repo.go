@@ -246,10 +246,11 @@ func (r *Repo) GetUserReleasesByAlbumID(ctx context.Context, userID, albumID str
 	return out, nil
 }
 
-// HasAnyUserReleaseForAlbum reports whether the user has any user_release row
-// for the album, regardless of status (owned, wishlist, removed).
-func (r *Repo) HasAnyUserReleaseForAlbum(ctx context.Context, userID, albumID string) (bool, error) {
-	hasRelease, err := r.q.HasAnyUserReleaseForAlbum(ctx, sqlc.HasAnyUserReleaseForAlbumParams{
+// HasOwnedOrWishlistedReleaseForAlbum reports whether the user currently owns
+// or wishlists the album (i.e. it is in the library). A `removed` release does
+// not count — such an album is still radar-eligible (ADR 0005).
+func (r *Repo) HasOwnedOrWishlistedReleaseForAlbum(ctx context.Context, userID, albumID string) (bool, error) {
+	hasRelease, err := r.q.HasOwnedOrWishlistedReleaseForAlbum(ctx, sqlc.HasOwnedOrWishlistedReleaseForAlbumParams{
 		UserID:  userID,
 		AlbumID: albumID,
 	})

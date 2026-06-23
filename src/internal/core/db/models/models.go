@@ -3,7 +3,8 @@ package models
 type FeedKind string
 
 const (
-	FeedKindSpotify FeedKind = "spotify"
+	FeedKindSpotify      FeedKind = "spotify"
+	FeedKindSpotifyRadar FeedKind = "spotify_radar"
 )
 
 type FeedSyncStatus string

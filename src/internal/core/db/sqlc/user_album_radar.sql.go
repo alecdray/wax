@@ -45,7 +45,9 @@ WHERE user_album_radar.user_id = ?
       JOIN releases r ON r.id = ur.release_id
       WHERE ur.user_id = user_album_radar.user_id
         AND r.album_id = user_album_radar.album_id
+        AND ur.status IN ('owned', 'wishlist')
   )
+ORDER BY user_album_radar.created_at ASC
 `
 
 type GetRadarAlbumsRow struct {
@@ -53,8 +55,9 @@ type GetRadarAlbumsRow struct {
 	Album          Album
 }
 
-// Returns radar rows whose album has no user_releases entries (not on wishlist, not owned, not removed).
-// This enforces the "any release activity wipes radar" invariant at query time.
+// Returns radar rows whose album the user does not currently own or wishlist.
+// A `removed` release does not disqualify the album, so a discarded album can
+// sit on the radar (ADR 0005); owning or wishlisting it filters it out here.
 func (q *Queries) GetRadarAlbums(ctx context.Context, userID string) ([]GetRadarAlbumsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getRadarAlbums, userID)
 	if err != nil {
