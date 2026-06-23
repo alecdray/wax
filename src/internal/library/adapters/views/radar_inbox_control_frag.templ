@@ -1,6 +1,10 @@
 package views
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/alecdray/wax/src/internal/core/templates"
+)
 
 // RadarInboxControlFrag renders the Spotify radar inbox opt-in. Before enabling
 // it shows a button (with an inline error beneath it if a previous attempt
@@ -24,10 +28,12 @@ templ RadarInboxControlFrag(playlistID string, errMsg string) {
 				href={ templ.SafeURL(fmt.Sprintf("https://open.spotify.com/playlist/%s", playlistID)) }
 				target="_blank"
 				rel="noopener noreferrer"
-				class="text-xs text-subtle hover-fade-in"
+				class="btn btn-soft btn-xs btn-square text-base tooltip tooltip-left"
+				data-tip="Add albums to your wax radar inbox playlist on Spotify to send them here"
+				aria-label="Open your wax radar inbox playlist on Spotify"
 				data-testid="radar-inbox-link"
 			>
-				Add albums to your <span class="font-semibold">wax radar inbox</span> playlist on Spotify to send them here →
+				@templates.Icon(templates.IconProps{Name: "inbox"})
 			</a>
 		} else {
 			<button

@@ -31,20 +31,18 @@ templ DiscoverPage(props DiscoverPageProps) {
         Title:  templates.CreatePageTitle("Discover"),
         Navbar: LibraryHeaderBarFrag(HeaderBarProps{Active: "discover", ShowFeeds: true, Feeds: props.Feeds}),
     }) {
-        <div data-testid="discover-page" class="w-full h-dvh flex flex-col" hx-history="false">
-            <div class="flex flex-col py-4 gap-6 items-center w-full flex-1 min-h-0">
-                <div class="w-full flex flex-col gap-1 flex-shrink-0 px-4">
-                    <div class="flex items-center justify-between gap-2 px-1">
-                        <span class="text-xs font-semibold uppercase tracking-widest text-default">On Radar</span>
-                        @RadarInboxControlFrag(props.RadarInboxPlaylistID, "")
-                    </div>
-                    @RadarCarouselFrag(props.RadarAlbums, false)
-                </div>
-                <div class="w-full max-w-3xl flex flex-col gap-3 flex-1 min-h-0 px-4">
-                    <div
-                        class="relative w-full flex-shrink-0"
-                        x-data={ "{ value: " + jsString(props.Query) + " }" }
-                    >
+        // Fill the viewport below the sticky h-11 navbar (not the whole viewport,
+        // or the page double-scrolls). Keeps the grid/results the only scrollers.
+        <div data-testid="discover-page" class="w-full h-[calc(100dvh-2.75rem)] flex flex-col" hx-history="false">
+            <div
+                class="flex flex-col py-4 gap-4 items-center w-full flex-1 min-h-0"
+                x-data={ "{ value: " + jsString(props.Query) + " }" }
+            >
+                // Search bar centered, with the radar inbox control on the same
+                // row pinned to the right via balanced flex spacers.
+                <div class="w-full flex items-center gap-3 px-4 flex-shrink-0">
+                    <div class="flex-1"></div>
+                    <div class="relative w-full max-w-3xl min-w-0">
                         <input
                             x-ref="input"
                             id="discover-search-input"
@@ -75,22 +73,46 @@ templ DiscoverPage(props DiscoverPageProps) {
                             @templates.Icon(templates.IconProps{Name: "x-circle-fill"})
                         </button>
                     </div>
-                    <div id="discover-results-region" class="relative flex-1 min-h-0">
-                        <div
-                            id="discover-results"
-                            class="h-full overflow-y-auto"
-                            data-testid="discover-page-results"
-                            hx-get="/app/library/discover/search"
-                            hx-include="#discover-search-input"
-                            hx-trigger="radarUpdated from:body, libraryUpdated from:body"
-                            hx-target="this"
-                            hx-swap="innerHTML"
-                            hx-indicator="#discover-results-region"
-                        >
-                            @DiscoverSearchResultsFrag(props.SearchResults, props.Query)
-                        </div>
-                        @templates.RegionOverlay()
+                    <div class="flex-1 self-stretch flex items-start justify-end">
+                        @RadarInboxControlFrag(props.RadarInboxPlaylistID, "")
                     </div>
+                </div>
+                // Radar grid — the main region while the search is empty. Hidden
+                // the moment a query is entered, when the results take its place.
+                <div
+                    x-show="value.length === 0"
+                    x-cloak
+                    class="w-full flex flex-col gap-2 flex-1 min-h-0 px-4"
+                    data-testid="discover-radar-region"
+                >
+                    <div class="px-1 flex-shrink-0">
+                        <span class="text-xs font-semibold uppercase tracking-widest text-default">On Radar</span>
+                    </div>
+                    <div class="flex-1 min-h-0 overflow-y-auto">
+                        @RadarGridFrag(props.RadarAlbums, false)
+                    </div>
+                </div>
+                // Search results — shown on demand, only while a query is present.
+                <div
+                    id="discover-results-region"
+                    x-show="value.length > 0"
+                    x-cloak
+                    class="relative w-full max-w-3xl flex-1 min-h-0 px-4"
+                >
+                    <div
+                        id="discover-results"
+                        class="h-full overflow-y-auto"
+                        data-testid="discover-page-results"
+                        hx-get="/app/library/discover/search"
+                        hx-include="#discover-search-input"
+                        hx-trigger="radarUpdated from:body, libraryUpdated from:body"
+                        hx-target="this"
+                        hx-swap="innerHTML"
+                        hx-indicator="#discover-results-region"
+                    >
+                        @DiscoverSearchResultsFrag(props.SearchResults, props.Query)
+                    </div>
+                    @templates.RegionOverlay()
                 </div>
             </div>
         </div>

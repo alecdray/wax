@@ -30,11 +30,11 @@ test('Visiting the discover page shows the radar', async ({ context, page }) => 
   await loginAs(context, userId!);
   await page.goto('/app/library/discover');
 
-  await expect(page.getByTestId('radar-carousel')).toBeVisible();
+  await expect(page.getByTestId('radar-grid')).toBeVisible();
 
-  // Radar shows either at least one carousel item or the empty-state message.
-  const items = page.getByTestId('radar-carousel-item');
-  const empty = page.getByTestId('radar-carousel-empty');
+  // Radar shows either at least one grid item or the empty-state message.
+  const items = page.getByTestId('radar-grid-item');
+  const empty = page.getByTestId('radar-grid-empty');
   const itemCount = await items.count();
   if (itemCount > 0) {
     await expect(items.first()).toBeVisible();
@@ -94,16 +94,16 @@ test('Activating the clear control resets the search to its empty state', async 
   const input = page.getByTestId('discover-page-search-input');
   await input.pressSequentially('the beatles');
 
-  // Wait until the server has swapped in results — the empty-query placeholder
-  // must be gone before we can meaningfully assert it returns after clearing.
+  // Wait until results have swapped in and the radar grid has given up the main
+  // region, so its return after clearing is a meaningful change.
   await expect(page.getByTestId('discover-search-results')).toBeVisible();
-  await expect(page.getByTestId('discover-search-results-empty-query')).not.toBeVisible();
+  await expect(page.getByTestId('radar-grid')).not.toBeVisible();
 
   await page.getByTestId('discover-page-search-clear').click();
 
   await expect(input).toHaveValue('');
-  await expect(page.getByTestId('discover-search-results-empty-query')).toBeVisible();
-  await expect(page.getByTestId('discover-search-results')).not.toBeVisible();
+  await expect(page.getByTestId('radar-grid')).toBeVisible();
+  await expect(page.getByTestId('discover-page-results')).not.toBeVisible();
   await expect(input).toBeFocused();
 });
 
@@ -175,7 +175,10 @@ test('A library change refreshes the discover results panel', async ({ context, 
 
   await loginAs(context, userId!);
   await page.goto('/app/library/discover');
-  await expect(page.getByTestId('discover-page-results')).toBeVisible();
+
+  // Search so the results panel is the active main region.
+  await page.getByTestId('discover-page-search-input').pressSequentially('beatles');
+  await expect(page.getByTestId('discover-search-results')).toBeVisible();
 
   // The results panel listens for `libraryUpdated` and `radarUpdated` on body
   // and re-fetches its contents. Dispatching the event mirrors what the
@@ -188,32 +191,29 @@ test('A library change refreshes the discover results panel', async ({ context, 
   });
   await responsePromise;
 
-  // Re-render still leaves the results panel in place and showing the
-  // empty-query content (since the search input has no value).
+  // Re-render leaves the results panel in place, still showing the results for
+  // the current query.
   await expect(page.getByTestId('discover-page-results')).toBeVisible();
-  await expect(page.getByTestId('discover-search-results-empty-query')).toBeVisible();
+  await expect(page.getByTestId('discover-search-results')).toBeVisible();
 });
 
-test('A new search result swaps into the same panel and leaves the rest of the page intact', async ({ context, page }) => {
+test('Searching swaps the radar grid out for the results panel', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto('/app/library/discover');
 
-  // Snapshot the radar above the search bar — its DOM should not be touched
-  // by the search swap, only the results panel below should change.
-  const radarBefore = await page.getByTestId('radar-carousel').innerHTML();
+  // Radar grid is the main region on a fresh visit.
+  await expect(page.getByTestId('radar-grid')).toBeVisible();
 
   await page.getByTestId('discover-page-search-input').pressSequentially('beatles');
-  await expect(page.getByTestId('discover-search-results')).toBeVisible();
 
-  // Results landed inside the dedicated panel.
+  // Results land inside the dedicated panel...
   const panel = page.getByTestId('discover-page-results');
   await expect(panel.getByTestId('discover-search-results')).toBeVisible();
 
-  // The radar above is byte-for-byte the same — unaffected by the swap.
-  const radarAfter = await page.getByTestId('radar-carousel').innerHTML();
-  expect(radarAfter, 'radar above the search bar must be unaffected by the search swap').toBe(radarBefore);
+  // ...and the radar grid yields the main region while the search is active.
+  await expect(page.getByTestId('radar-grid')).not.toBeVisible();
 });
 
 test('A new search result scrolls the results panel back to the top', async ({ context, page }) => {
@@ -256,33 +256,30 @@ test('A new search result scrolls the results panel back to the top', async ({ c
   ).toBe(0);
 });
 
-test('Erasing the query back to empty restores the same empty-query message as a fresh visit', async ({ context, page }) => {
+test('Erasing the query back to empty restores the radar grid', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
 
   await loginAs(context, userId!);
   await page.goto('/app/library/discover');
 
-  // Capture the fresh-page empty-query placeholder so we can compare it to
-  // what reappears after the round trip (type → erase).
-  const emptyOnLoad = page.getByTestId('discover-search-results-empty-query');
-  await expect(emptyOnLoad).toBeVisible();
-  const freshHTML = await emptyOnLoad.innerHTML();
+  // Radar grid is the main region on a fresh visit.
+  await expect(page.getByTestId('radar-grid')).toBeVisible();
 
   const input = page.getByTestId('discover-page-search-input');
   const query = 'beatles';
   await input.pressSequentially(query);
   await expect(page.getByTestId('discover-search-results')).toBeVisible();
+  await expect(page.getByTestId('radar-grid')).not.toBeVisible();
 
   // Erase to empty via real backspaces so htmx's keyup-changed trigger fires
-  // and the server returns the empty-query branch.
+  // and Alpine swaps the radar grid back in.
   await input.focus();
   for (let i = 0; i < query.length; i++) {
     await page.keyboard.press('Backspace');
   }
   await expect(input).toHaveValue('');
 
-  const emptyAgain = page.getByTestId('discover-search-results-empty-query');
-  await expect(emptyAgain).toBeVisible();
-  const afterHTML = await emptyAgain.innerHTML();
-  expect(afterHTML, 'empty-query content after clearing must match the fresh-load content').toBe(freshHTML);
+  // The radar grid returns as the main region; the results panel is hidden.
+  await expect(page.getByTestId('radar-grid')).toBeVisible();
+  await expect(page.getByTestId('discover-page-results')).not.toBeVisible();
 });

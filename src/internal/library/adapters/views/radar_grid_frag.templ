@@ -1,0 +1,72 @@
+package views
+
+import (
+    "fmt"
+    "github.com/alecdray/wax/src/internal/library"
+)
+
+// The grid refreshes on in-session radar changes (radarUpdated) and also polls,
+// so albums ingested by the background radar-inbox sync appear without a manual
+// reload. It is the discover page's main region while the search box is empty.
+templ RadarGridFrag(albums []library.AlbumDTO, isOOB bool) {
+    <div
+        id="radar-grid"
+        class="w-full"
+        hx-get="/app/library/discover/radar"
+        hx-trigger="radarUpdated from:body, every 30s"
+        hx-swap="outerHTML"
+        if isOOB {
+            hx-swap-oob="true"
+        }
+        data-testid="radar-grid"
+    >
+        if len(albums) == 0 {
+            <div class="flex items-center justify-center px-4 py-10 text-xs text-subtle" data-testid="radar-grid-empty">
+                No albums on your radar yet — search above to find some.
+            </div>
+        } else {
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-x-3 gap-y-4 py-2">
+                for _, album := range albums {
+                    <div data-testid="radar-grid-item" data-album-id={ album.ID }>
+                        @radarGridCard(album)
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+templ radarGridCard(album library.AlbumDTO) {
+    <div data-testid="radar-grid-card" class="flex flex-col items-center gap-1 w-full">
+        <button
+            type="button"
+            class="hover-fade-out cursor-pointer"
+            hx-get={ fmt.Sprintf("/app/library/discover/album-menu?spotifyId=%s", album.SpotifyID) }
+            hx-swap="none"
+            data-testid="radar-grid-card-cover"
+        >
+            if album.ImageURL != "" {
+                <div class="avatar">
+                    <div class="mask mask-squircle size-24 flex-shrink-0">
+                        <img src={ album.ImageURL } alt={ album.Title }/>
+                    </div>
+                </div>
+            } else {
+                <div class="avatar avatar-placeholder">
+                    <div class="mask mask-squircle size-24 flex-shrink-0 bg-base-300"></div>
+                </div>
+            }
+        </button>
+        <span class="text-xs text-nowrap truncate w-full text-center">{ album.Title }</span>
+        if len(album.Artists) > 0 {
+            <span class="text-xs text-nowrap truncate w-full text-center text-subtle">
+                for i, artist := range album.Artists {
+                    if i > 0 {
+                        { ", " }
+                    }
+                    { artist.Name }
+                }
+            </span>
+        }
+    </div>
+}
