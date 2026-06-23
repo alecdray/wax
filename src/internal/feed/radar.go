@@ -99,11 +99,14 @@ func (s *Service) SyncSpotifyRadarFeed(ctx contextx.ContextX, feed FeedDTO) (*Fe
 	_, ingestErr := ingestRadarPlaylist(ctx, s.spotifyService, s.libraryService, feed.UserID, playlistID)
 
 	if errors.Is(ingestErr, spotify.ErrPlaylistNotFound) {
-		// The user deleted the playlist; forget the handle and stop syncing.
-		if err := s.repo.SetFeedSourceRef(ctx, feed.ID, ""); err != nil {
-			slog.Error("failed to clear radar playlist handle", "feed", feed.ID, "error", err)
+		// The user removed the playlist (opt-out). That is not a failure — delete
+		// the feed so it disappears cleanly rather than lingering as a failed
+		// entry; the discover control returns to Enable, and re-enabling recreates.
+		if err := s.repo.DeleteFeed(ctx, feed.ID); err != nil {
+			return nil, fmt.Errorf("failed to delete radar feed after playlist removal: %w", err)
 		}
-		feed.SourceRef = nil
+		slog.Info("radar inbox: playlist removed by user, feed disabled", "feed", feed.ID)
+		return nil, nil
 	}
 
 	if ingestErr != nil {

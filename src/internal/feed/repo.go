@@ -110,6 +110,11 @@ func (r *Repo) SetFeedSourceRef(ctx context.Context, feedID, sourceRef string) e
 	})
 }
 
+// DeleteFeed removes a feed row.
+func (r *Repo) DeleteFeed(ctx context.Context, feedID string) error {
+	return r.q.DeleteFeed(ctx, feedID)
+}
+
 // GetSyncableRadarFeeds returns radar inbox feeds eligible to sync (those with a
 // playlist handle), least-recently-synced first.
 func (r *Repo) GetSyncableRadarFeeds(ctx context.Context) ([]FeedDTO, error) {

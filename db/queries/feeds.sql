@@ -7,6 +7,9 @@ returning *;
 -- Sets (or, with NULL, clears) a feed's external source handle.
 UPDATE feeds SET source_ref = ? WHERE id = ?;
 
+-- name: DeleteFeed :exec
+DELETE FROM feeds WHERE id = ?;
+
 -- name: UpsertFeed :one
 INSERT INTO feeds (id, user_id, kind)
 VALUES (?, ?, ?)
