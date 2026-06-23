@@ -71,9 +71,9 @@ templ FeedsDropdownContentFrag(feeds []feed.FeedDTO) {
 		hx-on:htmx:after-swap="this.focus()"
 		hx-get="/app/library/dashboard/feeds-dropdown-content"
 		if getFeedsDropdownButtonIndicatorColor(feeds) == templates.NeonColorSuccess {
-			hx-trigger="every 30s"
+			hx-trigger="every 30s, feedsChanged from:body"
 		} else {
-			hx-trigger="every 5s"
+			hx-trigger="every 5s, feedsChanged from:body"
 		}
 		hx-vals={ fmt.Sprintf(`{"wasSyncing": "%v"}`, anyFeedIsSyncing(feeds)) }
 		hx-swap="morph"

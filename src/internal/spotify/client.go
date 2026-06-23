@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/alecdray/wax/src/internal/core/contextx"
 )
@@ -50,6 +51,36 @@ func (c *Client) RemoveAlbum(ctx contextx.ContextX, accessToken, spotifyId strin
 // (POST /me/playlists, /playlists/{id}/items) which the vendor SDK does not yet
 // use — it still calls the now-removed /users/{id}/playlists and
 // /playlists/{id}/tracks paths, which 403 for Development-mode apps.
+
+// PlaylistFollowed reports whether the playlist is in the user's library (i.e.
+// followed) via a single GET /me/library/contains?uris=... call. Spotify has no
+// true playlist delete — "deleting" only unfollows — so this is how the radar
+// sync detects removal (it flips to false), without scanning every playlist.
+func (c *Client) PlaylistFollowed(ctx contextx.ContextX, accessToken, playlistID string) (bool, error) {
+	uri := url.QueryEscape("spotify:playlist:" + playlistID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiOrigin+"/v1/me/library/contains?uris="+uri, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to build request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false, fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("unexpected status checking library membership: %s", resp.Status)
+	}
+	var results []bool
+	if err := json.NewDecoder(resp.Body).Decode(&results); err != nil {
+		return false, fmt.Errorf("failed to decode membership response: %w", err)
+	}
+	if len(results) == 0 {
+		return false, nil
+	}
+	return results[0], nil
+}
 
 // CreatePlaylist creates a private playlist for the current user and returns its
 // id, via POST /me/playlists.

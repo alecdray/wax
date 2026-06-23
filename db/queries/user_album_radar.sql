@@ -23,7 +23,8 @@ WHERE user_album_radar.user_id = ?
       WHERE ur.user_id = user_album_radar.user_id
         AND r.album_id = user_album_radar.album_id
         AND ur.status IN ('owned', 'wishlist')
-  );
+  )
+ORDER BY user_album_radar.created_at ASC;
 
 -- name: IsAlbumOnRadar :one
 SELECT EXISTS (

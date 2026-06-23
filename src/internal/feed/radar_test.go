@@ -15,13 +15,13 @@ type fakeRadarSpotify struct {
 	itemsErr  error
 	removed   []string
 	removeErr error
-	// notInLibrary inverts the default so the zero value means "in library" and
-	// existing tests keep ingesting; set true to simulate the user unfollowing.
-	notInLibrary bool
+	// notFollowed inverts the default so the zero value means "followed" and
+	// existing tests keep ingesting; set true to simulate the user removing it.
+	notFollowed bool
 }
 
-func (f *fakeRadarSpotify) PlaylistInLibrary(_ contextx.ContextX, _, _ string) (bool, error) {
-	return !f.notInLibrary, nil
+func (f *fakeRadarSpotify) PlaylistFollowed(_ contextx.ContextX, _, _ string) (bool, error) {
+	return !f.notFollowed, nil
 }
 
 func (f *fakeRadarSpotify) GetPlaylistItems(_ contextx.ContextX, _, _ string) ([]spotify.PlaylistItem, error) {
@@ -140,22 +140,22 @@ func TestIngestRadarPlaylist_IgnoresLocalTracksWithNoAlbum(t *testing.T) {
 	}
 }
 
-func TestIngestRadarPlaylist_UnfollowedPlaylistSignalsNotFound(t *testing.T) {
-	// "Deleting" a playlist in Spotify only unfollows it (it stays readable), so
-	// removal shows up as the playlist leaving the library, not as a 404. The
-	// ingest must treat that as ErrPlaylistNotFound and not ingest anything.
+func TestIngestRadarPlaylist_RemovedPlaylistSignalsNotFound(t *testing.T) {
+	// Removing the playlist in Spotify only unfollows it, surfacing as the
+	// library-membership check returning false; the ingest must treat that as
+	// ErrPlaylistNotFound and not ingest anything.
 	sp := &fakeRadarSpotify{
-		notInLibrary: true,
-		items:        []spotify.PlaylistItem{{TrackID: "t1", AlbumSpotifyID: "alb"}},
+		notFollowed: true,
+		items:       []spotify.PlaylistItem{{TrackID: "t1", AlbumSpotifyID: "alb"}},
 	}
 	sink := &fakeRadarSink{}
 
 	_, err := ingestRadarPlaylist(bg(), sp, sink, "u1", "pl1")
 	if !errors.Is(err, spotify.ErrPlaylistNotFound) {
-		t.Fatalf("expected ErrPlaylistNotFound for an unfollowed playlist, got %v", err)
+		t.Fatalf("expected ErrPlaylistNotFound for a removed playlist, got %v", err)
 	}
 	if len(sink.calls) != 0 {
-		t.Fatalf("must not ingest from a playlist that left the library, got %v", sink.calls)
+		t.Fatalf("must not ingest from a removed playlist, got %v", sink.calls)
 	}
 }
 

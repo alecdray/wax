@@ -15,7 +15,7 @@ import (
 // radarSpotifyPort is the slice of spotify.Service the radar inbox sync needs.
 // Defined here (consumer-side) so the sync can be tested with a fake.
 type radarSpotifyPort interface {
-	PlaylistInLibrary(ctx contextx.ContextX, userID, playlistID string) (bool, error)
+	PlaylistFollowed(ctx contextx.ContextX, userID, playlistID string) (bool, error)
 	GetPlaylistItems(ctx contextx.ContextX, userID, playlistID string) ([]spotify.PlaylistItem, error)
 	RemovePlaylistTracks(ctx contextx.ContextX, userID, playlistID string, trackIDs []string) error
 }
@@ -32,14 +32,14 @@ type radarSink interface {
 // Albums that fail to ingest for any other reason leave their tracks in place
 // for the next cycle. Local/unknown tracks (no album id) are ignored and left.
 func ingestRadarPlaylist(ctx contextx.ContextX, sp radarSpotifyPort, sink radarSink, userID, playlistID string) ([]string, error) {
-	// Spotify "delete" only unfollows the playlist — it stays readable by the
-	// owner (no 404), so detect removal by it leaving the user's library and
-	// signal it as ErrPlaylistNotFound to reuse the clear-the-handle recovery.
-	inLibrary, err := sp.PlaylistInLibrary(ctx, userID, playlistID)
+	// Spotify "delete" only unfollows the playlist (it stays readable, no 404),
+	// so detect removal with a one-call library-membership check and signal it as
+	// ErrPlaylistNotFound to reuse the delete-the-feed recovery.
+	followed, err := sp.PlaylistFollowed(ctx, userID, playlistID)
 	if err != nil {
 		return nil, err
 	}
-	if !inLibrary {
+	if !followed {
 		return nil, spotify.ErrPlaylistNotFound
 	}
 

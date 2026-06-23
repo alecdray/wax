@@ -725,6 +725,30 @@ func (h *HttpHandler) GetDiscoverPage(w http.ResponseWriter, r *http.Request) {
 	}).Render(r.Context(), w)
 }
 
+// GetRadarInbox renders the radar inbox control for its current state. The
+// enabled control polls this so it flips back to Enable if the background sync
+// removes the feed (the user deleted the playlist on Spotify).
+func (h *HttpHandler) GetRadarInbox(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+	userId, err := ctx.UserId()
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get user ID: %w", err),
+		})
+		return
+	}
+	playlistID, err := h.feedService.RadarInboxPlaylistID(ctx, userId)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to get radar inbox state: %w", err),
+		})
+		return
+	}
+	views.RadarInboxControlFrag(playlistID, "").Render(r.Context(), w)
+}
+
 // PostEnableRadarInbox opts the user into the Spotify radar inbox, creating their
 // "wax radar" playlist, and swaps the control to show its link. If Spotify denies
 // the request for missing playlist scope (a user connected before the scope was
@@ -766,6 +790,9 @@ func (h *HttpHandler) PostEnableRadarInbox(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Tell the header's feeds dropdown to refresh so the new radar feed appears
+	// immediately rather than on its next poll.
+	w.Header().Set("HX-Trigger", "feedsChanged")
 	views.RadarInboxControlFrag(playlistID, "").Render(r.Context(), w)
 }
 
