@@ -56,13 +56,16 @@ templ carouselCardInner(album library.AlbumSummaryDTO) {
 	if album.ImageURL != "" {
 		<div class="indicator">
 			if !album.InLibrary {
+				// Non-library albums carry the radar icon. "radar" has no filled glyph
+				// (see bottom_nav), so on-radar is signalled with the accent colour —
+				// the same accent the "On radar" badge uses — rather than a fill.
 				if album.OnRadar {
-					<span class="indicator-item text-xs text-muted">
-						@templates.Icon(templates.IconProps{Name: "compass", Style: templates.IconStyleFill})
+					<span class="indicator-item text-xs text-accent">
+						@templates.Icon(templates.IconProps{Name: "radar"})
 					</span>
 				} else {
 					<span class="indicator-item text-xs text-muted">
-						@templates.Icon(templates.IconProps{Name: "compass"})
+						@templates.Icon(templates.IconProps{Name: "radar"})
 					</span>
 				}
 			}
