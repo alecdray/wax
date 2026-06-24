@@ -52,22 +52,39 @@ templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 	}
 }
 
+// summaryRatingClass returns the score badge's text colour: a finalized score
+// gets the primary colour, every other case (provisional and unrated) stays
+// muted like the rest of the corner indicators.
+func summaryRatingClass(album library.AlbumSummaryDTO) string {
+	if album.RatingState == "finalized" {
+		return "text-primary"
+	}
+	return "text-muted"
+}
+
 templ carouselCardInner(album library.AlbumSummaryDTO) {
 	if album.ImageURL != "" {
 		<div class="indicator">
-			if !album.InLibrary {
-				// Non-library albums carry the radar icon. "radar" has no filled glyph
-				// (see bottom_nav), so on-radar is signalled with the accent colour —
-				// the same accent the "On radar" badge uses — rather than a fill.
-				if album.OnRadar {
-					<span class="indicator-item text-xs text-accent">
-						@templates.Icon(templates.IconProps{Name: "radar"})
-					</span>
-				} else {
-					<span class="indicator-item text-xs text-muted">
-						@templates.Icon(templates.IconProps{Name: "radar"})
-					</span>
-				}
+			// The corner indicator encodes the album's membership: a library album shows
+			// its score ("--" when unrated), a radar album shows the radar icon, and an
+			// album that is neither shows nothing. Indicators are muted, except a
+			// finalized score, which gets the primary colour. ("radar" has no filled
+			// glyph; see bottom_nav.)
+			if album.InLibrary {
+				<span
+					class={ "indicator-item text-xs font-bold tabular-nums leading-none rounded bg-base-100/85 px-1 py-0.5", summaryRatingClass(album) }
+					data-testid="carousel-strip-card-rating"
+				>
+					if album.Rating != nil {
+						{ fmt.Sprintf("%.1f", *album.Rating) }
+					} else {
+						--
+					}
+				</span>
+			} else if album.OnRadar {
+				<span class="indicator-item text-xs text-muted">
+					@templates.Icon(templates.IconProps{Name: "radar"})
+				</span>
 			}
 			<div class="avatar">
 				<div class="mask mask-squircle h-24 w-24 flex-shrink-0">
@@ -99,9 +116,23 @@ templ provisionalCarouselStrip(albums []library.ProvisionalAlbumDTO) {
 						}
 					>
 						if album.ImageURL != "" {
-							<div class="avatar">
-								<div class="mask mask-squircle h-24 w-24 flex-shrink-0">
-									<img src={ album.ImageURL } alt={ album.Title }/>
+							<div class="indicator">
+								// Every album in this view is provisional, so the score badge is
+								// always muted (see summaryRatingClass). "--" when no score yet.
+								<span
+									class="indicator-item text-xs font-bold tabular-nums leading-none rounded bg-base-100/85 px-1 py-0.5 text-muted"
+									data-testid="carousel-strip-card-rating"
+								>
+									if album.Rating != nil {
+										{ fmt.Sprintf("%.1f", *album.Rating) }
+									} else {
+										--
+									}
+								</span>
+								<div class="avatar">
+									<div class="mask mask-squircle h-24 w-24 flex-shrink-0">
+										<img src={ album.ImageURL } alt={ album.Title }/>
+									</div>
 								</div>
 							</div>
 						}
@@ -122,7 +153,7 @@ templ CarouselSectionFrag(props CarouselSectionProps) {
 		data-testid="carousel-section"
 		class="w-full flex-shrink-0"
 		hx-get="/app/library/dashboard/carousel"
-		hx-trigger="libraryUpdated from:body"
+		hx-trigger="libraryUpdated from:body, radarUpdated from:body, album-changed from:body"
 		hx-swap="outerHTML"
 	>
 		<div class="flex items-center gap-3 px-4 pb-1">

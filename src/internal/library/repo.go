@@ -281,21 +281,31 @@ func (r *Repo) GetAlbumFormats(ctx context.Context, userID, albumID string) ([]A
 
 // GetRecentlyPlayedAlbums returns the recently-played album summaries.
 func (r *Repo) GetRecentlyPlayedAlbums(ctx context.Context, userID string) ([]AlbumSummaryDTO, error) {
-	rows, err := r.q.GetRecentlyPlayedAlbums(ctx, userID)
+	rows, err := r.q.GetRecentlyPlayedAlbums(ctx, sqlc.GetRecentlyPlayedAlbumsParams{
+		UserID:   userID,
+		UserID_2: userID,
+		UserID_3: userID,
+	})
 	if err != nil {
 		return nil, err
 	}
 	out := make([]AlbumSummaryDTO, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, AlbumSummaryDTO{
-			ID:        row.ID,
-			SpotifyID: row.SpotifyID,
-			Title:     row.Title,
-			Artists:   fmt.Sprintf("%s", row.ArtistNames),
-			ImageURL:  row.ImageUrl.String,
-			InLibrary: row.InLibrary != 0,
-			OnRadar:   row.OnRadar != 0,
-		})
+		dto := AlbumSummaryDTO{
+			ID:          row.ID,
+			SpotifyID:   row.SpotifyID,
+			Title:       row.Title,
+			Artists:     fmt.Sprintf("%s", row.ArtistNames),
+			ImageURL:    row.ImageUrl.String,
+			InLibrary:   row.InLibrary != 0,
+			OnRadar:     row.OnRadar != 0,
+			RatingState: row.RatingState,
+		}
+		if row.HasRating != 0 {
+			rating := row.LatestRating
+			dto.Rating = &rating
+		}
+		out = append(out, dto)
 	}
 	return out, nil
 }

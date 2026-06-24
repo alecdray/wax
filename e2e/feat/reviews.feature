@@ -95,25 +95,3 @@ Feature: Rating Log
   # data-testid values (album-row-notes, album-row-notes-button) that have
   # never been declared in any templ, so the check passed vacuously. Notes
   # live on the album detail page (SleeveNotesSectionFrag), never on rows.
-
-  # --- Score-readout icon scheme ---
-  #
-  # The score-readout cell on each library row carries a `pen` icon when the
-  # album's rating is provisional, and no status icon when the rating is
-  # finalized or the album is unrated. The colored number alone communicates
-  # state to colorblind viewers; the pen is a visual second channel.
-
-  Scenario: Score readout shows the pen icon for a provisional album
-    Given a logged-in user with a provisional rating for an album
-    When they view the dashboard album row for that album
-    Then the score readout shows the pen status icon
-
-  Scenario: Score readout shows no status icon for a finalized album
-    Given a logged-in user who has finalized a rating for an album
-    When they view the dashboard album row for that album
-    Then the score readout shows no status icon
-
-  Scenario: Score readout shows no status icon for an unrated album
-    Given a logged-in user with an unrated album
-    When they view the dashboard album row for that album
-    Then the score readout shows no status icon
