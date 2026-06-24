@@ -7,12 +7,12 @@ import (
 
 // The grid refreshes on in-session radar changes (radarUpdated) and also polls,
 // so albums ingested by the background radar-inbox sync appear without a manual
-// reload. It is the discover page's main region while the search box is empty.
+// reload. It is the radar page's main region while the search box is empty.
 templ RadarGridFrag(albums []library.AlbumDTO, isOOB bool) {
     <div
         id="radar-grid"
         class="w-full"
-        hx-get="/app/library/discover/radar"
+        hx-get="/app/library/radar/grid"
         hx-trigger="radarUpdated from:body, every 30s"
         hx-swap="outerHTML"
         if isOOB {
@@ -41,7 +41,7 @@ templ radarGridCard(album library.AlbumDTO) {
         <button
             type="button"
             class="hover-fade-out cursor-pointer"
-            hx-get={ fmt.Sprintf("/app/library/discover/album-menu?spotifyId=%s", album.SpotifyID) }
+            hx-get={ fmt.Sprintf("/app/library/radar/album-menu?spotifyId=%s", album.SpotifyID) }
             hx-swap="none"
             data-testid="radar-grid-card-cover"
         >

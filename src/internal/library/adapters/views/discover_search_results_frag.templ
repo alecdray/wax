@@ -39,7 +39,7 @@ templ discoverSearchResultRow(result library.DiscoverResultDTO) {
             hx-push-url="true"
         } else {
             role="button"
-            hx-get={ fmt.Sprintf("/app/library/discover/album-menu?spotifyId=%s", result.SpotifyID) }
+            hx-get={ fmt.Sprintf("/app/library/radar/album-menu?spotifyId=%s", result.SpotifyID) }
             hx-swap="none"
         }
     >

@@ -10,7 +10,7 @@ import (
 // it shows a button (with an inline error beneath it if a previous attempt
 // failed); once enabled it shows a link to the user's "wax radar" playlist. The
 // handler swaps this fragment in place on enable. When enabled it polls GET
-// /app/library/discover/radar-inbox so it reverts to Enable if the background
+// /app/library/radar/inbox so it reverts to Enable if the background
 // sync removes the feed (the user deleted the playlist on Spotify).
 templ RadarInboxControlFrag(playlistID string, errMsg string) {
 	<div
@@ -18,7 +18,7 @@ templ RadarInboxControlFrag(playlistID string, errMsg string) {
 		class="flex flex-col items-end gap-1 flex-shrink-0"
 		data-testid="radar-inbox-control"
 		if playlistID != "" {
-			hx-get="/app/library/discover/radar-inbox"
+			hx-get="/app/library/radar/inbox"
 			hx-trigger="every 30s"
 			hx-swap="outerHTML"
 		}
@@ -39,7 +39,7 @@ templ RadarInboxControlFrag(playlistID string, errMsg string) {
 			<button
 				type="button"
 				class="btn btn-soft btn-xs btn-busy"
-				hx-post="/app/library/discover/radar-inbox/enable"
+				hx-post="/app/library/radar/inbox/enable"
 				hx-target="#radar-inbox-control"
 				hx-swap="outerHTML"
 				hx-disabled-elt="this"

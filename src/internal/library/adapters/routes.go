@@ -15,13 +15,13 @@ func RegisterRoutes(mux *httpx.Mux, h *HttpHandler) {
 	mux.Handle("GET /app/library/dashboard/albums-page", httpx.HandlerFunc(h.GetAlbumsPage))
 	mux.Handle("GET /app/library/dashboard/carousel", httpx.HandlerFunc(h.GetCarousel))
 
-	mux.Handle("GET /app/library/discover", httpx.HandlerFunc(h.GetDiscoverPage))
-	mux.Handle("GET /app/library/discover/search", httpx.HandlerFunc(h.GetDiscoverSearch))
-	mux.Handle("GET /app/library/discover/radar", httpx.HandlerFunc(h.GetDiscoverRadar))
-	mux.Handle("POST /app/library/discover/radar", httpx.HandlerFunc(h.PostDiscoverRadar))
-	mux.Handle("GET /app/library/discover/radar-inbox", httpx.HandlerFunc(h.GetRadarInbox))
-	mux.Handle("POST /app/library/discover/radar-inbox/enable", httpx.HandlerFunc(h.PostEnableRadarInbox))
-	mux.Handle("GET /app/library/discover/album-menu", httpx.HandlerFunc(h.GetAlbumActionsModal))
+	mux.Handle("GET /app/library/radar", httpx.HandlerFunc(h.GetRadarPage))
+	mux.Handle("GET /app/library/radar/search", httpx.HandlerFunc(h.GetDiscoverSearch))
+	mux.Handle("GET /app/library/radar/grid", httpx.HandlerFunc(h.GetRadarGrid))
+	mux.Handle("POST /app/library/radar/grid", httpx.HandlerFunc(h.PostRadarAlbum))
+	mux.Handle("GET /app/library/radar/inbox", httpx.HandlerFunc(h.GetRadarInbox))
+	mux.Handle("POST /app/library/radar/inbox/enable", httpx.HandlerFunc(h.PostEnableRadarInbox))
+	mux.Handle("GET /app/library/radar/album-menu", httpx.HandlerFunc(h.GetAlbumActionsModal))
 
 	mux.Handle("GET /app/library/album-surfaces", httpx.HandlerFunc(h.GetAlbumSurfaces))
 

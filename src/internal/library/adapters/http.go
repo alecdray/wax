@@ -688,9 +688,9 @@ func (h *HttpHandler) GetAlbumSurfaces(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// --- Discover page ---
+// --- Radar page ---
 
-func (h *HttpHandler) GetDiscoverPage(w http.ResponseWriter, r *http.Request) {
+func (h *HttpHandler) GetRadarPage(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())
 	userId, err := ctx.UserId()
 	if err != nil {
@@ -724,7 +724,7 @@ func (h *HttpHandler) GetDiscoverPage(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	views.DiscoverPage(views.DiscoverPageProps{
+	views.RadarPage(views.RadarPageProps{
 		RadarAlbums:          radar,
 		Query:                "",
 		SearchResults:        nil,
@@ -783,9 +783,9 @@ func (h *HttpHandler) PostEnableRadarInbox(w http.ResponseWriter, r *http.Reques
 			return
 		}
 		// Send the user through Spotify OAuth again to grant the playlist scope,
-		// and remember to return them to discover afterwards so they can finish
-		// enabling rather than landing on the dashboard.
-		httpx.SetPostAuthRedirect(w, "/app/library/discover")
+		// and remember to return them to the radar page afterwards so they can
+		// finish enabling rather than landing on the dashboard.
+		httpx.SetPostAuthRedirect(w, "/app/library/radar")
 		w.Header().Set("HX-Redirect", h.spotifyAuth.AuthURLForcingConsent(app.Config().StateCode))
 		w.WriteHeader(http.StatusOK)
 		return
@@ -804,7 +804,7 @@ func (h *HttpHandler) PostEnableRadarInbox(w http.ResponseWriter, r *http.Reques
 	views.RadarInboxControlFrag(playlistID, "").Render(r.Context(), w)
 }
 
-func (h *HttpHandler) GetDiscoverRadar(w http.ResponseWriter, r *http.Request) {
+func (h *HttpHandler) GetRadarGrid(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())
 	userId, err := ctx.UserId()
 	if err != nil {
@@ -877,7 +877,7 @@ func (h *HttpHandler) GetDiscoverSearch(w http.ResponseWriter, r *http.Request) 
 	views.DiscoverSearchResultsFrag(results, query).Render(r.Context(), w)
 }
 
-func (h *HttpHandler) PostDiscoverRadar(w http.ResponseWriter, r *http.Request) {
+func (h *HttpHandler) PostRadarAlbum(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())
 	userId, err := ctx.UserId()
 	if err != nil {

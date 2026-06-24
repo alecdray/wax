@@ -15,18 +15,18 @@ test('Global progress bar is present in the layout', async ({ context, page }) =
 test('Discover search results region carries a loading overlay', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
   await loginAs(context, userId!);
-  await page.goto('/app/library/discover');
-  await expect(page.locator('#discover-results-region [data-testid="region-overlay"]')).toBeAttached();
+  await page.goto('/app/library/radar');
+  await expect(page.locator('#radar-results-region [data-testid="region-overlay"]')).toBeAttached();
 });
 
 test('Add-to-library button declares the disable-on-request contract', async ({ context, page }) => {
   expect(userId, 'E2E_TEST_USER_ID must be set').toBeTruthy();
   await loginAs(context, userId!);
-  await page.goto('/app/library/discover');
+  await page.goto('/app/library/radar');
 
-  // Fire keyup events via pressSequentially (same pattern as discover.spec.ts
+  // Fire keyup events via pressSequentially (same pattern as radar.spec.ts
   // and album_actions.spec.ts) to trigger the debounced hx-get.
-  await page.getByTestId('discover-page-search-input').pressSequentially('the beatles');
+  await page.getByTestId('radar-page-search-input').pressSequentially('the beatles');
   await expect(page.getByTestId('discover-search-results')).toBeVisible();
 
   // Find the first result that is NOT already in the user's library — only

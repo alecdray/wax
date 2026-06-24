@@ -3,7 +3,7 @@ package templates
 // BottomNav is the app's primary navigation chrome: a fixed bottom bar shown on
 // every authenticated page and at every viewport size (ADR 0007). It is a
 // domain-free primitive — `active` names the current top-level destination
-// ("library" | "discover" | ""), nothing more. The shared layout renders it.
+// ("library" | "radar" | ""), nothing more. The shared layout renders it.
 //
 // Because the bar is fixed, scrolling page content must reserve trailing space
 // for it (the bar's height plus the iOS safe-area inset); that spacing is set at
@@ -14,17 +14,20 @@ templ BottomNav(active string) {
 		class="fixed inset-x-0 bottom-0 z-20 bg-base-100 border-t border-base-300 pb-[env(safe-area-inset-bottom)]"
 	>
 		<div class="max-w-md mx-auto grid grid-cols-3 h-14">
-			@bottomNavTab("library", active == "library", templ.SafeURL("/app/library/dashboard"), "collection", "Library")
-			@bottomNavTab("discover", active == "discover", templ.SafeURL("/app/library/discover"), "compass", "Discover")
+			@bottomNavTab("library", active == "library", templ.SafeURL("/app/library/dashboard"), "collection", "Library", true)
+			// "radar" has no filled glyph in Bootstrap Icons, so it stays outline when active (hasFillVariant=false).
+			@bottomNavTab("radar", active == "radar", templ.SafeURL("/app/library/radar"), "radar", "Radar", false)
 			@bottomNavProfileTab()
 		</div>
 	</nav>
 }
 
 // bottomNavTab is one destination tab. Active state is marked semantically with
-// aria-current="page" and a filled icon at full text strength; the testid is
-// stable across both states (see docs/design/testids.md "Selected state").
-templ bottomNavTab(role string, active bool, href templ.SafeURL, icon string, label string) {
+// aria-current="page" and full text strength, plus a filled icon when the icon
+// has a filled glyph (hasFillVariant); icons without one stay outline in both
+// states. The testid is stable across both states (see docs/design/testids.md
+// "Selected state").
+templ bottomNavTab(role string, active bool, href templ.SafeURL, icon string, label string, hasFillVariant bool) {
 	if active {
 		<a
 			href={ href }
@@ -32,7 +35,11 @@ templ bottomNavTab(role string, active bool, href templ.SafeURL, icon string, la
 			data-testid={ "bottom-nav-" + role }
 			class="flex flex-col items-center justify-center gap-0.5 text-xl text-default"
 		>
-			@Icon(IconProps{Name: icon, Style: IconStyleFill})
+			if hasFillVariant {
+				@Icon(IconProps{Name: icon, Style: IconStyleFill})
+			} else {
+				@Icon(IconProps{Name: icon, Style: IconStyleOutline})
+			}
 			<span class="text-xs font-medium">{ label }</span>
 		</a>
 	} else {
