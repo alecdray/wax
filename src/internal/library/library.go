@@ -33,6 +33,14 @@ type AlbumSummaryDTO struct {
 	ImageURL  string
 	InLibrary bool
 	OnRadar   bool
+	// Rating is the album's latest score for the viewing user, or nil when the
+	// album is unrated. RatingState is the matching lifecycle value
+	// ("provisional" | "finalized"), empty when unrated; the carousel uses it to
+	// surface finalized scores in the primary colour. Both are populated only
+	// where a query projects them (e.g. the recently-played carousel); other
+	// summary sources leave them zero-valued.
+	Rating      *float64
+	RatingState string
 }
 
 type ArtistDTO struct {

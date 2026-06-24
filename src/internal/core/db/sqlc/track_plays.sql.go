@@ -77,14 +77,39 @@ SELECT albums.id, albums.spotify_id, albums.title, albums.created_at, albums.del
     EXISTS (
         SELECT 1 FROM user_album_radar
         WHERE user_album_radar.album_id = albums.id AND user_album_radar.user_id = track_plays.user_id
-    ) as on_radar
+    ) as on_radar,
+    COALESCE(arl.state, '') AS rating_state,
+    COALESCE(arl.rating, 0) AS latest_rating,
+    CASE WHEN arl.rating IS NULL THEN 0 ELSE 1 END AS has_rating
 FROM track_plays
 JOIN albums ON albums.id = track_plays.album_id
+LEFT JOIN (
+    SELECT arl.album_id, arl.rating, arl.state
+    FROM album_rating_log arl
+    JOIN (
+        SELECT arl2.album_id, MAX(arl2.id) AS max_id
+        FROM album_rating_log arl2
+        WHERE arl2.user_id = ?
+          AND (arl2.album_id, arl2.created_at) IN (
+              SELECT arl3.album_id, MAX(arl3.created_at)
+              FROM album_rating_log arl3
+              WHERE arl3.user_id = ?
+              GROUP BY arl3.album_id
+          )
+        GROUP BY arl2.album_id
+    ) latest ON arl.album_id = latest.album_id AND arl.id = latest.max_id
+) arl ON arl.album_id = albums.id
 WHERE track_plays.user_id = ?
 GROUP BY albums.id
 ORDER BY last_played_at DESC
 LIMIT 20
 `
+
+type GetRecentlyPlayedAlbumsParams struct {
+	UserID   string
+	UserID_2 string
+	UserID_3 string
+}
 
 type GetRecentlyPlayedAlbumsRow struct {
 	ID           string
@@ -97,10 +122,22 @@ type GetRecentlyPlayedAlbumsRow struct {
 	ArtistNames  interface{}
 	InLibrary    int64
 	OnRadar      int64
+	RatingState  string
+	LatestRating float64
+	HasRating    int64
 }
 
-func (q *Queries) GetRecentlyPlayedAlbums(ctx context.Context, userID string) ([]GetRecentlyPlayedAlbumsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getRecentlyPlayedAlbums, userID)
+// rating_state and latest_rating come from the album's latest album_rating_log
+// entry (same row, so score and state are coherent). State is read from the log
+// rather than album_rating_state because the log entry is written on every
+// rating action and is the populated source. rating and state are NOT NULL in
+// schema, so a LEFT JOIN miss would make sqlc scan NULL into a non-nullable Go
+// type; COALESCE keeps them off the wire as NULL (0 rating, empty state) and
+// has_rating carries log-row presence to the app. The latest entry is the row
+// with the greatest created_at, tie-broken by id, matching
+// GetLatestUserAlbumRatings.
+func (q *Queries) GetRecentlyPlayedAlbums(ctx context.Context, arg GetRecentlyPlayedAlbumsParams) ([]GetRecentlyPlayedAlbumsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRecentlyPlayedAlbums, arg.UserID, arg.UserID_2, arg.UserID_3)
 	if err != nil {
 		return nil, err
 	}
@@ -119,6 +156,9 @@ func (q *Queries) GetRecentlyPlayedAlbums(ctx context.Context, userID string) ([
 			&i.ArtistNames,
 			&i.InLibrary,
 			&i.OnRadar,
+			&i.RatingState,
+			&i.LatestRating,
+			&i.HasRating,
 		); err != nil {
 			return nil, err
 		}

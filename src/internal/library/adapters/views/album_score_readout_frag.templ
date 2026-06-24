@@ -2,7 +2,6 @@ package views
 
 import (
 	"fmt"
-	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/library"
 )
 
@@ -19,30 +18,10 @@ func ratingStateClass(album library.AlbumDTO) string {
 	case "finalized":
 		return "text-primary hover-fade-out"
 	case "provisional":
-		return "text-default hover-fade-out"
+		return "text-muted hover-fade-out"
 	default:
 		return "text-primary"
 	}
-}
-
-// ratingStateIcon returns the Bootstrap Icon name and style for the album's
-// rating state, or empty name if no icon should be rendered. Provisional
-// ratings carry a `pen` mark — open to revision; finalized and unrated
-// ratings carry no status icon.
-func ratingStateIcon(album library.AlbumDTO) (string, templates.IconStyle) {
-	if album.RatingState != nil && album.RatingState.State == "provisional" {
-		return "pen", templates.IconStyleOutline
-	}
-	return "", templates.IconStyleOutline
-}
-
-// ratingStateLabel returns the human-readable label for the icon's tooltip,
-// since the icon alone won't tell a new user which state it represents.
-func ratingStateLabel(album library.AlbumDTO) string {
-	if album.RatingState != nil && album.RatingState.State == "provisional" {
-		return "Provisional"
-	}
-	return ""
 }
 
 // AlbumScoreReadoutFrag renders the score readout used in the list view.
@@ -60,19 +39,7 @@ templ AlbumScoreReadoutFrag(album library.AlbumDTO, isOOB bool) {
 				hx-swap-oob="true"
 			}
 		>
-			<div class="relative">
-				{ fmt.Sprintf("%.1f", *album.Rating.Rating) }
-				if iconName, iconStyle := ratingStateIcon(album); iconName != "" {
-					<span
-						class="absolute -top-2 -right-4 text-sm font-normal leading-none"
-						data-testid="album-score-readout-state-icon"
-						data-icon-name={ iconName }
-						title={ ratingStateLabel(album) }
-					>
-						@templates.Icon(templates.IconProps{Name: iconName, Style: iconStyle})
-					</span>
-				}
-			</div>
+			{ fmt.Sprintf("%.1f", *album.Rating.Rating) }
 		</div>
 	} else {
 		<div
