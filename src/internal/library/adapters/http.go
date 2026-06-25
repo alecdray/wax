@@ -64,6 +64,7 @@ func parseFilterParams(r *http.Request) library.FilterParams {
 		fp.Formats = append(fp.Formats, models.ReleaseFormat(format))
 	}
 	fp.ArtistIDs = q["artist"]
+	fp.PrimaryIDs = q["primary"]
 	return fp
 }
 

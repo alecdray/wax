@@ -4,11 +4,26 @@ import (
 	"fmt"
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/templates"
+	"github.com/alecdray/wax/src/internal/genregraph"
 	"github.com/alecdray/wax/src/internal/library"
 	"net/url"
 	"slices"
 	"strings"
 )
+
+// primaryFilterLabel maps a selected primary-genre filter value to its display
+// label — the curated label for a genre id, or "Uncategorized" for the sentinel.
+func primaryFilterLabel(id string) string {
+	if id == library.UncategorizedPrimaryID {
+		return "Uncategorized"
+	}
+	for _, p := range genregraph.PrimaryGenres() {
+		if p.ID == id {
+			return p.Label
+		}
+	}
+	return id
+}
 
 // Default sort field + direction for the library dashboard. The URL contract
 // requires defaults to be omitted from the query string so stale params
@@ -41,7 +56,8 @@ func isDefaultFilters(fp library.FilterParams) bool {
 		fp.MinRating == nil && fp.MaxRating == nil &&
 		fp.Rated == "" &&
 		len(fp.Formats) == 0 &&
-		len(fp.ArtistIDs) == 0
+		len(fp.ArtistIDs) == 0 &&
+		len(fp.PrimaryIDs) == 0
 }
 
 // isDefaultView reports whether the full view (sort + filters + query) is at
@@ -80,6 +96,9 @@ func addNonDefaultParams(q url.Values, sortBy, dir string, fp library.FilterPara
 	}
 	for _, artistID := range fp.ArtistIDs {
 		q.Add("artist", artistID)
+	}
+	for _, primaryID := range fp.PrimaryIDs {
+		q.Add("primary", primaryID)
 	}
 }
 
@@ -394,6 +413,9 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 					for _, artistID := range fp.ArtistIDs {
 						<input type="hidden" name="artist" value={ artistID }/>
 					}
+					for _, primaryID := range fp.PrimaryIDs {
+						<input type="hidden" name="primary" value={ primaryID }/>
+					}
 					<div class="flex flex-col gap-1 mb-3">
 						for _, opt := range []struct{ value, label string }{
 							{"date", "Date Added"},
@@ -479,6 +501,9 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 					}
 					for _, artistID := range fp.ArtistIDs {
 						<input type="hidden" name="artist" value={ artistID }/>
+					}
+					for _, primaryID := range fp.PrimaryIDs {
+						<input type="hidden" name="primary" value={ primaryID }/>
 					}
 					<div class="flex gap-3 mb-3">
 						<label class="flex flex-col gap-1 flex-1">
@@ -582,6 +607,9 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 					for _, artistID := range fp.ArtistIDs {
 						<input type="hidden" name="artist" value={ artistID }/>
 					}
+					for _, primaryID := range fp.PrimaryIDs {
+						<input type="hidden" name="primary" value={ primaryID }/>
+					}
 					<div class="flex flex-col gap-1 mb-3">
 						for _, opt := range []struct{ value, label string }{
 							{"digital", "Digital"},
@@ -601,6 +629,91 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 								<span class="text-sm">{ opt.label }</span>
 							</label>
 						}
+					</div>
+					<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
+				</form>
+			</div>
+		</div>
+		// Primary genre popover (multi-select)
+		<div x-data="{ open: false }" class="relative">
+			<button
+				type="button"
+				class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.PrimaryIDs) > 0), templ.KV("btn btn-sm btn-outline", len(fp.PrimaryIDs) == 0) }
+				data-testid="unified-search-bar-genre-toggle"
+				@click="open = !open"
+			>
+				if len(fp.PrimaryIDs) == 1 {
+					<span class="capitalize">{ primaryFilterLabel(fp.PrimaryIDs[0]) }</span>
+				} else if len(fp.PrimaryIDs) > 1 {
+					{ fmt.Sprintf("%d Genres", len(fp.PrimaryIDs)) }
+				} else {
+					Genre
+				}
+			</button>
+			<div
+				x-show="open"
+				x-cloak
+				@click.outside="open = false"
+				data-testid="unified-search-bar-genre-popover"
+				class="absolute z-50 mt-2 right-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-56"
+			>
+				<form
+					hx-get="/app/library/dashboard/albums-table"
+					hx-target="#album-list"
+					hx-indicator="#album-list-results"
+					hx-swap="outerHTML"
+					hx-push-url="true"
+					@submit="open = false"
+				>
+					if fp.Q != "" {
+						<input type="hidden" name="q" value={ fp.Q }/>
+					}
+					if sortBy != "" {
+						<input type="hidden" name="sortBy" value={ sortBy }/>
+					}
+					if sortDir != "" {
+						<input type="hidden" name="dir" value={ sortDir }/>
+					}
+					if fp.MinRating != nil {
+						<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
+					}
+					if fp.MaxRating != nil {
+						<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
+					}
+					if fp.Rated != "" {
+						<input type="hidden" name="rated" value={ fp.Rated }/>
+					}
+					for _, format := range fp.Formats {
+						<input type="hidden" name="format" value={ string(format) }/>
+					}
+					for _, artistID := range fp.ArtistIDs {
+						<input type="hidden" name="artist" value={ artistID }/>
+					}
+					<div class="max-h-56 overflow-y-auto flex flex-col gap-1 mb-3">
+						for _, primary := range genregraph.PrimaryGenres() {
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input
+									data-testid="unified-search-bar-genre-checkbox"
+									type="checkbox"
+									name="primary"
+									value={ primary.ID }
+									class="checkbox checkbox-sm"
+									checked?={ slices.Contains(fp.PrimaryIDs, primary.ID) }
+								/>
+								<span class="text-sm capitalize">{ primary.Label }</span>
+							</label>
+						}
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input
+								data-testid="unified-search-bar-genre-checkbox"
+								type="checkbox"
+								name="primary"
+								value={ library.UncategorizedPrimaryID }
+								class="checkbox checkbox-sm"
+								checked?={ slices.Contains(fp.PrimaryIDs, library.UncategorizedPrimaryID) }
+							/>
+							<span class="text-sm">Uncategorized</span>
+						</label>
 					</div>
 					<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
 				</form>
@@ -658,6 +771,9 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 						}
 						for _, format := range fp.Formats {
 							<input type="hidden" name="format" value={ string(format) }/>
+						}
+						for _, primaryID := range fp.PrimaryIDs {
+							<input type="hidden" name="primary" value={ primaryID }/>
 						}
 						<div x-data="{ search: '' }">
 							<input

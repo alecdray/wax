@@ -11,10 +11,11 @@ import (
 	"github.com/alecdray/wax/src/internal/core/task"
 	"github.com/alecdray/wax/src/internal/discogs"
 	"github.com/alecdray/wax/src/internal/feed"
-	"github.com/alecdray/wax/src/internal/genres"
+	"github.com/alecdray/wax/src/internal/genregraph"
 	"github.com/alecdray/wax/src/internal/library"
 	"github.com/alecdray/wax/src/internal/listeninghistory"
 	"github.com/alecdray/wax/src/internal/musicbrainz"
+	"github.com/alecdray/wax/src/internal/genres"
 	"github.com/alecdray/wax/src/internal/notes"
 	"github.com/alecdray/wax/src/internal/review"
 	"github.com/alecdray/wax/src/internal/spotify"
@@ -36,6 +37,7 @@ type services struct {
 	review           *review.Service
 	listeningHistory *listeninghistory.Service
 	tags             *tags.Service
+	genres           *genres.Service
 	notes            *notes.Service
 	auth             *auth.Service
 }
@@ -64,7 +66,7 @@ func NewServices(app appConfig.App, db *db.DB) *services {
 		slog.Error("Failed to create Discogs client", "error", err)
 		os.Exit(1)
 	}
-	genreDAG, err := genres.Load()
+	genreDAG, err := genregraph.Load()
 	if err != nil {
 		slog.Warn("Failed to load genre DAG; tag suggestions will be unavailable", "error", err)
 	}
@@ -87,11 +89,13 @@ func NewServices(app appConfig.App, db *db.DB) *services {
 
 	s.tags = tags.NewService(db)
 
+	s.genres = genres.NewService(db, s.discogs, genreDAG)
+
 	s.notes = notes.NewService(db)
 
 	s.review = review.NewService(db)
 
-	s.library = library.NewService(db, s.spotify, s.listeningHistory, s.tags, s.notes, s.review)
+	s.library = library.NewService(db, s.spotify, s.listeningHistory, s.tags, s.genres, s.notes, s.review)
 
 	s.feed = feed.NewService(db, s.spotify, s.library)
 
@@ -109,6 +113,9 @@ func NewServices(app appConfig.App, db *db.DB) *services {
 		)
 		s.taskManager.RegisterCronTask(
 			feed.NewSyncStaleSpotifyRadarFeedsTask(s.feed),
+		)
+		s.taskManager.RegisterCronTask(
+			genres.NewEnrichGenresTask(s.genres, s.library),
 		)
 	}
 

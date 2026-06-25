@@ -8,6 +8,7 @@ import (
 
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/discogs"
+	"github.com/alecdray/wax/src/internal/genregraph"
 	"github.com/alecdray/wax/src/internal/notes"
 	"github.com/alecdray/wax/src/internal/review"
 	"github.com/alecdray/wax/src/internal/tags"
@@ -66,6 +67,7 @@ type AlbumDTO struct {
 	Rating       *review.AlbumRatingDTO
 	RatingLog    []*review.AlbumRatingDTO
 	Tags         []tags.TagDTO
+	Primaries    []genregraph.Primary
 	SleeveNote   *notes.AlbumNoteDTO
 	LastPlayedAt *time.Time
 	RatingState  *review.RatingStateDTO
@@ -293,13 +295,37 @@ func (albums AlbumDTOs) SortByDate(ascending bool) {
 	})
 }
 
+// UncategorizedPrimaryID is the sentinel primary-genre filter value matching
+// albums with no primary genres (none resolved, or none mapping to a primary).
+const UncategorizedPrimaryID = "uncategorized"
+
 type FilterParams struct {
-	Q         string // case-insensitive substring against album title and credited artist names
-	MinRating *float64
-	MaxRating *float64
-	Rated     string // "only" | "unrated" | ""
-	Formats   []models.ReleaseFormat
-	ArtistIDs []string
+	Q          string // case-insensitive substring against album title and credited artist names
+	MinRating  *float64
+	MaxRating  *float64
+	Rated      string // "only" | "unrated" | ""
+	Formats    []models.ReleaseFormat
+	ArtistIDs  []string
+	PrimaryIDs []string // primary genre Q-ids; UncategorizedPrimaryID matches no-primary albums
+}
+
+// matchesPrimaries returns true if the album carries any of the selected
+// primary genres, or if Uncategorized is selected and the album has none.
+func matchesPrimaries(album AlbumDTO, primaryIDs []string) bool {
+	for _, want := range primaryIDs {
+		if want == UncategorizedPrimaryID {
+			if len(album.Primaries) == 0 {
+				return true
+			}
+			continue
+		}
+		for _, p := range album.Primaries {
+			if p.ID == want {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // matchesQ returns true if the album's title or any credited artist's name
@@ -322,7 +348,7 @@ func matchesQ(album AlbumDTO, q string) bool {
 
 func (albums AlbumDTOs) Filter(p FilterParams) AlbumDTOs {
 	q := strings.TrimSpace(p.Q)
-	if q == "" && p.MinRating == nil && p.MaxRating == nil && p.Rated == "" && len(p.Formats) == 0 && len(p.ArtistIDs) == 0 {
+	if q == "" && p.MinRating == nil && p.MaxRating == nil && p.Rated == "" && len(p.Formats) == 0 && len(p.ArtistIDs) == 0 && len(p.PrimaryIDs) == 0 {
 		return albums
 	}
 	result := make(AlbumDTOs, 0, len(albums))
@@ -376,6 +402,9 @@ func (albums AlbumDTOs) Filter(p FilterParams) AlbumDTOs {
 			if !hasArtist {
 				continue
 			}
+		}
+		if len(p.PrimaryIDs) > 0 && !matchesPrimaries(album, p.PrimaryIDs) {
+			continue
 		}
 		result = append(result, album)
 	}

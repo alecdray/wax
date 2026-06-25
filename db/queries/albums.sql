@@ -18,3 +18,14 @@ SELECT * FROM albums WHERE spotify_id = ?;
 
 -- name: ListAlbums :many
 SELECT * FROM albums WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT ?;
+
+-- name: GetAlbumsForGenreEnrichment :many
+SELECT albums.id, albums.title,
+    CAST(COALESCE((
+        SELECT artists.name FROM album_artists
+        JOIN artists ON album_artists.artist_id = artists.id
+        WHERE album_artists.album_id = albums.id
+        ORDER BY artists.name LIMIT 1
+    ), '') AS TEXT) AS artist
+FROM albums
+WHERE albums.deleted_at IS NULL;

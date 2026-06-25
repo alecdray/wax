@@ -13,6 +13,7 @@ import (
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/db"
 	"github.com/alecdray/wax/src/internal/core/httpx"
+	"github.com/alecdray/wax/src/internal/genres"
 	"github.com/alecdray/wax/src/internal/library"
 	"github.com/alecdray/wax/src/internal/listeninghistory"
 	"github.com/alecdray/wax/src/internal/notes"
@@ -66,12 +67,14 @@ func newHarness(t *testing.T) *harness {
 	wrapped := db.WrapSqlDB(sqlDB)
 	reviewSvc := review.NewService(wrapped)
 	tagsSvc := tags.NewService(wrapped)
+	// genres' discogs client and graph are unused on this path — nil is safe.
+	genresSvc := genres.NewService(wrapped, nil, nil)
 	notesSvc := notes.NewService(wrapped)
 	// listening-history's GetLastPlayedAtByAlbumIds method (the only one used
 	// downstream of the rating endpoints) hits the local DB only — the spotify
 	// service is required by the constructor but unused on this path.
 	histSvc := listeninghistory.NewService(wrapped, nil)
-	libSvc := library.NewService(wrapped, nil, histSvc, tagsSvc, notesSvc, reviewSvc)
+	libSvc := library.NewService(wrapped, nil, histSvc, tagsSvc, genresSvc, notesSvc, reviewSvc)
 
 	mux := httpx.NewMux(app.NewApp(app.Config{}))
 	RegisterRoutes(mux, NewHttpHandler(libSvc, reviewSvc))

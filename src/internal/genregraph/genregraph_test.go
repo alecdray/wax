@@ -1,4 +1,4 @@
-package genres
+package genregraph
 
 import (
 	"testing"

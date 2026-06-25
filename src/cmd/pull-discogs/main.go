@@ -11,7 +11,7 @@ import (
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/db"
 	"github.com/alecdray/wax/src/internal/discogs"
-	"github.com/alecdray/wax/src/internal/genres"
+	"github.com/alecdray/wax/src/internal/genregraph"
 )
 
 const (
@@ -38,7 +38,7 @@ type Record struct {
 	MainRelease  int             `json:"main_release"`
 }
 
-func nodesToResolved(nodes []*genres.Node) []ResolvedGenre {
+func nodesToResolved(nodes []*genregraph.Node) []ResolvedGenre {
 	out := make([]ResolvedGenre, len(nodes))
 	for i, n := range nodes {
 		out[i] = ResolvedGenre{ID: n.ID, Label: n.Label}
@@ -49,7 +49,7 @@ func nodesToResolved(nodes []*genres.Node) []ResolvedGenre {
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})))
 
-	dag, err := genres.Load()
+	dag, err := genregraph.Load()
 	if err != nil {
 		slog.Error("Failed to load genre DAG", "error", err)
 		os.Exit(1)

@@ -8,6 +8,7 @@ import (
 
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/db/sqlc"
+	"github.com/alecdray/wax/src/internal/genres"
 	"github.com/alecdray/wax/src/internal/review"
 
 	"github.com/google/uuid"
@@ -159,6 +160,20 @@ func (r *Repo) GetAlbumsByIDs(ctx context.Context, albumIDs []string) ([]AlbumDT
 		dtos[i] = albumDTOFromModel(row, nil, nil, nil, nil)
 	}
 	return dtos, nil
+}
+
+// AlbumsForGenreEnrichment returns every non-deleted album with the metadata
+// needed to resolve its genres from Discogs (title + one credited artist).
+func (r *Repo) AlbumsForGenreEnrichment(ctx context.Context) ([]genres.AlbumForEnrichment, error) {
+	rows, err := r.q.GetAlbumsForGenreEnrichment(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]genres.AlbumForEnrichment, len(rows))
+	for i, row := range rows {
+		out[i] = genres.AlbumForEnrichment{ID: row.ID, Title: row.Title, Artist: row.Artist}
+	}
+	return out, nil
 }
 
 // --- Artist lookups ---

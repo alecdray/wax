@@ -80,3 +80,23 @@ export function getLibraryAlbumIds(userId: string): string[] {
 export function getAlbumTitle(albumId: string): string {
   return execSql(`SELECT title FROM albums WHERE id = '${albumId}';`).trim();
 }
+
+// seedAlbumGenre inserts a resolved leaf genre (Wikidata Q-id + label) for an
+// album. Genres are global per album (not per user), so this sets the album's
+// derived primary genres for every viewer. Idempotent on (album_id, genre_id).
+export function seedAlbumGenre(albumId: string, genreId: string, label: string) {
+  execSql(
+    `INSERT INTO album_genres (id, album_id, genre_id, genre_label)` +
+      ` VALUES ('seed-${albumId}-${genreId}', '${albumId}', '${genreId}', '${label}')` +
+      ` ON CONFLICT(album_id, genre_id) DO UPDATE SET genre_label = excluded.genre_label;`,
+  );
+}
+
+// clearAlbumGenres removes all seeded genres and the enrichment marker for an
+// album, returning it to the uncategorized (not-yet-enriched) shape.
+export function clearAlbumGenres(albumId: string) {
+  execSql(
+    `DELETE FROM album_genres WHERE album_id = '${albumId}';` +
+      ` DELETE FROM album_genre_enrichment WHERE album_id = '${albumId}';`,
+  );
+}

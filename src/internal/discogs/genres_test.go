@@ -3,7 +3,7 @@ package discogs
 import (
 	"testing"
 
-	"github.com/alecdray/wax/src/internal/genres"
+	"github.com/alecdray/wax/src/internal/genregraph"
 )
 
 func TestSplitTerm(t *testing.T) {
@@ -33,8 +33,8 @@ func TestSplitTerm(t *testing.T) {
 }
 
 // minimalDAG builds a small DAG with a few well-known genre nodes for testing.
-func minimalDAG() *genres.DAG {
-	return genres.Build([]genres.Entry{
+func minimalDAG() *genregraph.DAG {
+	return genregraph.Build([]genregraph.Entry{
 		{Genre: "Q11399", GenreLabel: "Rock"},
 		{Genre: "Q9778", GenreLabel: "Electronic music", Parent: "Q638", ParentLabel: "Music"},
 		{Genre: "Q8341", GenreLabel: "Jazz", Parent: "Q638", ParentLabel: "Music"},

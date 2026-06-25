@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/alecdray/wax/src/internal/core/db/models"
+	"github.com/alecdray/wax/src/internal/genregraph"
 	"github.com/alecdray/wax/src/internal/review"
 	spotifylib "github.com/zmb3/spotify/v2"
 )
@@ -317,6 +318,67 @@ func TestFilter_UnratedOnly(t *testing.T) {
 	result := albums.Filter(FilterParams{Rated: "unrated"})
 	if len(result) != 1 || result[0].ID != "2" {
 		t.Fatalf("expected only unrated album, got %d albums", len(result))
+	}
+}
+
+func makeAlbumWithPrimaries(id, title string, primaries ...genregraph.Primary) AlbumDTO {
+	a := makeAlbum(id, title, "", nil, nil)
+	a.Primaries = primaries
+	return a
+}
+
+func TestFilter_PrimaryGenre_MatchesSelected(t *testing.T) {
+	rock := genregraph.Primary{ID: "Q11399", Label: "rock"}
+	pop := genregraph.Primary{ID: "Q37073", Label: "pop"}
+	albums := AlbumDTOs{
+		makeAlbumWithPrimaries("1", "Rock Album", rock),
+		makeAlbumWithPrimaries("2", "Pop Album", pop),
+		makeAlbumWithPrimaries("3", "Uncategorized Album"),
+	}
+	result := albums.Filter(FilterParams{PrimaryIDs: []string{"Q11399"}})
+	if len(result) != 1 || result[0].ID != "1" {
+		t.Fatalf("expected only rock album, got %d albums", len(result))
+	}
+}
+
+func TestFilter_PrimaryGenre_OrSemanticsAcrossSelections(t *testing.T) {
+	rock := genregraph.Primary{ID: "Q11399", Label: "rock"}
+	pop := genregraph.Primary{ID: "Q37073", Label: "pop"}
+	jazz := genregraph.Primary{ID: "Q8341", Label: "jazz"}
+	albums := AlbumDTOs{
+		makeAlbumWithPrimaries("1", "Rock Album", rock),
+		makeAlbumWithPrimaries("2", "Pop Album", pop),
+		makeAlbumWithPrimaries("3", "Jazz Album", jazz),
+	}
+	result := albums.Filter(FilterParams{PrimaryIDs: []string{"Q11399", "Q37073"}})
+	if len(result) != 2 {
+		t.Fatalf("expected rock + pop albums, got %d", len(result))
+	}
+}
+
+func TestFilter_PrimaryGenre_MultiPrimaryAlbumMatchesEither(t *testing.T) {
+	pop := genregraph.Primary{ID: "Q37073", Label: "pop"}
+	electronic := genregraph.Primary{ID: "Q9778", Label: "electronic"}
+	hyperpop := makeAlbumWithPrimaries("1", "Hyperpop Album", pop, electronic)
+	albums := AlbumDTOs{hyperpop}
+
+	if got := albums.Filter(FilterParams{PrimaryIDs: []string{"Q9778"}}); len(got) != 1 {
+		t.Fatalf("multi-primary album should match electronic, got %d", len(got))
+	}
+	if got := albums.Filter(FilterParams{PrimaryIDs: []string{"Q37073"}}); len(got) != 1 {
+		t.Fatalf("multi-primary album should match pop, got %d", len(got))
+	}
+}
+
+func TestFilter_PrimaryGenre_Uncategorized(t *testing.T) {
+	rock := genregraph.Primary{ID: "Q11399", Label: "rock"}
+	albums := AlbumDTOs{
+		makeAlbumWithPrimaries("1", "Rock Album", rock),
+		makeAlbumWithPrimaries("2", "Uncategorized Album"),
+	}
+	result := albums.Filter(FilterParams{PrimaryIDs: []string{UncategorizedPrimaryID}})
+	if len(result) != 1 || result[0].ID != "2" {
+		t.Fatalf("expected only uncategorized album, got %d albums", len(result))
 	}
 }
 

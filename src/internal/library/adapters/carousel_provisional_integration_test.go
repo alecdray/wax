@@ -14,6 +14,7 @@ import (
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/db"
 	"github.com/alecdray/wax/src/internal/core/httpx"
+	"github.com/alecdray/wax/src/internal/genres"
 	"github.com/alecdray/wax/src/internal/library"
 	"github.com/alecdray/wax/src/internal/listeninghistory"
 	"github.com/alecdray/wax/src/internal/notes"
@@ -63,13 +64,16 @@ func newCarouselHarness(t *testing.T) *carouselHarness {
 	wrapped := db.WrapSqlDB(sqlDB)
 	reviewSvc := review.NewService(wrapped)
 	tagsSvc := tags.NewService(wrapped)
+	// genres' discogs client and graph are unused on this path — nil is safe;
+	// AlbumPrimaries returns no primaries when the graph is nil.
+	genresSvc := genres.NewService(wrapped, nil, nil)
 	notesSvc := notes.NewService(wrapped)
 	// listening-history's spotify client is not exercised by the carousel
 	// endpoint — nil is safe here.
 	histSvc := listeninghistory.NewService(wrapped, nil)
 	// spotify service is also unused on this path; library's constructor
 	// accepts a nil pointer for it.
-	libSvc := library.NewService(wrapped, nil, histSvc, tagsSvc, notesSvc, reviewSvc)
+	libSvc := library.NewService(wrapped, nil, histSvc, tagsSvc, genresSvc, notesSvc, reviewSvc)
 
 	// The carousel handler only consumes libraryService — every other
 	// collaborator is nil-safe along this request path.

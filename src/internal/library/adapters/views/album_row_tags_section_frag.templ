@@ -47,6 +47,9 @@ templ AlbumRowTagsSectionFrag(album library.AlbumDTO, isOOB bool) {
 					@templates.Icon(templates.IconProps{Name: "pen"})
 				</span>
 			}
+			for _, primary := range album.Primaries {
+				<span class="badge badge-sm badge-outline badge-primary text-xs text-nowrap capitalize" data-testid="album-row-primary-genre">{ primary.Label }</span>
+			}
 			for i, tag := range album.Tags {
 				if i < maxRowTags {
 					<span class="badge badge-sm badge-ghost text-xs text-nowrap text-muted">{ tag.Name }</span>
