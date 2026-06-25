@@ -95,7 +95,7 @@ templ AlbumDetailPage(album library.AlbumDTO, feeds []feed.FeedDTO) {
 						<span class="text-xs font-semibold uppercase tracking-wider text-subtle">Genres</span>
 						<div class="flex flex-wrap items-center gap-1">
 							for _, primary := range album.Primaries {
-								<span class="badge badge-sm badge-outline badge-primary capitalize" data-testid="album-detail-page-primary-genre">{ primary.Label }</span>
+								<span class="badge badge-sm badge-outline capitalize text-muted" data-testid="album-detail-page-primary-genre">{ primary.Label }</span>
 							}
 						</div>
 					</div>

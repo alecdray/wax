@@ -28,6 +28,7 @@ var primaryAllowlist = []Primary{
 	{"Q131272", "soul"},
 	{"Q45981", "R&B"},
 	{"Q164444", "funk"},
+	{"Q58339", "disco"},
 }
 
 // PrimaryGenres returns the full curated primary set in display order. It needs

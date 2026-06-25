@@ -12,6 +12,7 @@ const (
 	qAmbient    = "Q193207"
 	qGFunk      = "Q1045541"
 	qPostPunk   = "Q598929"
+	qDisco      = "Q58339"
 )
 
 func labels(ps []Primary) []string {
@@ -73,6 +74,14 @@ func TestPrimaries(t *testing.T) {
 		got := dag.PrimariesOf(qPostPunk)
 		if !equalLabels(got, "punk") {
 			t.Errorf("post-punk primaries = %v, want [punk] (not rock)", labels(got))
+		}
+	})
+
+	t.Run("disco maps to disco, not R&B", func(t *testing.T) {
+		// disco descends from rhythm and blues; as its own primary it wins.
+		got := dag.PrimariesOf(qDisco)
+		if !equalLabels(got, "disco") {
+			t.Errorf("disco primaries = %v, want [disco] (not R&B)", labels(got))
 		}
 	})
 

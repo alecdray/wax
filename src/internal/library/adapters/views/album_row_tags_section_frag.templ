@@ -48,7 +48,7 @@ templ AlbumRowTagsSectionFrag(album library.AlbumDTO, isOOB bool) {
 				</span>
 			}
 			for _, primary := range album.Primaries {
-				<span class="badge badge-sm badge-outline badge-primary text-xs text-nowrap capitalize" data-testid="album-row-primary-genre">{ primary.Label }</span>
+				<span class="badge badge-sm badge-outline text-xs text-nowrap capitalize text-muted" data-testid="album-row-primary-genre">{ primary.Label }</span>
 			}
 			for i, tag := range album.Tags {
 				if i < maxRowTags {
