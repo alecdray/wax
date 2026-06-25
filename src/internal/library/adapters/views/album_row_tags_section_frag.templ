@@ -13,11 +13,6 @@ func GetAlbumRowTagsSectionID(albumId string) string {
 
 const maxRowTags = 2
 
-// maxRowPrimaries caps how many primary-genre badges a row shows; the rest
-// collapse into a "+N" badge. Primaries arrive dominance-ordered, so the most
-// representative genres are the ones kept.
-const maxRowPrimaries = 3
-
 func ratingLabelTagClass(album library.AlbumDTO) string {
 	if album.RatingState != nil && album.RatingState.State == "finalized" {
 		return "badge badge-sm badge-soft badge-primary text-xs text-nowrap"
@@ -52,13 +47,8 @@ templ AlbumRowTagsSectionFrag(album library.AlbumDTO, isOOB bool) {
 					@templates.Icon(templates.IconProps{Name: "pen"})
 				</span>
 			}
-			for i, primary := range album.Primaries {
-				if i < maxRowPrimaries {
-					<span class="badge badge-sm badge-outline text-xs text-nowrap capitalize text-muted" data-testid="album-row-primary-genre">{ primary.Label }</span>
-				}
-			}
-			if len(album.Primaries) > maxRowPrimaries {
-				<span class="badge badge-sm badge-outline text-xs text-nowrap text-subtle" data-testid="album-row-primary-genre-overflow">+{ fmt.Sprintf("%d", len(album.Primaries)-maxRowPrimaries) }</span>
+			for _, primary := range album.Primaries {
+				<span class="badge badge-sm badge-outline text-xs text-nowrap capitalize text-muted" data-testid="album-row-primary-genre">{ primary.Label }</span>
 			}
 			for i, tag := range album.Tags {
 				if i < maxRowTags {

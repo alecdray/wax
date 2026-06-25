@@ -14,13 +14,18 @@ import (
 
 func newID() string { return uuid.NewString() }
 
+// maxPrimaries caps how many primary genres an album carries. Beyond the top
+// few, extra buckets are noise rather than signal, so they are dropped entirely
+// — for badges and for filtering alike. The kept ones are the most dominant.
+const maxPrimaries = 3
+
 // AlbumPrimaries returns each album's primary genres, keyed by album ID. An
 // album with no resolved genres (or none mapping to a primary) is absent from
 // the map — callers treat absence as uncategorized. Primaries are unioned
 // across the album's leaf genres and ordered by dominance: the more leaf genres
 // map to a primary, the stronger the signal, so it sorts first (ties broken by
-// curated order). Callers that show only a few badges thus surface the most
-// representative genres.
+// curated order). Only the top maxPrimaries are kept — weaker buckets are
+// dropped entirely, for filtering as well as display.
 func (s *Service) AlbumPrimaries(ctx context.Context, albumIDs []string) (map[string][]genregraph.Primary, error) {
 	out := make(map[string][]genregraph.Primary)
 	if len(albumIDs) == 0 || s.graph == nil {
@@ -54,6 +59,9 @@ func (s *Service) AlbumPrimaries(ctx context.Context, albumIDs []string) (map[st
 		sort.SliceStable(prims, func(i, j int) bool {
 			return support[prims[i].ID] > support[prims[j].ID]
 		})
+		if len(prims) > maxPrimaries {
+			prims = prims[:maxPrimaries]
+		}
 		out[albumID] = prims
 	}
 	return out, nil

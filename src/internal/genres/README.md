@@ -17,7 +17,9 @@ A leaf genre maps to its **most-specific** allowlisted primaries by walking the 
 matching bucket on each ancestor path wins (a death-metal album lands in *metal*, not *rock*), while an
 album spanning unrelated branches keeps one primary per branch (hyperpop → *pop* + *electronic*). The
 allowlist and the mapping live in the [`genregraph`](../genregraph/) utility; this module unions the
-results across an album's leaf genres. An album with no primary is *uncategorized*.
+results across an album's leaf genres, ranks them by how many leaves support each (the dominant genres
+first), and keeps only the top few — weaker buckets are dropped entirely, for filtering as well as
+display. An album with no primary is *uncategorized*.
 
 ## Enrichment
 

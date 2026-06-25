@@ -151,6 +151,28 @@ func TestAlbumPrimaries_DominanceOrder(t *testing.T) {
 	}
 }
 
+func TestAlbumPrimaries_CapsAtThree(t *testing.T) {
+	svc, sqlDB := newGenresService(t)
+	ctx := context.Background()
+
+	// Four supported primaries: soul (x2 via neo soul), metal, jazz, funk.
+	// Only the top 3 by dominance survive — funk (weakest, latest curated) drops.
+	seedAlbum(t, sqlDB, "cap")
+	seedAlbumGenre(t, sqlDB, "cap", qSoul, "soul")
+	seedAlbumGenre(t, sqlDB, "cap", qNeoSoul, "neo soul")
+	seedAlbumGenre(t, sqlDB, "cap", qDeathMetal, "death metal")
+	seedAlbumGenre(t, sqlDB, "cap", qBebop, "bebop")
+	seedAlbumGenre(t, sqlDB, "cap", qFunk, "funk")
+
+	got, err := svc.AlbumPrimaries(ctx, []string{"cap"})
+	if err != nil {
+		t.Fatalf("AlbumPrimaries: %v", err)
+	}
+	if labels := primaryLabels(got["cap"]); !equal(labels, []string{"soul", "metal", "jazz"}) {
+		t.Errorf("capped primaries = %v, want [soul metal jazz] (funk dropped)", labels)
+	}
+}
+
 func TestEnrichmentMarkerAndReplace(t *testing.T) {
 	svc, sqlDB := newGenresService(t)
 	ctx := context.Background()
