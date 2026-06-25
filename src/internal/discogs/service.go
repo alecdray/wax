@@ -4,15 +4,15 @@ import (
 	"log/slog"
 
 	"github.com/alecdray/wax/src/internal/core/contextx"
-	"github.com/alecdray/wax/src/internal/genres"
+	"github.com/alecdray/wax/src/internal/genregraph"
 )
 
 type Service struct {
 	client *Client
-	dag    *genres.DAG
+	dag    *genregraph.DAG
 }
 
-func NewService(client *Client, dag *genres.DAG) *Service {
+func NewService(client *Client, dag *genregraph.DAG) *Service {
 	return &Service{client: client, dag: dag}
 }
 
@@ -85,17 +85,33 @@ func (s *Service) GetRelease(ctx contextx.ContextX, id int) (*Release, error) {
 	return s.client.GetRelease(ctx, id)
 }
 
-// GetAlbumGenreSuggestions searches Discogs for the album, resolves the genres and styles
-// against the genre DAG, and returns the normalized genre labels.
-// Errors are logged and suppressed so callers always get a (possibly empty) slice.
-func (s *Service) GetAlbumGenreSuggestions(ctx contextx.ContextX, title, artist string) []string {
+// ResolveAlbumGenreNodes searches Discogs for the album and resolves its genre
+// and style terms against the genre graph, returning the matched nodes (Q-id +
+// label). Errors are logged and suppressed so callers always get a (possibly
+// empty) slice.
+func (s *Service) ResolveAlbumGenreNodes(ctx contextx.ContextX, title, artist string) []*genregraph.Node {
 	item, err := s.SearchMasterByAlbum(ctx, title, artist)
 	if err != nil {
-		slog.Warn("discogs search failed for genre suggestions", "title", title, "err", err)
+		slog.Warn("discogs search failed for genre resolution", "title", title, "err", err)
 		return nil
 	}
 	if item == nil {
-		item, err = s.SearchReleaseByAlbum(ctx, title, artist)
+		item, _ = s.SearchReleaseByAlbum(ctx, title, artist)
 	}
-	return resolveItemGenres(s.dag, item)
+	if item == nil {
+		return nil
+	}
+	return Resolve(s.dag, append(item.Genre, item.Style...))
+}
+
+// GetAlbumGenreSuggestions searches Discogs for the album, resolves the genres and styles
+// against the genre graph, and returns the normalized genre labels.
+// Errors are logged and suppressed so callers always get a (possibly empty) slice.
+func (s *Service) GetAlbumGenreSuggestions(ctx contextx.ContextX, title, artist string) []string {
+	nodes := s.ResolveAlbumGenreNodes(ctx, title, artist)
+	labels := make([]string, 0, len(nodes))
+	for _, n := range nodes {
+		labels = append(labels, n.Label)
+	}
+	return labels
 }

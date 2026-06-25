@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alecdray/wax/src/internal/genres"
+	"github.com/alecdray/wax/src/internal/genregraph"
 )
 
 func TestParseBindings(t *testing.T) {
@@ -68,7 +68,7 @@ func TestBindingsToEntries(t *testing.T) {
 
 func TestPruneOrphans(t *testing.T) {
 	t.Run("removes genres with no known parent", func(t *testing.T) {
-		entries := []genres.Entry{
+		entries := []genregraph.Entry{
 			{Genre: rootGenreID, GenreLabel: "music"},
 			{Genre: "Q1", GenreLabel: "rock", Parent: rootGenreID},
 			{Genre: "Q2", GenreLabel: "indie rock", Parent: "Q1"},
@@ -87,7 +87,7 @@ func TestPruneOrphans(t *testing.T) {
 
 	t.Run("cascades across multiple rounds", func(t *testing.T) {
 		// Q2 depends on Q1 which is an orphan — both should be removed after two rounds.
-		entries := []genres.Entry{
+		entries := []genregraph.Entry{
 			{Genre: rootGenreID, GenreLabel: "music"},
 			{Genre: "Q1", GenreLabel: "orphan", Parent: "Qunknown"},
 			{Genre: "Q2", GenreLabel: "child of orphan", Parent: "Q1"},
@@ -110,7 +110,7 @@ func TestPruneOrphans(t *testing.T) {
 	})
 
 	t.Run("never removes the root node", func(t *testing.T) {
-		entries := []genres.Entry{
+		entries := []genregraph.Entry{
 			{Genre: rootGenreID, GenreLabel: "music"},
 		}
 		filtered, removed := pruneOrphans(entries)
@@ -125,7 +125,7 @@ func TestPruneOrphans(t *testing.T) {
 
 func TestFindMissingParents(t *testing.T) {
 	t.Run("reports parent not in dataset", func(t *testing.T) {
-		entries := []genres.Entry{
+		entries := []genregraph.Entry{
 			{Genre: rootGenreID, GenreLabel: "music"},
 			{Genre: "Q1", GenreLabel: "rock", Parent: rootGenreID},
 			{Genre: "Q2", GenreLabel: "latin", Parent: "Qmissing", ParentLabel: "missing genre"},
@@ -143,7 +143,7 @@ func TestFindMissingParents(t *testing.T) {
 	})
 
 	t.Run("skips genre if at least one parent is known", func(t *testing.T) {
-		entries := []genres.Entry{
+		entries := []genregraph.Entry{
 			{Genre: rootGenreID, GenreLabel: "music"},
 			{Genre: "Q1", GenreLabel: "rock", Parent: rootGenreID},
 			{Genre: "Q2", GenreLabel: "genre", Parent: "Q1"},
@@ -158,7 +158,7 @@ func TestFindMissingParents(t *testing.T) {
 
 func TestRemoveStaleParentRefs(t *testing.T) {
 	t.Run("removes rows whose parent is not in the set", func(t *testing.T) {
-		entries := []genres.Entry{
+		entries := []genregraph.Entry{
 			{Genre: rootGenreID, GenreLabel: "music"},
 			{Genre: "Q1", GenreLabel: "rock", Parent: rootGenreID},
 			{Genre: "Q1", GenreLabel: "rock", Parent: "Qgone"},
@@ -175,7 +175,7 @@ func TestRemoveStaleParentRefs(t *testing.T) {
 	})
 
 	t.Run("keeps rows with no parent", func(t *testing.T) {
-		entries := []genres.Entry{
+		entries := []genregraph.Entry{
 			{Genre: rootGenreID, GenreLabel: "music"},
 		}
 		result := removeStaleParentRefs(entries)
@@ -187,7 +187,7 @@ func TestRemoveStaleParentRefs(t *testing.T) {
 
 func TestFindOrphans(t *testing.T) {
 	t.Run("returns genres with no known parent", func(t *testing.T) {
-		entries := []genres.Entry{
+		entries := []genregraph.Entry{
 			{Genre: rootGenreID, GenreLabel: "music"},
 			{Genre: "Q1", GenreLabel: "rock", Parent: rootGenreID},
 			{Genre: "Q2", GenreLabel: "latin", Parent: "Qunknown"},
@@ -202,7 +202,7 @@ func TestFindOrphans(t *testing.T) {
 	})
 
 	t.Run("does not count root as orphan", func(t *testing.T) {
-		entries := []genres.Entry{
+		entries := []genregraph.Entry{
 			{Genre: rootGenreID, GenreLabel: "music"},
 		}
 		orphans := findOrphans(entries)

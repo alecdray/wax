@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/alecdray/wax/src/internal/genres"
+	"github.com/alecdray/wax/src/internal/genregraph"
 )
 
 var splitRe = regexp.MustCompile(`[/,]+`)
@@ -27,7 +27,7 @@ func splitTerm(term string) []string {
 
 // resolveOne tries to find the best DAG node for a single term.
 // Returns nil if no match.
-func resolveOne(dag *genres.DAG, term string) *genres.Node {
+func resolveOne(dag *genregraph.DAG, term string) *genregraph.Node {
 	if m := dag.Search(term); len(m) > 0 {
 		return m[0]
 	}
@@ -36,7 +36,7 @@ func resolveOne(dag *genres.DAG, term string) *genres.Node {
 
 // resolveItemGenres combines the genre and style fields from a Discogs search item,
 // fuzzy-matches them against the DAG, and returns the resolved genre labels.
-func resolveItemGenres(dag *genres.DAG, item *SearchItem) []string {
+func resolveItemGenres(dag *genregraph.DAG, item *SearchItem) []string {
 	if item == nil {
 		return nil
 	}
@@ -54,11 +54,11 @@ func resolveItemGenres(dag *genres.DAG, item *SearchItem) []string {
 // genre DAG and returns the best-matching node for each term.
 // Compound terms (e.g. "Funk / Soul") are split and each part resolved
 // independently. Terms with no match are logged and skipped.
-func Resolve(dag *genres.DAG, terms []string) []*genres.Node {
+func Resolve(dag *genregraph.DAG, terms []string) []*genregraph.Node {
 	seen := make(map[string]bool)
-	var result []*genres.Node
+	var result []*genregraph.Node
 
-	add := func(n *genres.Node) {
+	add := func(n *genregraph.Node) {
 		if n != nil && !seen[n.ID] {
 			seen[n.ID] = true
 			result = append(result, n)

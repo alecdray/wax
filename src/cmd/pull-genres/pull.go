@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/alecdray/wax/src/internal/genres"
+	"github.com/alecdray/wax/src/internal/genregraph"
 )
 
 const rootGenreID = "Q115484611"
@@ -49,10 +49,10 @@ func parseBindings(r io.Reader) ([]map[string]sparqlBinding, error) {
 }
 
 // bindingsToEntries converts raw SPARQL bindings to genre entries.
-func bindingsToEntries(bindings []map[string]sparqlBinding) []genres.Entry {
-	entries := make([]genres.Entry, 0, len(bindings))
+func bindingsToEntries(bindings []map[string]sparqlBinding) []genregraph.Entry {
+	entries := make([]genregraph.Entry, 0, len(bindings))
 	for _, b := range bindings {
-		entries = append(entries, genres.Entry{
+		entries = append(entries, genregraph.Entry{
 			Genre:       path.Base(b["genre"].Value),
 			GenreLabel:  strings.TrimSuffix(b["genreLabel"].Value, " music"),
 			Parent:      path.Base(b["parent"].Value),
@@ -65,7 +65,7 @@ func bindingsToEntries(bindings []map[string]sparqlBinding) []genres.Entry {
 // pruneOrphans removes entries with no known parent, preserving the root.
 // Returns the pruned slice and the number of entries removed.
 // A single call removes one generation; call repeatedly until 0 is returned.
-func pruneOrphans(entries []genres.Entry) ([]genres.Entry, int) {
+func pruneOrphans(entries []genregraph.Entry) ([]genregraph.Entry, int) {
 	known := make(map[string]bool, len(entries))
 	for _, e := range entries {
 		known[e.Genre] = true
@@ -99,7 +99,7 @@ func pruneOrphans(entries []genres.Entry) ([]genres.Entry, int) {
 		return entries, 0
 	}
 
-	filtered := make([]genres.Entry, 0, len(entries)-len(toRemove))
+	filtered := make([]genregraph.Entry, 0, len(entries)-len(toRemove))
 	for _, e := range entries {
 		if !toRemove[e.Genre] {
 			filtered = append(filtered, e)
@@ -109,12 +109,12 @@ func pruneOrphans(entries []genres.Entry) ([]genres.Entry, int) {
 }
 
 // removeStaleParentRefs removes entry rows whose parent is not in the final set.
-func removeStaleParentRefs(entries []genres.Entry) []genres.Entry {
+func removeStaleParentRefs(entries []genregraph.Entry) []genregraph.Entry {
 	known := make(map[string]bool, len(entries))
 	for _, e := range entries {
 		known[e.Genre] = true
 	}
-	filtered := make([]genres.Entry, 0, len(entries))
+	filtered := make([]genregraph.Entry, 0, len(entries))
 	for _, e := range entries {
 		if e.Parent != "" && e.Parent != "." && !known[e.Parent] {
 			continue
@@ -133,7 +133,7 @@ type missingParent struct {
 
 // findMissingParents returns parent IDs referenced by genres that have no
 // known parent in the dataset.
-func findMissingParents(entries []genres.Entry) []missingParent {
+func findMissingParents(entries []genregraph.Entry) []missingParent {
 	known := make(map[string]bool, len(entries))
 	for _, e := range entries {
 		known[e.Genre] = true
@@ -179,7 +179,7 @@ type orphan struct {
 }
 
 // findOrphans returns genres with no parent present in the dataset.
-func findOrphans(entries []genres.Entry) []orphan {
+func findOrphans(entries []genregraph.Entry) []orphan {
 	known := make(map[string]bool, len(entries))
 	for _, e := range entries {
 		known[e.Genre] = true

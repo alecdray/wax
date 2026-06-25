@@ -27,11 +27,15 @@ type AlbumArtist struct {
 
 type AlbumGenre struct {
 	ID         string
-	UserID     string
 	AlbumID    string
 	GenreID    string
 	GenreLabel string
 	CreatedAt  time.Time
+}
+
+type AlbumGenreEnrichment struct {
+	AlbumID    string
+	EnrichedAt time.Time
 }
 
 type AlbumMood struct {

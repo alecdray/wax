@@ -5,13 +5,13 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/alecdray/wax/src/internal/genres"
+	"github.com/alecdray/wax/src/internal/genregraph"
 )
 
 const (
 	sparqlURL   = "https://query.wikidata.org/sparql"
 	sparqlQuery = `SELECT ?genre ?genreLabel ?parent ?parentLabel WHERE { ?genre wdt:P31 wd:Q188451 . OPTIONAL { ?genre wdt:P279 ?parent } SERVICE wikibase:label { bd:serviceParam wikibase:language "en" } }`
-	outputFile  = "src/internal/genres/data.json"
+	outputFile  = "src/internal/genregraph/data.json"
 )
 
 type sparqlBinding struct {
@@ -38,7 +38,7 @@ func main() {
 	}
 
 	entries := bindingsToEntries(bindings)
-	entries = append(entries, genres.Entry{Genre: rootGenreID, GenreLabel: "music"})
+	entries = append(entries, genregraph.Entry{Genre: rootGenreID, GenreLabel: "music"})
 	slog.Info("Fetched genres", "count", len(entries))
 
 	for round := 1; ; round++ {
@@ -72,7 +72,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	dag := genres.Build(entries)
+	dag := genregraph.Build(entries)
 	if errs := dag.Validate(); len(errs) > 0 {
 		for _, e := range errs {
 			slog.Error("DAG validation failed", "detail", e)

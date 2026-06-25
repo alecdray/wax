@@ -112,6 +112,47 @@ func (q *Queries) GetAlbumsByIDs(ctx context.Context, ids []string) ([]Album, er
 	return items, nil
 }
 
+const getAlbumsForGenreEnrichment = `-- name: GetAlbumsForGenreEnrichment :many
+SELECT albums.id, albums.title,
+    CAST(COALESCE((
+        SELECT artists.name FROM album_artists
+        JOIN artists ON album_artists.artist_id = artists.id
+        WHERE album_artists.album_id = albums.id
+        ORDER BY artists.name LIMIT 1
+    ), '') AS TEXT) AS artist
+FROM albums
+WHERE albums.deleted_at IS NULL
+`
+
+type GetAlbumsForGenreEnrichmentRow struct {
+	ID     string
+	Title  string
+	Artist string
+}
+
+func (q *Queries) GetAlbumsForGenreEnrichment(ctx context.Context) ([]GetAlbumsForGenreEnrichmentRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAlbumsForGenreEnrichment)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAlbumsForGenreEnrichmentRow
+	for rows.Next() {
+		var i GetAlbumsForGenreEnrichmentRow
+		if err := rows.Scan(&i.ID, &i.Title, &i.Artist); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getOrCreateAlbum = `-- name: GetOrCreateAlbum :one
 INSERT INTO albums (id, spotify_id, title, image_url) VALUES (?, ?, ?, ?)
 ON CONFLICT (spotify_id)

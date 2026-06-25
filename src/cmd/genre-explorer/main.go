@@ -6,16 +6,16 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/alecdray/wax/src/internal/genres"
+	"github.com/alecdray/wax/src/internal/genregraph"
 )
 
-var dag *genres.DAG
+var dag *genregraph.DAG
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
 
 	var err error
-	dag, err = genres.Load()
+	dag, err = genregraph.Load()
 	if err != nil {
 		slog.Error("Failed to load genres", "error", err)
 		os.Exit(1)
@@ -229,7 +229,7 @@ body { font-family: system-ui, sans-serif; display: flex; height: 100vh; backgro
   <div id="search-box">
     <input
       type="text"
-      placeholder="Search genres..."
+      placeholder="Search genregraph..."
       name="q"
       hx-get="/api/search"
       hx-trigger="input changed delay:200ms"

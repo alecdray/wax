@@ -90,15 +90,6 @@ CREATE TABLE album_notes (
     updated_at DATETIME NOT NULL DEFAULT current_timestamp,
     UNIQUE(user_id, album_id)
 );
-CREATE TABLE album_genres (
-    id           TEXT PRIMARY KEY,
-    user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    album_id     TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
-    genre_id     TEXT NOT NULL,
-    genre_label  TEXT NOT NULL,
-    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, album_id, genre_id)
-);
 CREATE TABLE album_moods (
     id         TEXT PRIMARY KEY,
     user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -175,4 +166,16 @@ CREATE TABLE IF NOT EXISTS "feeds" (
     last_sync_status text default 'none' check(last_sync_status in ('none', 'success', 'failure', 'pending')),
     source_ref text, next_sync_at datetime, consecutive_failures integer not null default 0,
     unique(user_id, kind)
+);
+CREATE TABLE album_genres (
+    id          TEXT PRIMARY KEY,
+    album_id    TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+    genre_id    TEXT NOT NULL,
+    genre_label TEXT NOT NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(album_id, genre_id)
+);
+CREATE TABLE album_genre_enrichment (
+    album_id    TEXT PRIMARY KEY REFERENCES albums(id) ON DELETE CASCADE,
+    enriched_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

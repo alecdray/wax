@@ -89,6 +89,17 @@ templ AlbumDetailPage(album library.AlbumDTO, feeds []feed.FeedDTO) {
 				</div>
 				// Rating History
 				@AlbumRatingHistoryFrag(album, false)
+				// Genres (read-only, app-curated)
+				if len(album.Primaries) > 0 {
+					<div class="flex flex-col gap-2" data-testid="album-detail-page-genres">
+						<span class="text-xs font-semibold uppercase tracking-wider text-subtle">Genres</span>
+						<div class="flex flex-wrap items-center gap-1">
+							for _, primary := range album.Primaries {
+								<span class="badge badge-sm badge-outline capitalize text-muted" data-testid="album-detail-page-primary-genre">{ primary.Label }</span>
+							}
+						</div>
+					</div>
+				}
 				// Tags
 				<div class="flex flex-col gap-2" data-testid="album-detail-page-tags">
 					<div class="flex items-center justify-start gap-2">

@@ -12,6 +12,7 @@ import (
 	"github.com/alecdray/wax/src/internal/core/db"
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/utils"
+	"github.com/alecdray/wax/src/internal/genres"
 	"github.com/alecdray/wax/src/internal/listeninghistory"
 	"github.com/alecdray/wax/src/internal/notes"
 	"github.com/alecdray/wax/src/internal/review"
@@ -27,20 +28,28 @@ type Service struct {
 	spotifyService          *spotify.Service
 	listeningHistoryService *listeninghistory.Service
 	tagsService             *tags.Service
+	genresService           *genres.Service
 	notesService            *notes.Service
 	reviewService           *review.Service
 }
 
-func NewService(d *db.DB, spotifyService *spotify.Service, listeningHistoryService *listeninghistory.Service, tagsService *tags.Service, notesService *notes.Service, reviewService *review.Service) *Service {
+func NewService(d *db.DB, spotifyService *spotify.Service, listeningHistoryService *listeninghistory.Service, tagsService *tags.Service, genresService *genres.Service, notesService *notes.Service, reviewService *review.Service) *Service {
 	return &Service{
 		db:                      d,
 		repo:                    NewRepo(d.Queries()),
 		spotifyService:          spotifyService,
 		listeningHistoryService: listeningHistoryService,
 		tagsService:             tagsService,
+		genresService:           genresService,
 		notesService:            notesService,
 		reviewService:           reviewService,
 	}
+}
+
+// AlbumsForGenreEnrichment implements genres.AlbumGenreSource: the full album
+// catalog with the metadata the genres module needs to resolve genres.
+func (s *Service) AlbumsForGenreEnrichment(ctx contextx.ContextX) ([]genres.AlbumForEnrichment, error) {
+	return s.repo.AlbumsForGenreEnrichment(ctx)
 }
 
 func (s *Service) GetReleasesInLibrary(ctx context.Context, userId string) ([]ReleaseDTO, error) {
@@ -94,6 +103,11 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 		return nil, fmt.Errorf("failed to get album tags: %w", err)
 	}
 
+	primariesByAlbumId, err := s.genresService.AlbumPrimaries(ctx, albumIds)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get album primary genres: %w", err)
+	}
+
 	notesByAlbumId, err := s.notesService.GetAlbumNotesByAlbumIds(ctx, userId, albumIds)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get album notes: %w", err)
@@ -116,6 +130,7 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 			dto.LastPlayedAt = &t
 		}
 		dto.Tags = tagsByAlbumId[album.ID]
+		dto.Primaries = primariesByAlbumId[album.ID]
 		dto.SleeveNote = notesByAlbumId[album.ID]
 		dto.RatingState = ratingStates[album.ID]
 		albumDTOs = append(albumDTOs, dto)
@@ -195,6 +210,12 @@ func (s *Service) GetAlbumInLibrary(ctx context.Context, userId string, albumId 
 		return nil, fmt.Errorf("failed to get album tags: %w", err)
 	}
 	album.Tags = albumTags
+
+	primariesByAlbumId, err := s.genresService.AlbumPrimaries(ctx, []string{albumId})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get album primary genres: %w", err)
+	}
+	album.Primaries = primariesByAlbumId[albumId]
 
 	sleeveNote, err := s.notesService.GetAlbumNote(ctx, userId, albumId)
 	if err != nil {
