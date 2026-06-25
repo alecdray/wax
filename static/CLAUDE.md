@@ -64,6 +64,10 @@ Four named utilities express the text-on-base-content hierarchy. Defined as Tail
 
 Roles: see `docs/design/design-system.md` "Text emphasis scale."
 
+## Brand icon
+
+`favicon.svg` is the single source mark — a large amber `--color-primary` brand "w" with a dark extruded edge (depth without lightening the brand colour) on a warm-black tile (`#0e0c0a`, theme base-100). The "w" is the brand font (Instrument Sans 600) **outlined to a `<path>`**, not live `<text>`: an SVG icon doesn't inherit the page's web font, and `rsvg-convert` uses system fonts, so a font-name reference would fall back inconsistently. To change the letter/weight/font, re-outline it (fonttools: instantiate the variable font at the target axes, pull the glyph via `SVGPathPen`, and transform it to centre the bbox). It is served directly as the favicon; the home-screen PNGs (`apple-touch-icon.png` for iOS, `icon-{192,512}.png` for the PWA manifest) are rendered from it by `task build/icons`. Edit `favicon.svg`, rerun the task, and commit the PNGs — the Docker build copies `public/` as-is and has no `rsvg-convert`.
+
 ## Bootstrap Icons (vendored)
 
 `bootstrap-icons.css` (vendored to `static/public/`) and `fonts/bootstrap-icons.woff2` (vendored to `static/public/fonts/`) are loaded by the root layout primitive (`core/templates/root.templ`). The application's icon primitive (`core/templates/Icon`) emits `<i class="bi bi-{name}{-fill}?">` and relies on this stylesheet.
