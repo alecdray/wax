@@ -3,6 +3,7 @@ package genres
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/db"
@@ -16,7 +17,10 @@ func newID() string { return uuid.NewString() }
 // AlbumPrimaries returns each album's primary genres, keyed by album ID. An
 // album with no resolved genres (or none mapping to a primary) is absent from
 // the map — callers treat absence as uncategorized. Primaries are unioned
-// across the album's leaf genres and returned in the graph's curated order.
+// across the album's leaf genres and ordered by dominance: the more leaf genres
+// map to a primary, the stronger the signal, so it sorts first (ties broken by
+// curated order). Callers that show only a few badges thus surface the most
+// representative genres.
 func (s *Service) AlbumPrimaries(ctx context.Context, albumIDs []string) (map[string][]genregraph.Primary, error) {
 	out := make(map[string][]genregraph.Primary)
 	if len(albumIDs) == 0 || s.graph == nil {
@@ -28,22 +32,28 @@ func (s *Service) AlbumPrimaries(ctx context.Context, albumIDs []string) (map[st
 		return nil, fmt.Errorf("failed to load album genres: %w", err)
 	}
 
+	curated := s.graph.Primaries()
+
 	for albumID, leaves := range byAlbum {
-		hit := make(map[string]bool)
+		support := make(map[string]int)
 		for _, leaf := range leaves {
 			for _, p := range s.graph.PrimariesOf(leaf.GenreID) {
-				hit[p.ID] = true
+				support[p.ID]++
 			}
 		}
-		if len(hit) == 0 {
+		if len(support) == 0 {
 			continue
 		}
-		var prims []genregraph.Primary
-		for _, p := range s.graph.Primaries() { // curated order
-			if hit[p.ID] {
+		// Seed in curated order, then stable-sort by support so ties keep it.
+		prims := make([]genregraph.Primary, 0, len(support))
+		for _, p := range curated {
+			if support[p.ID] > 0 {
 				prims = append(prims, p)
 			}
 		}
+		sort.SliceStable(prims, func(i, j int) bool {
+			return support[prims[i].ID] > support[prims[j].ID]
+		})
 		out[albumID] = prims
 	}
 	return out, nil

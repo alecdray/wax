@@ -19,6 +19,9 @@ const (
 	qDeathMetal = "Q483251"
 	qAmbient    = "Q193207"
 	qBebop      = "Q105513"
+	qSoul       = "Q131272"
+	qNeoSoul    = "Q268253"
+	qFunk       = "Q164444"
 )
 
 func newGenresService(t *testing.T) (*Service, *sql.DB) {
@@ -126,6 +129,25 @@ func TestAlbumPrimaries(t *testing.T) {
 	// metal precedes jazz in curated order.
 	if labels := primaryLabels(got["mix"]); !equal(labels, []string{"metal", "jazz"}) {
 		t.Errorf("mixed album primaries = %v, want [metal jazz]", labels)
+	}
+}
+
+func TestAlbumPrimaries_DominanceOrder(t *testing.T) {
+	svc, sqlDB := newGenresService(t)
+	ctx := context.Background()
+
+	// Two leaves map to soul (soul itself + neo soul), one to funk → soul leads.
+	seedAlbum(t, sqlDB, "dom")
+	seedAlbumGenre(t, sqlDB, "dom", qSoul, "soul")
+	seedAlbumGenre(t, sqlDB, "dom", qNeoSoul, "neo soul")
+	seedAlbumGenre(t, sqlDB, "dom", qFunk, "funk")
+
+	got, err := svc.AlbumPrimaries(ctx, []string{"dom"})
+	if err != nil {
+		t.Fatalf("AlbumPrimaries: %v", err)
+	}
+	if labels := primaryLabels(got["dom"]); !equal(labels, []string{"soul", "funk"}) {
+		t.Errorf("dominance order = %v, want [soul funk] (soul has more leaf support)", labels)
 	}
 }
 
