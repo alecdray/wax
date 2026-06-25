@@ -71,3 +71,9 @@ Next: replace the enumerated list with a conceptual description of what `core/` 
 The e2e suite rules (feature↔spec 1:1, no orphan testids, testid naming, selectors, wait signals, single auth path, real backend, fail loud) appear in both `e2e/README.md` (detailed guide) and `e2e/CLAUDE.md` (auto-loaded quick reference), but this intentional duplication is not listed in `.claude/CLAUDE.md`'s "Synchronized content" section, so the two can drift. Pre-existing on `main`; surfaced by the docs-audit during the Spotify rate-limit branch.
 
 Next: either register the duplication in "Synchronized content" (README = detailed, CLAUDE.md = quick reference; update both together) or consolidate to full rules in `e2e/README.md` with `e2e/CLAUDE.md` referring to it. Low priority.
+
+## Primary genres — user controls
+
+The primary-genre facet ([ADR 0009](adr/0009-primary-genres-curated-facet.md)) auto-assigns app-curated genres to every album and shows them as read-only badges. Two user-control gaps remain: (1) there's no way to **turn the genre badges off** — a user who finds them noisy or doesn't filter by genre can't opt out; (2) genres are **entirely app-derived from Discogs with no manual override** — a user can't fix a misclassification, add a missing genre, or remove a wrong one on a given album.
+
+Next: (1) decide the toggle's scope and home — a per-user display preference that hides genre badges globally vs. a per-album hide, and where it lives (profile/settings vs. an affordance on the album). (2) Spec per-album genre editing: a picker over the curated primaries (and/or the `genregraph` DAG), and how manual edits coexist with auto-enrichment — re-enrichment must not clobber user edits (likely a "user-set" marker the enrichment task respects), stored either as overrides on `album_genres` or a separate layer.
