@@ -11,6 +11,7 @@ const (
 	qBebop      = "Q105513"
 	qAmbient    = "Q193207"
 	qGFunk      = "Q1045541"
+	qPostPunk   = "Q598929"
 )
 
 func labels(ps []Primary) []string {
@@ -64,6 +65,14 @@ func TestPrimaries(t *testing.T) {
 		got := dag.PrimariesOf(qDeathMetal)
 		if !equalLabels(got, "metal") {
 			t.Errorf("death metal primaries = %v, want [metal] (not rock)", labels(got))
+		}
+	})
+
+	t.Run("punk sub-genre maps to punk, not rock", func(t *testing.T) {
+		// post-punk descends from punk, which descends from rock; punk wins.
+		got := dag.PrimariesOf(qPostPunk)
+		if !equalLabels(got, "punk") {
+			t.Errorf("post-punk primaries = %v, want [punk] (not rock)", labels(got))
 		}
 	})
 

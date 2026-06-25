@@ -15,6 +15,7 @@ type Primary struct {
 var primaryAllowlist = []Primary{
 	{"Q11399", "rock"},
 	{"Q12326776", "metal"},
+	{"Q25554481", "punk"},
 	{"Q37073", "pop"},
 	{"Q9778", "electronic"},
 	{"Q11401", "hip-hop"},
