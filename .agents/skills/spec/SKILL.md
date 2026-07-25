@@ -4,7 +4,7 @@ description: Starts phase 1 (Spec) — creates the spec folder with a scope doc,
 argument-hint: "<name of the work — kebab-case slug, prefixed with current Unix timestamp>"
 ---
 
-Phase 1 of the process in [`docs/process.md`](../../docs/process.md). Full convention: [`docs/spec/README.md`](../../docs/spec/README.md).
+Phase 1 of the process in [`docs/process.md`](../../../docs/process.md). Full convention: [`docs/spec/README.md`](../../../docs/spec/README.md).
 
 ## Steps
 

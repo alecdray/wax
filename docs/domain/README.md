@@ -71,8 +71,8 @@ Every write that crosses a domain boundary — named, with owning operation and 
 
 | Write | Owning operation | Why it crosses |
 |---|---|---|
-| Ownership change clears radar entry | `library.SetAlbumOwnership` | Owning or wishlisting settles the radar question — the user acted, so the watch entry is obsolete. |
-| Radar inbox sync creates radar entries | `feed.SyncRadarInbox` → `library.AddRadarEntry` | The feed ingests external data; library owns the radar relationship. |
-| Saved-albums sync creates ownership | `feed.SyncSavedAlbums` → `library.SetAlbumOwnership` | Feed ingests from Spotify; library owns ownership. |
-| Rating save/finalize broadcasts album-changed | `review.SaveRating` / `review.FinalizeWithRating` | Library owns the album surfaces that re-render in response. |
-| Genre auto-assignment from genregraph | `genres.EnrichAlbumGenres` | Genres derive assignments from the genre graph and Discogs data; no user action involved. |
+| Ownership change clears radar entry | library — acquiring or wishlisting an album | Owning or wishlisting settles the radar question — the user acted, so the watch entry is obsolete. |
+| Radar inbox sync creates radar entries | feed inbox sync → library radar-add | The feed ingests external data; library owns the radar relationship. |
+| Saved-albums sync creates ownership | feed saved-albums sync → library ownership | Feed ingests from Spotify; library owns ownership. |
+| Rating save/finalize broadcasts album-changed | review — saving or finalizing a rating | Library owns the album surfaces that re-render in response. |
+| Genre auto-assignment from genregraph | genres — album enrichment | Genres derive assignments from the genre graph and Discogs data; no user action involved. |

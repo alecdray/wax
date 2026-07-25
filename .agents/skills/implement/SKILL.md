@@ -4,7 +4,7 @@ description: Runs phase 2 (Implement) of the development process — edits canon
 argument-hint: "[optional: name of the spec folder under docs/spec/ to implement]"
 ---
 
-Phase 2 of the process in [`docs/process.md`](../../docs/process.md).
+Phase 2 of the process in [`docs/process.md`](../../../docs/process.md).
 
 ## Steps
 
@@ -16,4 +16,4 @@ Phase 2 of the process in [`docs/process.md`](../../docs/process.md).
    - Canonical docs (ADRs, READMEs) describe the real merged behaviour — keep them live.
    - The spec folder under `docs/spec/<timestamp>-<name>/` gets its final update to match reality — this is the last edit it receives before freeze.
 
-4. **Confirm the gate.** Verify `go build ./...`, `go test ./src/...`, and `task test/e2e` are green (see [`docs/testing.md`](../../docs/testing.md)). Then hand off to phase 3 (`/audit`).
+4. **Confirm the gate.** Verify `go build ./...`, `go test ./src/...`, and `task test/e2e` are green (see [`docs/testing.md`](../../../docs/testing.md)). Then hand off to phase 3 (`/audit`).

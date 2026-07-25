@@ -181,4 +181,13 @@ All tasks landed across 4 commits on `align-agentic-template`, tracked as PR #48
 
 - PR A, B, C, D shipped on a single branch (`align-agentic-template`) in one stacked PR rather than separate PRs — the changes are small enough to review together.
 - `docs/backlog.md` and `docs/roadmap.md` were deleted and content migrated; git detected `roadmap.md → backlog/features.md` as a rename.
-- `docs/specs/` in .gitignore refers to the old convention — left as-is since the new convention uses `docs/spec/`.
+- `docs/specs/` .gitignore entry removed (it was a stale artefact from before the `docs/spec/` convention; the committed spec folder is unaffected).
+
+### Post-initial-commit fixes (pre-merge audit pass)
+
+Audit surfaced 5 issues fixed before freeze:
+
+1. **Cross-domain write ledger used fabricated Go operation names** (`SetAlbumOwnership`, `SyncRadarInbox`, `AddRadarEntry`, `SyncSavedAlbums`, `EnrichAlbumGenres` — none exist in the codebase). Ledger rephrased to conceptual operations in line with the domain-doc rule of staying implementation-agnostic (`docs/domain/README.md`, `docs/domain/library.md`).
+2. **Root `AGENTS.md` convention note** cited `.claude/CLAUDE.md` as the Claude Code entry point — that path does not resolve. Corrected to the real mechanism: the sibling `CLAUDE.md → AGENTS.md` symlink at repo root.
+3. **`docs/domain/library.md` ADR links** used `../../adr/` (one level too deep from `docs/domain/`); corrected to `../adr/`.
+4. **`.agents/skills/implement/SKILL.md` and `.agents/skills/spec/SKILL.md`** referenced `../../docs/` (resolves to `.agents/docs/`, nonexistent); corrected to `../../../docs/`.

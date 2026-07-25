@@ -1,6 +1,6 @@
 # Agent Guidelines
 
-> **Convention note:** This file is the tool-agnostic entry point. Claude Code users get it via the `.claude/CLAUDE.md` symlink; other agents load `AGENTS.md` directly. The same relationship holds for `.agents/` ↔ `.claude/`. Git hooks in `.githooks/` regenerate the symlinks automatically on checkout/merge/rewrite.
+> **Convention note:** This file is the tool-agnostic entry point. Claude Code loads it via the sibling `CLAUDE.md` symlink; other agents load `AGENTS.md` directly. The same pattern holds throughout the repo — every `AGENTS.md` has a generated `CLAUDE.md` symlink beside it, and `.claude/` is a symlink to the canonical `.agents/`. Git hooks in `.githooks/` regenerate these symlinks automatically on checkout/merge/rewrite.
 
 ## Starting new work
 

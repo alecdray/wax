@@ -51,14 +51,14 @@ A radar entry is a "watching this" bookmark on an album. It is independent of ow
 
 ### Eligibility rule
 
-An album is radar-eligible unless it is **currently owned or wishlisted**. A removed album is radar-eligible ([ADR 0005](../../adr/0005-radar-eligibility-excludes-only-owned-wishlisted.md)).
+An album is radar-eligible unless it is **currently owned or wishlisted**. A removed album is radar-eligible ([ADR 0005](../adr/0005-radar-eligibility-excludes-only-owned-wishlisted.md)).
 
 ### Auto-clear on ownership change
 
-When a user owns or wishlists an album, its radar entry is **automatically cleared** — the user acted on it, so it leaves the watch list. This is the library domain's single cross-domain write: `SetAlbumOwnership` clears the radar entry as a side effect.
+When a user owns or wishlists an album, its radar entry is **automatically cleared** — the user acted on it, so it leaves the watch list. This is the library domain's single cross-domain write: acquiring or wishlisting an album clears the radar entry as a side effect.
 
 ### Radar sources
 
 Albums reach the radar through two paths:
 - **In-app add**: the user searches and explicitly adds an album to radar.
-- **Spotify inbox**: the user opts into a Spotify playlist watched by wax. A periodic feed sync ingests each track as a radar entry. Tracks whose album is already owned or wishlisted are silently dropped ([ADR 0004](../../adr/0004-spotify-radar-playlist-entry.md)).
+- **Spotify inbox**: the user opts into a Spotify playlist watched by wax. A periodic feed sync ingests each track as a radar entry. Tracks whose album is already owned or wishlisted are silently dropped ([ADR 0004](../adr/0004-spotify-radar-playlist-entry.md)).
