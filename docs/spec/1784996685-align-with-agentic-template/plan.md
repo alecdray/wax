@@ -159,3 +159,26 @@ most of the raw material. Synthesize, don't invent.
 - **Tasks 6 & 7 are content-heavy** (product + domain). If either balloons, spin it into its own `docs/spec/<timestamp>-<name>/` and land it separately — PR A is the pure structural migration and merges first.
 - **Cross-check against two-cents** before finalizing any doc rule wording — two-cents is the authority and may already phrase a rule better than the template.
 - **Feed patterns back to the template.** Two wax assets have no template equivalent and are worth folding *upstream* after this lands: (1) `docs/product/vision.md` — a product-vision doc distinct from per-feature docs; (2) the `library`/`radar` cross-module examples, which are cleaner real-world demonstrations of the orthogonal domain-vs-product split than the template's synthetic `widgets`. The template is a pattern lab — this migration is also a chance to improve it.
+
+## Reconciliation — what shipped
+
+All tasks landed across 4 commits on `align-agentic-template`, tracked as PR #48:
+
+| Task | Status | Notes |
+|---|---|---|
+| 1 — AGENTS.md/.agents symlink convention | Shipped | 21 renames, .githooks/ added, hooksPath set |
+| 2 — Merge audit skills | Shipped | Single dispatcher + 2 checklists in .agents/skills/audit/ |
+| 3 — Add spec, implement, prose-compact skills | Shipped | All 3 copied from template |
+| 4 — Two-layer doc model | Shipped | process.md rewritten, docs/spec/README.md added |
+| 5 — Backlog dir | Shipped | docs/backlog.md + roadmap.md → docs/backlog/features.md + bugs.md |
+| 6 — Product dir | Shipped | vision.md moved, library/radar/ratings authored, 5 stubs created |
+| 7 — Domain dir | Shipped | index + library/review/genres authored, 6 stubs created |
+| 8-rules — Doc-practice rules | Shipped | Structure-over-prose + product-docs table convention in root AGENTS.md |
+| 8-tables — Per-module Product docs | Shipped | 9 module AGENTS.md files updated with Product docs tables |
+| 9 — Backfill auth/genregraph READMEs | Shipped | Both READMEs written |
+
+### Divergences from plan
+
+- PR A, B, C, D shipped on a single branch (`align-agentic-template`) in one stacked PR rather than separate PRs — the changes are small enough to review together.
+- `docs/backlog.md` and `docs/roadmap.md` were deleted and content migrated; git detected `roadmap.md → backlog/features.md` as a rename.
+- `docs/specs/` in .gitignore refers to the old convention — left as-is since the new convention uses `docs/spec/`.

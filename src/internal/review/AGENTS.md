@@ -10,3 +10,9 @@ Module-specific notes:
 - The modal entry route `GET /app/review/rating-recommender` always renders the score-entry form (`RatingConfirmFormFrag`), pre-filled from the most-recent rating-log score. Both save buttons render unconditionally — **Save & finalize** (primary) posts to the finalize route, **Save only** (secondary, the form's own submit) posts to the save route. The questionnaire is opt-in via a **Help me score it** link beneath the rating input, carries `priorRating` so dismissal can restore the pre-fill, and never writes a rating row itself.
 - `album_rating_log.state`'s CHECK still admits `'stalled'` because history is immutable — `RatingStateLogLabel` provides the display label for historical entries. The live `album_rating_state.state` CHECK is narrowed to `{provisional, finalized}` after the `20260517000001_retire_rerate_machinery.sql` migration.
 - After saving/finalizing a rating or deleting a rating-log entry, handlers broadcast the `album-changed` HTMX event (via `httpx.SetHXTrigger`, detail `{"albumId": <id>}`) instead of rendering library views; library owns the refresh via its `GET /app/library/album-surfaces` endpoint.
+
+## Product docs
+
+| Doc | What | When |
+|---|---|---|
+| [ratings](../../../docs/product/ratings.md) | score albums 0–10 with questionnaire; provisional/finalized lifecycle | deciding rating behaviour or how the lifecycle should work |
