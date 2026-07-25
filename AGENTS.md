@@ -58,8 +58,9 @@ Where to find / update docs:
 |---|---|
 | Development process (spec→implement→audit→merge) | `docs/process.md` |
 | Per-chunk-of-work record (scope, goals, spec; frozen at merge) | `docs/spec/<timestamp>-<name>/` |
-| Product vision & philosophy | `docs/vision.md` |
+| Product vision & philosophy | `docs/product/vision.md` |
 | Backlog (features and bugs) | `docs/backlog/` |
+| Product features (present-state, what + why) | `docs/product/` |
 | Testing strategy & gate | `docs/testing.md` |
 | E2E authoring, debugging, and suite rules | `e2e/README.md` (auto-loads `e2e/AGENTS.md`) |
 | Architecture rules | `docs/architecture/` |
