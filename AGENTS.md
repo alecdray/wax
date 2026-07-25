@@ -61,6 +61,7 @@ Where to find / update docs:
 | Product vision & philosophy | `docs/product/vision.md` |
 | Backlog (features and bugs) | `docs/backlog/` |
 | Product features (present-state, what + why) | `docs/product/` |
+| Domain model & glossary | `docs/domain/` |
 | Testing strategy & gate | `docs/testing.md` |
 | E2E authoring, debugging, and suite rules | `e2e/README.md` (auto-loads `e2e/AGENTS.md`) |
 | Architecture rules | `docs/architecture/` |
@@ -73,9 +74,9 @@ Where to find / update docs:
 
 ### Synchronized content
 
-A few topics intentionally live in more than one place. **Edit both when changing either:**
+A few topics intentionally live in more than one place. **Edit every listed location when changing any of them:**
 
-- **Data model** — cross-cutting design decisions live in `docs/architecture/data-model.md`; per-entity meaning and key types live in each owning module's `README.md`. When adding, renaming, or removing an entity, update both.
+- **Data model** — cross-cutting design decisions live in `docs/architecture/data-model.md`; per-entity meaning and key types live in each owning module's `README.md`; the domain glossary in `docs/domain/README.md` is canonical for term meaning. When adding, renaming, or removing an entity, update all three.
 - **Design tokens** — token and utility definitions live in `static/src/main.css` (truth); their conceptual roles live in `docs/design/design-system.md`. Update the doc when a token group or named-role utility changes, not when individual values shift.
 
 Anything else that ends up duplicated should be removed from one location, not kept in sync.
