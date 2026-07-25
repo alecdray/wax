@@ -1,6 +1,6 @@
-# Roadmap
+# Features
 
-Planned features in rough priority order. See each module's README for what's already shipped, and [`docs/backlog.md`](./backlog.md) for operational follow-ups. Each feature ships through the [development process](./process.md) — spec → implement → audit → merge.
+Candidate features and improvements in rough priority order. Each ships through the [development process](../process.md).
 
 ## In queue
 
@@ -19,6 +19,11 @@ Planned features in rough priority order. See each module's README for what's al
 | **Auth Error Handling** | Graceful handling of JWT middleware failures and expired/invalid Spotify token failures |
 | **Rating Label Sync (Album List)** | When a rating is changed via the rating modal from the album list, the rating label badge on the row should update without a page reload |
 | **Saved Tracks Sync** | Sync the user's saved tracks from Spotify so loved tracks can be highlighted within album views |
+| **Simplify review flow** | Drop the time-based aspects of the review flow and let the user manually move an item from unrated → provisional → final. Simplify the rating flow so the rating modal opens directly rather than forcing a Q-and-A step first. |
+| **Rethink tagging system** | The current tagging system isn't pulling its weight and needs a rethink. No replacement design yet. |
+| **Auth-aware feed dormancy** | Classify feed failures — keep exponential backoff for transient errors, but give feeds a dormant/needs-reconnect state for auth/permission failures that stops auto-polling and surfaces a "reconnect Spotify" prompt in the UI. |
+| **Visible toast for rate-limited user actions** | When the shared Spotify guard is paused, a user-initiated action fails fast with 429 + Retry-After, but HTMX doesn't swap 4xx responses. Decide the app-wide transient-error display mechanism and render a "Spotify is rate-limiting us, try again shortly" toast. |
+| **Primary genres — user controls** | Two gaps: (1) no way to turn the genre badges off; (2) genres are entirely app-derived from Discogs with no manual override. Spec per-album genre editing and a display-preference toggle. |
 
 ## Ideas
 
@@ -38,8 +43,6 @@ Directionally clear, not yet queued.
 - **Multiple view modes** — grid/cover wall, compact text-only, table — mode switcher in the library header, persisted per user.
 
 ## Open questions
-
-Genuinely undecided — direction or approach unresolved.
 
 - **Progressive Web App (PWA)** — whether to convert Wax to a PWA for offline support and installability; deferred until the mobile experience is more fully developed.
 - **Social features** — Goodreads-style network is a natural long-term direction, but it's unclear whether this belongs in the core product or as a separate surface; secondary to personal library depth.
