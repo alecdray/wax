@@ -260,7 +260,8 @@ templ emptyResultState(sortBy, sortDir string, fp library.FilterParams) {
 //
 // Each popover submits via HTMX hx-get to the same /albums-table endpoint and
 // re-renders the whole #album-list region. The text input fires keyup-changed
-// with a 300ms debounce, matching the radar-page search affordance.
+// with a 300ms debounce and scopes its swap to #album-list-results only (to
+// avoid replacing the input element mid-type); popovers swap the full region.
 //
 // Retired testids (asserted-absent by e2e/spec/library.spec.ts to pin the
 // removal of the chip-modal surface — declared here so the negative
