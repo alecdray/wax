@@ -360,7 +360,8 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 				class="input input-sm input-bordered flex-1 min-w-[12rem]"
 				hx-get={ buildAlbumsTableURLForInput(sortBy, sortDir, fp) }
 				hx-trigger="keyup changed delay:300ms, search"
-				hx-target="#album-list"
+				hx-target="#album-list-results"
+				hx-select="#album-list-results"
 				hx-indicator="#album-list-results"
 				hx-swap="outerHTML"
 				hx-push-url="true"
