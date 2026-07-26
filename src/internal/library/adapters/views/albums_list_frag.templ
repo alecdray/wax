@@ -168,53 +168,74 @@ func sortLabel(sortBy string) string {
 	}
 }
 
+// albumRowFormatsClick is the OnFormatsClick handler for the library dashboard row.
+// It wraps children in the formats button (hx-get opens the formats modal) and also
+// renders dashboardReleasesRegion for OOB swap targeting after format saves.
+templ albumRowFormatsClick(album library.AlbumDTO) {
+	<button
+		class="flex flex-col gap-2 cursor-pointer hover-fade-out"
+		hx-get={ fmt.Sprintf("/app/library/albums/%s/formats", album.ID) }
+		hx-trigger="click"
+		hx-swap="none"
+	>
+		@dashboardReleasesRegion(album.ID, album.Releases, false)
+	</button>
+}
+
+// albumRowDetailLink is the OnRowClick handler for the library dashboard row.
+// It wraps children in an anchor linking to the album detail page.
+templ albumRowDetailLink(id string) {
+	<a href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", id)) }>
+		{ children... }
+	</a>
+}
+
+// albumRowRatingClick is the OnRatingClick handler for the library dashboard row.
+// It renders AlbumScoreReadoutFrag directly; the primitive's score child is unused.
+templ albumRowRatingClick(album library.AlbumDTO) {
+	@AlbumScoreReadoutFrag(album, false)
+}
+
+// albumRowRating returns the rating float64 pointer for AlbumRowProps.
+func albumRowRating(album library.AlbumDTO) *float64 {
+	if album.Rating != nil && album.Rating.Rating != nil {
+		return album.Rating.Rating
+	}
+	return nil
+}
+
+// albumRowFinalized reports whether the album's rating is finalized.
+func albumRowFinalized(album library.AlbumDTO) bool {
+	return album.RatingState != nil && album.RatingState.State == "finalized"
+}
+
+// albumRowArtistNames extracts artist names from an AlbumDTO.
+func albumRowArtistNames(album library.AlbumDTO) []string {
+	names := make([]string, len(album.Artists))
+	for i, a := range album.Artists {
+		names[i] = a.Name
+	}
+	return names
+}
+
 // Reserved testids for album-list-row (asserted-absent by e2e/spec/library.spec.ts):
 //   data-testid="album-list-row-spotify-link" — intentionally NOT rendered;
 //     album rows must not surface Spotify outlinks per design. Declared here
 //     so spec assertions of zero count reference a known testid.
 templ albumListRow(album library.AlbumDTO) {
-	<li class="list-row items-center px-0" data-testid="album-list-row">
-		<button
-			class="flex flex-col gap-2 cursor-pointer hover-fade-out"
-			hx-get={ fmt.Sprintf("/app/library/albums/%s/formats", album.ID) }
-			hx-trigger="click"
-			hx-swap="none"
-		>
-			@dashboardReleasesRegion(album.ID, album.Releases, false)
-		</button>
-		<a href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) } class="flex-shrink-0">
-			if album.ImageURL != "" {
-				<div class="avatar">
-					<div class="mask mask-squircle size-24 flex-shrink-0">
-						<img src={ album.ImageURL } alt={ album.Title }/>
-					</div>
-				</div>
-			} else {
-				<div class="avatar avatar-placeholder">
-					<div class="mask mask-squircle size-24 flex-shrink-0 bg-base-300"></div>
-				</div>
-			}
-		</a>
-		<div class="list-col-grow flex flex-col justify-between min-w-0 h-full pt-2 gap-2">
-			<a href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) } class="block min-w-0">
-				<div class="font-medium truncate" data-testid="album-list-row-title-link">{ album.Title }</div>
-				if len(album.Artists) > 0 {
-					<div class="text-sm text-muted truncate">
-						for i, artist := range album.Artists {
-							if i > 0 {
-								<span>, </span>
-							}
-							{ artist.Name }
-						}
-					</div>
-				}
-			</a>
-			@AlbumRowTagsSectionFrag(album, false)
-		</div>
-		<div class="flex-shrink-0 self-stretch flex items-center">
-			@AlbumScoreReadoutFrag(album, false)
-		</div>
-	</li>
+	@templates.AlbumRow(templates.AlbumRowProps{
+		ID:             album.ID,
+		Title:          album.Title,
+		Artists:        albumRowArtistNames(album),
+		ImageURL:       album.ImageURL,
+		Rating:         albumRowRating(album),
+		Finalized:      albumRowFinalized(album),
+		OnRowClick:     albumRowDetailLink(album.ID),
+		OnFormatsClick: albumRowFormatsClick(album),
+		OnRatingClick:  albumRowRatingClick(album),
+	}) {
+		@AlbumRowTagsSectionFrag(album, false)
+	}
 }
 
 templ AlbumsListBodyFrag(albums []library.AlbumDTO, offset int, sortBy string, sortDir string, fp library.FilterParams) {
