@@ -171,7 +171,6 @@ var RatingKey = []RatingKeyEntry{
 	{10.0, 10.0, RatingLabelMasterpiece},
 }
 
-// FormatDisplayRating formats a rating for display as a whole number (floor).
 func FormatDisplayRating(r float64) string {
 	return strconv.Itoa(int(math.Floor(r)))
 }

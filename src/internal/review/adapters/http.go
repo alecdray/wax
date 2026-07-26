@@ -3,12 +3,12 @@ package adapters
 import (
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
 	"strconv"
 
 	"github.com/alecdray/wax/src/internal/core/contextx"
 	"github.com/alecdray/wax/src/internal/core/httpx"
+	"github.com/alecdray/wax/src/internal/core/utils"
 	"github.com/alecdray/wax/src/internal/library"
 	"github.com/alecdray/wax/src/internal/review"
 	"github.com/alecdray/wax/src/internal/review/adapters/views"
@@ -139,7 +139,7 @@ func (h *HttpHandler) SubmitRatingRecommenderQuestions(w http.ResponseWriter, r 
 			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("invalid value for %s: %w", q.Key, err)})
 			return
 		}
-		val = math.Max(1.0, math.Min(5.0, val))
+		val = utils.Clamp(val, 1.0, 5.0)
 		questions[i] = q.WithValue(val)
 		questionValues[string(q.Key)] = rawVal
 	}
@@ -245,6 +245,7 @@ func (h *HttpHandler) SubmitRatingRecommenderRating(w http.ResponseWriter, r *ht
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("invalid rating: %w", err)})
 		return
 	}
+	ratingVal = utils.Clamp(ratingVal, 0.0, 10.0)
 
 	note := r.Form.Get("note")
 	if len(note) > 2000 {
@@ -287,6 +288,7 @@ func (h *HttpHandler) SubmitRatingRecommenderFinalize(w http.ResponseWriter, r *
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("invalid rating: %w", err)})
 		return
 	}
+	ratingVal = utils.Clamp(ratingVal, 0.0, 10.0)
 
 	note := r.Form.Get("note")
 	if len(note) > 2000 {

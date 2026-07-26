@@ -56,10 +56,10 @@ Apply to all five display callsites (format strings → `review.FormatDisplayRat
 
 - Remove `baseQuestionRadio` and `baseQuestionFieldset`.
 - New `baseQuestionSlider(q review.BaseQuestion)`:
-  - DaisyUI `range` input: `class="range range-primary range-sm"`, `min="1"`, `max="5"`, `step="0.01"`, `value="3"` (neutral default), `name={ string(q.Key) }`, `required`.
-  - `<datalist>` with five `<option>` elements at values 1–5 (no label text — browser renders ticks only); connected via `list` attribute.
-  - `<legend>` question text unchanged above the slider.
-- Unique datalist ID per question: `"ticks-" + string(q.Key)`.
+  - DaisyUI `range` input: `class="range range-neutral range-sm"`, `min="1"`, `max="5"`, `step="0.01"`, `value="3"` (neutral default), `name={ string(q.Key) }`. Track color overridden with `text-muted` (70% base-content); `range-neutral` supplies the thumb color.
+  - Tick marks: a `<div class="flex justify-between px-1">` with five `<span>` elements (no `<datalist>` or `list` attribute — avoided because `list` causes browser snapping to whole-number positions).
+  - Label row: a three-column grid below the ticks with "Disagree" / "Neutral" / "Agree" in muted small text.
+  - `<legend>` question text above the slider.
 
 ### E2E tests (`e2e/spec/reviews.spec.ts`)
 

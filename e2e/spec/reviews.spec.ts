@@ -175,8 +175,8 @@ test("Opening the questionnaire from the score-entry form pre-fills the score af
   await dialog.getByTestId('base-questions-form-submit').click();
 
   await expect(dialog.getByTestId('rating-confirm-form')).toBeVisible();
-  // Computed score is now in the input (some non-empty value).
-  await expect(dialog.getByTestId('rating-confirm-form-input')).not.toHaveValue('');
+  // All-1s answers → score 0.0; the input shows it as "0.0" (%.1f format).
+  await expect(dialog.getByTestId('rating-confirm-form-input')).toHaveValue('0.0');
 });
 
 test('Dismissing the questionnaire preserves the prior pre-fill', async ({ context, page }) => {

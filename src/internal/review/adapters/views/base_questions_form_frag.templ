@@ -7,7 +7,7 @@ import (
 )
 
 templ baseQuestionSlider(q review.BaseQuestion) {
-	<fieldset data-testid="base-question-fieldset" class="flex flex-col gap-2">
+	<fieldset data-testid="base-question-fieldset" class="flex flex-col gap-1">
 		<legend class="text-default font-medium">{ q.Question }</legend>
 		<input
 			data-testid="base-question-slider"
@@ -17,17 +17,18 @@ templ baseQuestionSlider(q review.BaseQuestion) {
 			max="5"
 			step="0.01"
 			value="3"
-			class="range range-primary range-sm"
-			list={ "ticks-" + string(q.Key) }
-			required
+			class="range range-neutral range-sm w-full mt-3 mb-1 text-muted"
 		/>
-		<datalist id={ "ticks-" + string(q.Key) }>
-			<option value="1"></option>
-			<option value="2"></option>
-			<option value="3"></option>
-			<option value="4"></option>
-			<option value="5"></option>
-		</datalist>
+		<div class="flex justify-between px-1">
+			for range 5 {
+				<span class="w-1 h-2 bg-base-300 rounded-full flex-shrink-0"></span>
+			}
+		</div>
+		<div class="grid grid-cols-3 text-xs text-subtle px-1 mt-1">
+			<span>Disagree</span>
+			<span class="text-center">Neutral</span>
+			<span class="text-right">Agree</span>
+		</div>
 	</fieldset>
 }
 
