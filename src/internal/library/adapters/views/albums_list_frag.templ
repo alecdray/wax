@@ -255,13 +255,15 @@ templ emptyResultState(sortBy, sortDir string, fp library.FilterParams) {
 }
 
 // unifiedSearchBar is the single view-state surface on the dashboard library
-// view: free-text query plus inline popovers covering every existing
-// filter/sort dimension. It replaces the previous chip-modal bar.
+// view: free-text query plus filter/sort modals covering every existing
+// filter dimension. It replaces the previous chip-modal bar.
 //
-// Each popover submits via HTMX hx-get to the same /albums-table endpoint and
-// re-renders the whole #album-list region. The text input fires keyup-changed
-// with a 300ms debounce and scopes its swap to #album-list-results only (to
-// avoid replacing the input element mid-type); popovers swap the full region.
+// Each filter chip opens a native <dialog> (modal-bottom on mobile,
+// modal-middle on desktop). The dialog's filter form submits via HTMX hx-get
+// and closes itself via hx-on:htmx:after-swap. The text input fires
+// keyup-changed with a 300ms debounce and scopes its swap to
+// #album-list-results only (to avoid replacing the input element mid-type);
+// filter forms swap the full #album-list region.
 //
 // Retired testids (asserted-absent by e2e/spec/library.spec.ts to pin the
 // removal of the chip-modal surface — declared here so the negative
@@ -368,34 +370,31 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 				hx-push-url="true"
 			/>
 			// Sort popover
-			<div x-data="{ open: false }" class="relative">
-				<button
-					type="button"
-					class="btn btn-sm btn-outline"
-					data-testid="unified-search-bar-sort-toggle"
-					@click="open = !open"
-				>
-					Sort: { sortLabel(sortBy) }
-					if sortDir == "asc" {
-						↑
-					} else {
-						↓
-					}
-				</button>
-				<div
-					x-show="open"
-					x-cloak
-					@click.outside="open = false"
-					data-testid="unified-search-bar-sort-popover"
-					class="absolute z-50 mt-2 left-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-56"
-				>
+			<button
+				type="button"
+				class="btn btn-sm btn-outline"
+				data-testid="unified-search-bar-sort-toggle"
+				onclick="document.getElementById('filter-sort-modal').showModal()"
+			>
+				Sort: { sortLabel(sortBy) }
+				if sortDir == "asc" {
+					↑
+				} else {
+					↓
+				}
+			</button>
+			<dialog id="filter-sort-modal" class="modal modal-bottom sm:modal-middle">
+				<div class="modal-box">
+					<form method="dialog">
+						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
+					</form>
 					<form
 						hx-get="/app/library/dashboard/albums-table"
 						hx-target="#album-list"
 						hx-indicator="#album-list-results"
 						hx-swap="outerHTML"
 						hx-push-url="true"
-						@submit="open = false"
+						hx-on:htmx:after-swap="this.closest('dialog').close()"
 					>
 						if fp.Q != "" {
 							<input type="hidden" name="q" value={ fp.Q }/>
@@ -451,43 +450,41 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
 					</form>
 				</div>
-			</div>
+				<form method="dialog" class="modal-backdrop"><button>close</button></form>
+			</dialog>
 			// Rating popover
-			<div x-data="{ open: false }" class="relative">
-				<button
-					type="button"
-					class={ templ.KV("btn btn-sm btn-soft btn-primary", fp.MinRating != nil || fp.MaxRating != nil || fp.Rated != ""), templ.KV("btn btn-sm btn-outline", fp.MinRating == nil && fp.MaxRating == nil && fp.Rated == "") }
-					data-testid="unified-search-bar-rating-toggle"
-					@click="open = !open"
-				>
-					if fp.Rated == "unrated" {
-						Unrated
-					} else if fp.MinRating != nil && fp.MaxRating != nil {
-						Rating: { fmt.Sprintf("%g", *fp.MinRating) }–{ fmt.Sprintf("%g", *fp.MaxRating) }
-					} else if fp.MinRating != nil {
-						Rating ≥ { fmt.Sprintf("%g", *fp.MinRating) }
-					} else if fp.MaxRating != nil {
-						Rating ≤ { fmt.Sprintf("%g", *fp.MaxRating) }
-					} else if fp.Rated == "only" {
-						Rated only
-					} else {
-						Rating
-					}
-				</button>
-				<div
-					x-show="open"
-					x-cloak
-					@click.outside="open = false"
-					data-testid="unified-search-bar-rating-popover"
-					class="absolute z-50 mt-2 left-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-64"
-				>
+			<button
+				type="button"
+				class={ templ.KV("btn btn-sm btn-soft btn-primary", fp.MinRating != nil || fp.MaxRating != nil || fp.Rated != ""), templ.KV("btn btn-sm btn-outline", fp.MinRating == nil && fp.MaxRating == nil && fp.Rated == "") }
+				data-testid="unified-search-bar-rating-toggle"
+				onclick="document.getElementById('filter-rating-modal').showModal()"
+			>
+				if fp.Rated == "unrated" {
+					Unrated
+				} else if fp.MinRating != nil && fp.MaxRating != nil {
+					Rating: { fmt.Sprintf("%g", *fp.MinRating) }–{ fmt.Sprintf("%g", *fp.MaxRating) }
+				} else if fp.MinRating != nil {
+					Rating ≥ { fmt.Sprintf("%g", *fp.MinRating) }
+				} else if fp.MaxRating != nil {
+					Rating ≤ { fmt.Sprintf("%g", *fp.MaxRating) }
+				} else if fp.Rated == "only" {
+					Rated only
+				} else {
+					Rating
+				}
+			</button>
+			<dialog id="filter-rating-modal" class="modal modal-bottom sm:modal-middle">
+				<div class="modal-box">
+					<form method="dialog">
+						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
+					</form>
 					<form
 						hx-get="/app/library/dashboard/albums-table"
 						hx-target="#album-list"
 						hx-indicator="#album-list-results"
 						hx-swap="outerHTML"
 						hx-push-url="true"
-						@submit="open = false"
+						hx-on:htmx:after-swap="this.closest('dialog').close()"
 					>
 						if fp.Q != "" {
 							<input type="hidden" name="q" value={ fp.Q }/>
@@ -556,37 +553,35 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
 					</form>
 				</div>
-			</div>
+				<form method="dialog" class="modal-backdrop"><button>close</button></form>
+			</dialog>
 			// Format popover (multi-select)
-			<div x-data="{ open: false }" class="relative">
-				<button
-					type="button"
-					class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.Formats) > 0), templ.KV("btn btn-sm btn-outline", len(fp.Formats) == 0) }
-					data-testid="unified-search-bar-format-toggle"
-					@click="open = !open"
-				>
-					if len(fp.Formats) == 1 {
-						<span class="capitalize">{ string(fp.Formats[0]) }</span>
-					} else if len(fp.Formats) > 1 {
-						{ fmt.Sprintf("%d Formats", len(fp.Formats)) }
-					} else {
-						Format
-					}
-				</button>
-				<div
-					x-show="open"
-					x-cloak
-					@click.outside="open = false"
-					data-testid="unified-search-bar-format-popover"
-					class="absolute z-50 mt-2 left-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-56"
-				>
+			<button
+				type="button"
+				class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.Formats) > 0), templ.KV("btn btn-sm btn-outline", len(fp.Formats) == 0) }
+				data-testid="unified-search-bar-format-toggle"
+				onclick="document.getElementById('filter-format-modal').showModal()"
+			>
+				if len(fp.Formats) == 1 {
+					<span class="capitalize">{ string(fp.Formats[0]) }</span>
+				} else if len(fp.Formats) > 1 {
+					{ fmt.Sprintf("%d Formats", len(fp.Formats)) }
+				} else {
+					Format
+				}
+			</button>
+			<dialog id="filter-format-modal" class="modal modal-bottom sm:modal-middle">
+				<div class="modal-box">
+					<form method="dialog">
+						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
+					</form>
 					<form
 						hx-get="/app/library/dashboard/albums-table"
 						hx-target="#album-list"
 						hx-indicator="#album-list-results"
 						hx-swap="outerHTML"
 						hx-push-url="true"
-						@submit="open = false"
+						hx-on:htmx:after-swap="this.closest('dialog').close()"
 					>
 						if fp.Q != "" {
 							<input type="hidden" name="q" value={ fp.Q }/>
@@ -635,37 +630,35 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
 					</form>
 				</div>
-			</div>
+				<form method="dialog" class="modal-backdrop"><button>close</button></form>
+			</dialog>
 			// Primary genre popover (multi-select)
-			<div x-data="{ open: false }" class="relative">
-				<button
-					type="button"
-					class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.PrimaryIDs) > 0), templ.KV("btn btn-sm btn-outline", len(fp.PrimaryIDs) == 0) }
-					data-testid="unified-search-bar-genre-toggle"
-					@click="open = !open"
-				>
-					if len(fp.PrimaryIDs) == 1 {
-						<span class="capitalize">{ primaryFilterLabel(fp.PrimaryIDs[0]) }</span>
-					} else if len(fp.PrimaryIDs) > 1 {
-						{ fmt.Sprintf("%d Genres", len(fp.PrimaryIDs)) }
-					} else {
-						Genre
-					}
-				</button>
-				<div
-					x-show="open"
-					x-cloak
-					@click.outside="open = false"
-					data-testid="unified-search-bar-genre-popover"
-					class="absolute z-50 mt-2 left-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-56"
-				>
+			<button
+				type="button"
+				class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.PrimaryIDs) > 0), templ.KV("btn btn-sm btn-outline", len(fp.PrimaryIDs) == 0) }
+				data-testid="unified-search-bar-genre-toggle"
+				onclick="document.getElementById('filter-genre-modal').showModal()"
+			>
+				if len(fp.PrimaryIDs) == 1 {
+					<span class="capitalize">{ primaryFilterLabel(fp.PrimaryIDs[0]) }</span>
+				} else if len(fp.PrimaryIDs) > 1 {
+					{ fmt.Sprintf("%d Genres", len(fp.PrimaryIDs)) }
+				} else {
+					Genre
+				}
+			</button>
+			<dialog id="filter-genre-modal" class="modal modal-bottom sm:modal-middle">
+				<div class="modal-box">
+					<form method="dialog">
+						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
+					</form>
 					<form
 						hx-get="/app/library/dashboard/albums-table"
 						hx-target="#album-list"
 						hx-indicator="#album-list-results"
 						hx-swap="outerHTML"
 						hx-push-url="true"
-						@submit="open = false"
+						hx-on:htmx:after-swap="this.closest('dialog').close()"
 					>
 						if fp.Q != "" {
 							<input type="hidden" name="q" value={ fp.Q }/>
@@ -720,38 +713,36 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
 					</form>
 				</div>
-			</div>
+				<form method="dialog" class="modal-backdrop"><button>close</button></form>
+			</dialog>
 			// Artist popover (multi-select, with in-popover search)
 			if len(artists) > 0 {
-				<div x-data="{ open: false }" class="relative">
-					<button
-						type="button"
-						class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.ArtistIDs) > 0), templ.KV("btn btn-sm btn-outline", len(fp.ArtistIDs) == 0) }
-						data-testid="unified-search-bar-artist-toggle"
-						@click="open = !open"
-					>
-						if len(fp.ArtistIDs) == 1 {
-							1 Artist
-						} else if len(fp.ArtistIDs) > 1 {
-							{ fmt.Sprintf("%d Artists", len(fp.ArtistIDs)) }
-						} else {
-							Artist
-						}
-					</button>
-					<div
-						x-show="open"
-						x-cloak
-						@click.outside="open = false"
-						data-testid="unified-search-bar-artist-popover"
-						class="absolute z-50 mt-2 left-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-72"
-					>
+				<button
+					type="button"
+					class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.ArtistIDs) > 0), templ.KV("btn btn-sm btn-outline", len(fp.ArtistIDs) == 0) }
+					data-testid="unified-search-bar-artist-toggle"
+					onclick="document.getElementById('filter-artist-modal').showModal()"
+				>
+					if len(fp.ArtistIDs) == 1 {
+						1 Artist
+					} else if len(fp.ArtistIDs) > 1 {
+						{ fmt.Sprintf("%d Artists", len(fp.ArtistIDs)) }
+					} else {
+						Artist
+					}
+				</button>
+				<dialog id="filter-artist-modal" class="modal modal-bottom sm:modal-middle">
+					<div class="modal-box">
+						<form method="dialog">
+							<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
+						</form>
 						<form
 							hx-get="/app/library/dashboard/albums-table"
 							hx-target="#album-list"
 							hx-indicator="#album-list-results"
 							hx-swap="outerHTML"
 							hx-push-url="true"
-							@submit="open = false"
+							hx-on:htmx:after-swap="this.closest('dialog').close()"
 						>
 							if fp.Q != "" {
 								<input type="hidden" name="q" value={ fp.Q }/>
@@ -807,7 +798,8 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 							<button type="submit" class="btn btn-primary btn-sm w-full mt-3">Apply</button>
 						</form>
 					</div>
-				</div>
+					<form method="dialog" class="modal-backdrop"><button>close</button></form>
+				</dialog>
 			}
 		</div>
 		// Active-state badges row. Rendered at rest below the controls;
