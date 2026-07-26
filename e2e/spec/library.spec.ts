@@ -225,7 +225,7 @@ test('Sort control on the unified bar reorders the list', async ({ context, page
   await page.goto('/app/library/dashboard');
 
   await page.getByTestId('unified-search-bar-sort-toggle').click();
-  const popover = page.getByTestId('unified-search-bar-sort-popover');
+  const popover = page.getByTestId('unified-search-bar-sort-modal');
   await expect(popover).toBeVisible();
   await popover.locator('input[name="sortBy"][value="artist"]').check();
   await popover.getByRole('button', { name: 'Apply' }).click();
@@ -241,7 +241,7 @@ test('Rating control on the unified bar narrows by minimum rating', async ({ con
   await page.goto('/app/library/dashboard');
 
   await page.getByTestId('unified-search-bar-rating-toggle').click();
-  const popover = page.getByTestId('unified-search-bar-rating-popover');
+  const popover = page.getByTestId('unified-search-bar-rating-modal');
   await expect(popover).toBeVisible();
   await popover.locator('input[name="minRating"]').fill('7');
   await popover.getByRole('button', { name: 'Apply' }).click();
@@ -257,7 +257,7 @@ test('Filtering to unrated from the unified bar', async ({ context, page }) => {
   await page.goto('/app/library/dashboard');
 
   await page.getByTestId('unified-search-bar-rating-toggle').click();
-  const popover = page.getByTestId('unified-search-bar-rating-popover');
+  const popover = page.getByTestId('unified-search-bar-rating-modal');
   await expect(popover).toBeVisible();
   await popover.locator('input[name="rated"][value="unrated"]').check();
   await popover.getByRole('button', { name: 'Apply' }).click();
@@ -273,7 +273,7 @@ test('Format control on the unified bar supports multi-select', async ({ context
   await page.goto('/app/library/dashboard');
 
   await page.getByTestId('unified-search-bar-format-toggle').click();
-  const popover = page.getByTestId('unified-search-bar-format-popover');
+  const popover = page.getByTestId('unified-search-bar-format-modal');
   await expect(popover).toBeVisible();
   // Multi-select inputs are checkboxes — picking one keeps the others
   // unchecked but the same control accepts further picks. We confirm the
@@ -298,7 +298,7 @@ test('Artist control on the unified bar opens a searchable list when artists exi
   await expect(toggle, 'fixture user must have at least one artist in their library').toBeVisible();
   await toggle.click();
 
-  const popover = page.getByTestId('unified-search-bar-artist-popover');
+  const popover = page.getByTestId('unified-search-bar-artist-modal');
   await expect(popover).toBeVisible();
   await expect(popover.getByTestId('unified-search-bar-artist-checkbox').first()).toBeVisible();
 });
@@ -340,7 +340,7 @@ test('Bar surfaces a badge for a non-default filter at rest', async ({ context, 
 
   // Apply unrated-only via the rating popover.
   await page.getByTestId('unified-search-bar-rating-toggle').click();
-  const popover = page.getByTestId('unified-search-bar-rating-popover');
+  const popover = page.getByTestId('unified-search-bar-rating-modal');
   await expect(popover).toBeVisible();
   await popover.locator('input[name="rated"][value="unrated"]').check();
   const resp = page.waitForResponse((res) =>
@@ -351,7 +351,7 @@ test('Bar surfaces a badge for a non-default filter at rest', async ({ context, 
   await resp;
 
   // The rating-dimension badge is visible at rest — no popover open.
-  await expect(page.getByTestId('unified-search-bar-rating-popover')).not.toBeVisible();
+  await expect(page.getByTestId('unified-search-bar-rating-modal')).not.toBeVisible();
   await expect(page.getByTestId('unified-search-bar-badges')).toBeVisible();
   await expect(page.getByTestId('unified-search-bar-badge-rating')).toBeVisible();
 });
@@ -364,7 +364,7 @@ test('Bar surfaces a sort badge for a non-default sort at rest', async ({ contex
 
   // Apply Artist sort (non-default — default is Date Added desc).
   await page.getByTestId('unified-search-bar-sort-toggle').click();
-  const popover = page.getByTestId('unified-search-bar-sort-popover');
+  const popover = page.getByTestId('unified-search-bar-sort-modal');
   await expect(popover).toBeVisible();
   await popover.locator('input[name="sortBy"][value="artist"]').check();
   const resp = page.waitForResponse((res) =>
@@ -374,7 +374,7 @@ test('Bar surfaces a sort badge for a non-default sort at rest', async ({ contex
   await popover.getByRole('button', { name: 'Apply' }).click();
   await resp;
 
-  await expect(page.getByTestId('unified-search-bar-sort-popover')).not.toBeVisible();
+  await expect(page.getByTestId('unified-search-bar-sort-modal')).not.toBeVisible();
   await expect(page.getByTestId('unified-search-bar-badge-sort')).toBeVisible();
   await expect(page.getByTestId('unified-search-bar-badge-sort')).toContainText('Artist');
 });
@@ -403,7 +403,7 @@ test('Applying state writes the expected params to the URL', async ({ context, p
 
   // Sort by Artist.
   await page.getByTestId('unified-search-bar-sort-toggle').click();
-  const sortPopover = page.getByTestId('unified-search-bar-sort-popover');
+  const sortPopover = page.getByTestId('unified-search-bar-sort-modal');
   await expect(sortPopover).toBeVisible();
   await sortPopover.locator('input[name="sortBy"][value="artist"]').check();
   const sortResp = page.waitForResponse((res) =>
@@ -679,7 +679,7 @@ test('A captured URL reproduces the exact DOM order in a fresh browser context',
 
   // Apply: sort by Artist asc.
   await pageA.getByTestId('unified-search-bar-sort-toggle').click();
-  const sortPopover = pageA.getByTestId('unified-search-bar-sort-popover');
+  const sortPopover = pageA.getByTestId('unified-search-bar-sort-modal');
   await expect(sortPopover).toBeVisible();
   await sortPopover.locator('input[name="sortBy"][value="artist"]').check();
   await sortPopover.locator('input[name="dir"][value="asc"]').check();
@@ -692,7 +692,7 @@ test('A captured URL reproduces the exact DOM order in a fresh browser context',
 
   // Apply: rated only.
   await pageA.getByTestId('unified-search-bar-rating-toggle').click();
-  const ratingPopover = pageA.getByTestId('unified-search-bar-rating-popover');
+  const ratingPopover = pageA.getByTestId('unified-search-bar-rating-modal');
   await expect(ratingPopover).toBeVisible();
   await ratingPopover.locator('input[name="rated"][value="only"]').check();
   const ratingResp = pageA.waitForResponse((res) =>

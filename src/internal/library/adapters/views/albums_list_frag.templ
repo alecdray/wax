@@ -383,7 +383,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 					↓
 				}
 			</button>
-			<dialog id="filter-sort-modal" class="modal modal-bottom sm:modal-middle">
+			<dialog id="filter-sort-modal" data-testid="unified-search-bar-sort-modal" class="modal modal-bottom sm:modal-middle">
 				<div class="modal-box">
 					<form method="dialog">
 						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
@@ -473,7 +473,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 					Rating
 				}
 			</button>
-			<dialog id="filter-rating-modal" class="modal modal-bottom sm:modal-middle">
+			<dialog id="filter-rating-modal" data-testid="unified-search-bar-rating-modal" class="modal modal-bottom sm:modal-middle">
 				<div class="modal-box">
 					<form method="dialog">
 						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
@@ -570,7 +570,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 					Format
 				}
 			</button>
-			<dialog id="filter-format-modal" class="modal modal-bottom sm:modal-middle">
+			<dialog id="filter-format-modal" data-testid="unified-search-bar-format-modal" class="modal modal-bottom sm:modal-middle">
 				<div class="modal-box">
 					<form method="dialog">
 						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
@@ -647,7 +647,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 					Genre
 				}
 			</button>
-			<dialog id="filter-genre-modal" class="modal modal-bottom sm:modal-middle">
+			<dialog id="filter-genre-modal" data-testid="unified-search-bar-genre-modal" class="modal modal-bottom sm:modal-middle">
 				<div class="modal-box">
 					<form method="dialog">
 						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
@@ -731,7 +731,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 						Artist
 					}
 				</button>
-				<dialog id="filter-artist-modal" class="modal modal-bottom sm:modal-middle">
+				<dialog id="filter-artist-modal" data-testid="unified-search-bar-artist-modal" class="modal modal-bottom sm:modal-middle">
 					<div class="modal-box">
 						<form method="dialog">
 							<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
