@@ -6,6 +6,18 @@
 
 All new work ships through the four-phase process in [`docs/process.md`](./docs/process.md) — read it before planning a feature. **Spec is phase 1:** create the work's spec folder [`docs/spec/<timestamp>-<name>/`](./docs/spec/) (scope, goals, spec) and plan the work. Codifying the design into the canonical docs (ADRs, module READMEs) is the opening move of phase 2 (Implement); `/build` and similar tools come after, never as the entry point.
 
+## Skills
+
+Project skills are prefixed `app-` (`.agents/skills/`) to avoid clashing with user/global skills of the same name.
+
+| Skill | When |
+|---|---|
+| `/app-spec` | phase 1 — start new work, create the spec folder |
+| `/app-implement` | phase 2 — build, after canonical docs are updated |
+| `/app-audit` | phase 3 — pre-merge gate, code + docs in one pass |
+| `/app-code-review` | adversarial review of an implementation, or when `/app-audit` isn't the right tool |
+| `/app-prose-compact` | tighten a wall of prose without losing facts |
+
 ## Code Generation
 
 ### Templates
@@ -101,7 +113,7 @@ The spec folder is preserved beside these as the narrative of how the work lande
 
 ## Documentation practices
 
-- **Structure over prose; compress what's left.** Prefer bullets, tables, diagrams, and code blocks over paragraphs — docs should be scannable, not read line-by-line. Where prose is unavoidable, keep it compact: cut filler, preamble, and hedging so every sentence earns its place. A wall of prose is a rewrite signal — run `/prose-compact` to tighten it without losing facts.
+- **Structure over prose; compress what's left.** Prefer bullets, tables, diagrams, and code blocks over paragraphs — docs should be scannable, not read line-by-line. Where prose is unavoidable, keep it compact: cut filler, preamble, and hedging so every sentence earns its place. A wall of prose is a rewrite signal — run `/app-prose-compact` to tighten it without losing facts.
 - After editing or adding significant logic to a module, review and update the module's README if needed.
 - Keep READMEs focused on high-level concepts, behaviour, and boundaries.
 - After editing a module, review its `AGENTS.md` and update the module-specific notes if anything changed. Keep it tight — it's auto-loaded into context.

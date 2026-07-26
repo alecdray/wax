@@ -1,6 +1,6 @@
 ---
-name: code-review
-description: Adversarial code review across correctness, product correctness, readability (incl. inline comments), maintainability, efficiency, security, and testability. Use when asking for a code review, before opening a PR, wanting to stress-test an implementation, or when /audit (structural compliance gate) is not the right tool.
+name: app-code-review
+description: Adversarial code review across correctness, product correctness, readability (incl. inline comments), maintainability, efficiency, security, and testability. Use when asking for a code review, before opening a PR, wanting to stress-test an implementation, or when /app-audit (structural compliance gate) is not the right tool.
 argument-hint: "[optional: 'diff' to scope to changed files vs main (default), a module name, or a file path]"
 ---
 
@@ -10,7 +10,7 @@ Run an adversarial multi-dimension code review by dispatching a **single subagen
 
 Dispatch one `Agent` (subagent_type `Explore`) with this prompt:
 
-> You are doing an adversarial code review for wax. Your job is to actively find problems — assume the author made mistakes, probe edge cases, and check the code against the product and domain specs. Read `.agents/skills/code-review/checklist.md` for the full per-dimension checklist, scope rules, and output format. Argument (scope): `<arg-or-diff>`.
+> You are doing an adversarial code review for wax. Your job is to actively find problems — assume the author made mistakes, probe edge cases, and check the code against the product and domain specs. Read `.agents/skills/app-code-review/checklist.md` for the full per-dimension checklist, scope rules, and output format. Argument (scope): `<arg-or-diff>`.
 
 Wait for the subagent to return, then relay its output verbatim.
 

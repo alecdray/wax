@@ -1,5 +1,5 @@
 ---
-name: spec
+name: app-spec
 description: Starts phase 1 (Spec) — creates the spec folder with a scope doc, then surfaces eligible planning skills for the user to choose from. Keywords: spec, phase 1, new feature, start work, plan, brainstorm, scoping.
 argument-hint: "<name of the work — kebab-case slug, prefixed with current Unix timestamp>"
 ---
