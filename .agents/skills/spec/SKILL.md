@@ -8,6 +8,8 @@ Phase 1 of the process in [`docs/process.md`](../../../docs/process.md). Full co
 
 ## Steps
 
+0. **Orient.** Read [`docs/product/vision.md`](../../../docs/product/vision.md) — the Deployment context section defines the threat model, scale assumptions, and product philosophy that should inform scoping decisions.
+
 1. **Create the spec folder.** Get the current Unix timestamp, then make `docs/spec/<timestamp>-<name>/` with a single `scope.md` — a heading and one short paragraph describing the work at a high level. The slug comes from the user's argument; if not supplied, ask for one before proceeding.
 
 2. **Surface eligible skills.** Look through your available skills and present the ones relevant to planning and design work as a short list with their one-line descriptions. Ask the user which, if any, they want to use next.
