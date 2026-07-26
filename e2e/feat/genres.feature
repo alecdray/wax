@@ -13,7 +13,7 @@ Feature: Primary genres
     When the user filters the dashboard by the pop genre
     Then the album is shown with its primary-genre badge
 
-  Scenario: Filtering by a genre no album has shows no albums
-    Given a library where no album has a reggae genre
+  Scenario: Filtering by a genre the fixture album lacks excludes it from results
+    Given an album without a reggae genre in the library
     When the user filters the dashboard by the reggae genre
-    Then no album rows are shown
+    Then the album is absent from the filtered results
