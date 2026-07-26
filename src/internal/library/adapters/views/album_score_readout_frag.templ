@@ -32,7 +32,7 @@ templ AlbumScoreReadoutFrag(album library.AlbumDTO, isOOB bool) {
 		<div
 			id={ GetAlbumScoreReadoutID(album.ID) }
 			data-testid="album-score-readout-rated"
-			class={ "min-w-28 h-fit p-3 flex items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none transition-colors", ratingStateClass(album) }
+			class={ "min-w-14 h-fit flex items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none transition-colors", ratingStateClass(album) }
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"
@@ -46,7 +46,7 @@ templ AlbumScoreReadoutFrag(album library.AlbumDTO, isOOB bool) {
 		<div
 			id={ GetAlbumScoreReadoutID(album.ID) }
 			data-testid="album-score-readout-unrated"
-			class="min-w-28 h-fit p-3 flex items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none text-muted hover-fade-in transition-colors"
+			class="min-w-14 h-fit flex items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none text-muted hover-fade-in transition-colors"
 			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
 			hx-trigger="click"
 			hx-swap="none"

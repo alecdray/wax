@@ -10,7 +10,6 @@ Candidate features and improvements. Priority column: **high** / **mid** / **low
 | high | **Wishlist surfaces** | Physical media wishlist — mark an album as "I want to buy this on vinyl/CD" and view those albums in a dedicated list. |
 | mid | **Ranked Lists** | User-curated ordered lists where position is the point — "my top 10 of the year," "albums to hear before you die." Order is explicit and meaningful. |
 | mid | **Hidden Albums** | Soft-remove albums from the main library view without deleting them (e.g., podcasts or junk synced from Spotify) |
-| mid | **Mobile: album title/artist truncation** | In the mobile library view, album titles and artist names are almost always cut short (e.g., "Arti…"), making rows unreadable. Needs a layout approach that surfaces the full text at small viewports. |
 | mid | **Scroll position restore on back navigation** | Navigating from the library to an artist detail page and pressing back returns to the top of the library instead of the previous scroll position. |
 | mid | **Infinite scroll: earlier load trigger** | The library only loads more albums once the user reaches the very bottom. With large libraries this creates a visible gap between scroll-stop and new content — the load should trigger earlier (e.g., within one viewport of the bottom). |
 | low | **Stats & Insights** | Analytics across library, listening history, ratings, ranked lists, and album groups |
