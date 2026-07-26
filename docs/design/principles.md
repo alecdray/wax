@@ -34,6 +34,12 @@ A region that is the target of an OOB swap is defined in exactly one shared temp
 
 Every user-triggered network action signals that it is working. A single app-wide indeterminate progress bar, wired once on the body, reacts to every HTMX request. Discrete one-shot actions additionally enter a busy, non-resubmittable state so the user sees the specific control was registered. Regions that reload data in place dim their existing content under a spinner overlay; append-style loads (pagination) show a trailing spinner instead, since dimming content that stays on screen would be wrong. All three patterns ride on HTMX's `htmx-request` / `htmx-indicator` classes and need no domain JavaScript. The rationale is in [`../adr/0002-loading-feedback-for-network-actions.md`](../adr/0002-loading-feedback-for-network-actions.md).
 
+## Core primitives over bespoke HTML
+
+When a primitive in `core/templates/` covers a use case, use it — do not replicate its structure inline. Bespoke `<dialog>` elements, tooltip wrappers, icon markup, etc. must not appear in a module's `.templ` files when an existing primitive covers the same role. The primitive is the single source of structure, accessibility, theming, testids, and behaviour; bypassing it silently forks each of those concerns.
+
+The only permitted exception is a genuinely incompatible contract — one that the primitive cannot accommodate without structural change. That incompatibility must be explained in the commit message; "simpler this way" is not sufficient justification.
+
 ## Theme tokens, not raw colors
 
 Styling uses the DaisyUI theme tokens defined in `static/src/main.css` (`bg-base-100`, `text-primary-content`, `border-accent`, etc.), not hex literals or one-off CSS variables in markup. When a new color is needed, it is added to the theme as a semantic token, not embedded inline at the call site.

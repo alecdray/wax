@@ -399,11 +399,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 					↓
 				}
 			</button>
-			<dialog id="filter-sort-modal" data-testid="unified-search-bar-sort-modal" class="modal modal-bottom sm:modal-middle">
-				<div class="modal-box">
-					<form method="dialog">
-						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
-					</form>
+			@templates.StaticModal("filter-sort-modal", templates.ModalProps{TestID: "unified-search-bar-sort-modal"}) {
 					<form
 						hx-get="/app/library/dashboard/albums-table"
 						hx-target="#album-list"
@@ -465,9 +461,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 						</div>
 						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
 					</form>
-				</div>
-				<form method="dialog" class="modal-backdrop"><button>close</button></form>
-			</dialog>
+			}
 			// Rating popover
 			<button
 				type="button"
@@ -489,11 +483,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 					Rating
 				}
 			</button>
-			<dialog id="filter-rating-modal" data-testid="unified-search-bar-rating-modal" class="modal modal-bottom sm:modal-middle">
-				<div class="modal-box">
-					<form method="dialog">
-						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
-					</form>
+			@templates.StaticModal("filter-rating-modal", templates.ModalProps{TestID: "unified-search-bar-rating-modal"}) {
 					<form
 						hx-get="/app/library/dashboard/albums-table"
 						hx-target="#album-list"
@@ -568,9 +558,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 						</div>
 						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
 					</form>
-				</div>
-				<form method="dialog" class="modal-backdrop"><button>close</button></form>
-			</dialog>
+			}
 			// Format popover (multi-select)
 			<button
 				type="button"
@@ -586,11 +574,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 					Format
 				}
 			</button>
-			<dialog id="filter-format-modal" data-testid="unified-search-bar-format-modal" class="modal modal-bottom sm:modal-middle">
-				<div class="modal-box">
-					<form method="dialog">
-						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
-					</form>
+			@templates.StaticModal("filter-format-modal", templates.ModalProps{TestID: "unified-search-bar-format-modal"}) {
 					<form
 						hx-get="/app/library/dashboard/albums-table"
 						hx-target="#album-list"
@@ -645,9 +629,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 						</div>
 						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
 					</form>
-				</div>
-				<form method="dialog" class="modal-backdrop"><button>close</button></form>
-			</dialog>
+			}
 			// Primary genre popover (multi-select)
 			<button
 				type="button"
@@ -663,11 +645,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 					Genre
 				}
 			</button>
-			<dialog id="filter-genre-modal" data-testid="unified-search-bar-genre-modal" class="modal modal-bottom sm:modal-middle">
-				<div class="modal-box">
-					<form method="dialog">
-						<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
-					</form>
+			@templates.StaticModal("filter-genre-modal", templates.ModalProps{TestID: "unified-search-bar-genre-modal"}) {
 					<form
 						hx-get="/app/library/dashboard/albums-table"
 						hx-target="#album-list"
@@ -728,9 +706,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 						</div>
 						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
 					</form>
-				</div>
-				<form method="dialog" class="modal-backdrop"><button>close</button></form>
-			</dialog>
+			}
 			// Artist popover (multi-select, with in-popover search)
 			if len(artists) > 0 {
 				<button
@@ -747,11 +723,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 						Artist
 					}
 				</button>
-				<dialog id="filter-artist-modal" data-testid="unified-search-bar-artist-modal" class="modal modal-bottom sm:modal-middle">
-					<div class="modal-box">
-						<form method="dialog">
-							<button class="btn btn-sm btn-ghost absolute right-2 top-2">✕</button>
-						</form>
+				@templates.StaticModal("filter-artist-modal", templates.ModalProps{TestID: "unified-search-bar-artist-modal"}) {
 						<form
 							hx-get="/app/library/dashboard/albums-table"
 							hx-target="#album-list"
@@ -813,9 +785,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 							</div>
 							<button type="submit" class="btn btn-primary btn-sm w-full mt-3">Apply</button>
 						</form>
-					</div>
-					<form method="dialog" class="modal-backdrop"><button>close</button></form>
-				</dialog>
+				}
 			}
 		</div>
 		// Active-state badges row. Rendered at rest below the controls;
