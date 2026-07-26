@@ -15,3 +15,10 @@ Module-specific notes:
 |---|---|---|
 | [radar](../../../docs/product/radar.md) | watch albums; eligibility rules; Spotify-inbox entry | deciding what Spotify API operations radar needs |
 | [discover](../../../docs/product/discover.md) | search for albums to add to radar | deciding search API behaviour or rate-limit implications |
+
+## Relevant ADRs
+
+| ADR | Decision | When |
+|---|---|---|
+| [ADR 0006](../../../docs/adr/0006-spotify-rate-limit-guard.md) | all Spotify calls route through one shared in-process guard; users get fast-fail on 429, background syncs defer | working on any Spotify call path, the rate-limit guard, token caching, or sync scheduling |
+| [ADR 0004](../../../docs/adr/0004-spotify-radar-playlist-entry.md) | a dedicated Wax-managed playlist is the Spotify-side radar entry point; only successfully-ingested tracks are removed | working on the radar inbox playlist lifecycle or ingestion rules |

@@ -111,19 +111,32 @@ The spec folder is preserved beside these as the narrative of how the work lande
 - Avoid comments that simply restate what the code does.
 - If you notice a pattern or convention that should be documented here, ask the user if it should be added to this file.
 
-### Product doc references in module AGENTS.md
+### Doc references in module AGENTS.md
 
-Every module `AGENTS.md` should include a **Product docs** section listing the `docs/product/` files relevant to that module. Each entry has two short fields:
+Every module `AGENTS.md` links to the docs an agent needs when working in that module. Three optional sections, each a table with **what** (one phrase) and **when** (one phrase):
 
-- **what** — one phrase describing what the doc covers.
-- **when** — one phrase describing when an agent should open it during implementation.
+- **Domain docs** — `docs/domain/` files for this module's domain model; open when reading/writing domain entities or rules. Add for every module that has a domain doc (including stubs — a pointer is useful even before the doc is filled in).
+- **Product docs** — `docs/product/` files for features this module implements; open when deciding behaviour or how a flow should work. Omit where no product doc exists yet.
+- **Relevant ADRs** — decisions in `docs/adr/` that directly constrain this module's behaviour; open when questioning a rule or constraint. Only link ADRs that are load-bearing for the module — skip cosmetic or naming decisions that don't affect implementation.
+
+Module-specific notes should **reference** these docs rather than restate their content. If an implementation detail (e.g. a function name or migration reference) sheds light on why a doc is relevant, a brief note is fine; full restatement is not.
 
 ```markdown
+## Domain docs
+
+| Doc | What | When |
+|---|---|---|
+| [library](../../../docs/domain/library.md) | ownership state machine, radar eligibility rules | working on ownership transitions or radar logic |
+
 ## Product docs
 
 | Doc | What | When |
 |---|---|---|
 | [library](../../../docs/product/library.md) | user-facing feature description | deciding what to expose or how a flow should behave |
-```
 
-Omit the section if no product doc exists yet for the module. Add a row when a new product doc is created.
+## Relevant ADRs
+
+| ADR | Decision | When |
+|---|---|---|
+| [ADR 0005](../../../docs/adr/0005-radar-eligibility-excludes-only-owned-wishlisted.md) | removed albums are radar-eligible | questioning why a removed album can be re-radared |
+```
