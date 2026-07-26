@@ -4,7 +4,7 @@ This directory is the **shared infrastructure** of the application. There is exa
 
 ## Sub-packages
 
-Each is a focused, framework-level utility used by 2+ modules:
+Each is a focused, framework-level utility used by 2+ modules. This list is an intentional index — `core` is a singleton with bounded membership, so the list doesn't rot the way a catalog of domain modules would. Adding a sub-package means updating this file.
 
 - `app` — application-level configuration and JWT auth setup
 - `contextx` — `ContextX` wrapper around `context.Context`; carries app config and authenticated user ID

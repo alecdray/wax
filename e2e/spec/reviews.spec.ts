@@ -175,8 +175,9 @@ test("Opening the questionnaire from the score-entry form pre-fills the score af
   await dialog.getByTestId('base-questions-form-submit').click();
 
   await expect(dialog.getByTestId('rating-confirm-form')).toBeVisible();
-  // All-1s answers → score 0.0; the input shows it as "0.0" (%.1f format).
-  await expect(dialog.getByTestId('rating-confirm-form-input')).toHaveValue('0.0');
+  // All-1s answers → score 0.0; Alpine.js x-model normalises "0.0" to "0"
+  // in the DOM value property.
+  await expect(dialog.getByTestId('rating-confirm-form-input')).toHaveValue('0');
 });
 
 test('Dismissing the questionnaire preserves the prior pre-fill', async ({ context, page }) => {
