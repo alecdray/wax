@@ -12,5 +12,5 @@ Shared infrastructure: framework-level utilities used by 2+ modules. There is ex
 
 ## See also
 
-- Singleton rationale and sub-package roster: [`./CLAUDE.md`](./CLAUDE.md)
+- Singleton rationale and sub-package roster: [`./AGENTS.md`](./AGENTS.md)
 - Architecture entry point: [`../../../docs/architecture/README.md`](../../../docs/architecture/README.md)

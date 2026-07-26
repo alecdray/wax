@@ -3,34 +3,29 @@
 How a feature ships. The four phases are **fixed**; *how* you carry out each one is at the
 agent/user's discretion. Work happens on a branch off `main`.
 
-**Core principle — the repo holds decisions, not exploration.** The repository only ever contains
-canonical, codified docs. Scratch artifacts (specs, plans, build records, research notes) are
-encouraged, but they are **never committed** — *where* they live is your call (a gitignored `tmp/`,
-`~/workshop/builds/wax-*/`, `/tmp`, …). See [Working artifacts](../.claude/CLAUDE.md). Whatever you
-decide in a working doc must be reflected in the repo's canonical docs before the branch merges.
+**Core principle — the repo holds two layers of docs.** *Canonical docs* (ADRs, architecture
+docs, the data model, module READMEs) are the source of truth for **current state** and are kept
+live. *Spec docs* under [`docs/spec/<timestamp>-<name>/`](./spec/) are the **point-in-time record of one
+chunk of work** — its scope, goals, spec, and supporting documents — reconciled to what actually
+shipped and then **frozen at merge**. Canonical docs answer *"how is it now?"*; a spec folder
+answers *"what did we set out to do for this piece, and how did it land?"* Genuinely throwaway
+scratch (raw exploration, dead-end notes) still lives outside the repo (`/tmp`, …) and is never
+committed — only the deliberate working docs for the chunk go in `docs/spec/`.
 
 ## 1. Spec
 
-Capture the design **by creating or editing the affected canonical docs in place** on the branch —
-ADRs, architecture docs, the data model, module READMEs — **not** as a separate spec file.
+Run `/spec <name>` — creates `docs/spec/<timestamp>-<name>/` with a scope doc and surfaces relevant planning
+skills. See [`docs/spec/README.md`](./spec/README.md) for the folder convention.
 
-Validate and sharpen the write-up with a grilling pass (`/grill-with-docs`), which tests it against the
-existing domain language and recorded decisions and updates the docs inline as decisions crystallise. Grill
-against the **full** set of canonical docs — the architecture rules and archetypes, design rules, the testing
-gate and e2e conventions, the ADR log, the affected module READMEs and `CLAUDE.md`s, and the product docs
-(vision, roadmap, backlog) — not only the files the feature edits. The documentation map in
-[`../.claude/CLAUDE.md`](../.claude/CLAUDE.md) lists where each lives; any conflict with them is resolved
-before leaving this phase.
-
-Scratch exploration may use temp docs; only the codified result lands in the repo.
+Codify the design in the canonical docs (ADRs, module READMEs, data model) on the branch during this
+phase. Validate with a grilling pass (`/grill-with-docs`) against the full set of canonical docs —
+architecture rules, design rules, the testing gate and e2e conventions, the ADR log, and the
+affected module READMEs — not only the files the feature edits.
 
 ## 2. Implement
 
-Build the change with whatever flow fits — `/build`, `/tdd`, subagent-driven, or by hand. The choice is
-yours; no working artifacts get committed either way.
-
-Implementation always diverges from the plan. When it does, **reconcile the repo docs to what actually
-shipped** before leaving this phase — the canonical docs must describe the real, merged behaviour.
+Run `/implement` — enforces the canonical-docs-first rule, surfaces relevant build skills, and
+confirms both doc layers are reconciled before handoff.
 
 Gate: `task test` green — unit (`task test/unit`) and e2e (`task test/e2e`, with `task dev` running on
 port 4691). See [testing.md](./testing.md).
@@ -43,3 +38,6 @@ Run `/audit` — the pre-merge gate covering both code and docs. Fix what it fin
 
 `main` is protected: every change lands via PR. Push the branch and open a pull request (use `/gh-pr` for
 the canonical PR body). Once the audit is clean and review passes, **squash-merge the PR** to `main`.
+The spec folder is now **frozen** — an immutable record of that chunk of work. A later change that
+revisits the same area gets its own new `docs/spec/<timestamp>-<name>/`; the frozen folder is never
+edited again.

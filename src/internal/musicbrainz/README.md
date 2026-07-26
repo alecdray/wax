@@ -9,4 +9,4 @@ Queried by name (title + artist) to find canonical recordings that Spotify doesn
 ## See also
 
 - Architecture rules: [`../../../docs/architecture/archetypes/external-client.md`](../../../docs/architecture/archetypes/external-client.md)
-- Module-specific notes: [`./CLAUDE.md`](./CLAUDE.md)
+- Module-specific notes: [`./AGENTS.md`](./AGENTS.md)

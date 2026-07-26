@@ -15,4 +15,4 @@ A free-form text surface a user can attach to any album in their library. Notes 
 ## See also
 
 - Architecture rules: [`../../../docs/architecture/archetypes/domain-module.md`](../../../docs/architecture/archetypes/domain-module.md)
-- Module-specific notes: [`./CLAUDE.md`](./CLAUDE.md)
+- Module-specific notes: [`./AGENTS.md`](./AGENTS.md)

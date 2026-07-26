@@ -26,4 +26,4 @@ The access token is reused until it expires rather than re-exchanged before ever
 ## See also
 
 - Architecture rules: [`../../../docs/architecture/archetypes/external-client.md`](../../../docs/architecture/archetypes/external-client.md)
-- Module-specific notes: [`./CLAUDE.md`](./CLAUDE.md)
+- Module-specific notes: [`./AGENTS.md`](./AGENTS.md)

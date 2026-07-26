@@ -17,4 +17,4 @@ Tokens are held encrypted at rest (`core/cryptox`) and only ever leave the modul
 
 - Architecture rules: [`../../../docs/architecture/archetypes/domain-module.md`](../../../docs/architecture/archetypes/domain-module.md)
 - Token caching rationale: [ADR 0006](../../../docs/adr/0006-spotify-rate-limit-guard.md)
-- Module-specific notes: [`./CLAUDE.md`](./CLAUDE.md)
+- Module-specific notes: [`./AGENTS.md`](./AGENTS.md)

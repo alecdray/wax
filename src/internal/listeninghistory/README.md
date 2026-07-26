@@ -15,4 +15,4 @@ The source of "Recently Spun" and last-played times anywhere they appear in Wax.
 ## See also
 
 - Architecture rules: [`../../../docs/architecture/archetypes/domain-module.md`](../../../docs/architecture/archetypes/domain-module.md)
-- Module-specific notes: [`./CLAUDE.md`](./CLAUDE.md)
+- Module-specific notes: [`./AGENTS.md`](./AGENTS.md)

@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(goose:*)",
+      "Bash(task:*)",
+      "Bash(templ generate:*)",
+      "Bash(git commit:*)",
+      "Bash(sqlc generate:*)",
+      "Bash(git add:*)",
+      "Bash(git:*)",
+      "Bash(xargs sed:*)",
+      "Bash(wc -l /Users/shmoopy/Documents/code/repos/wax/db/queries/*.sql)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//Users/shmoopy/Documents/code/repos/wax/**)",
+      "Bash(done)",
+      "Bash(mkdir -p /Users/shmoopy/Documents/code/repos/wax/.claude/skills && mv ~/.claude/skills/wiki-audit ~/.claude/skills/wiki-ingest /Users/shmoopy/Documents/code/repos/wax/.claude/skills/)",
+      "Bash(find docs/wiki/pages -name \"*.md\" -exec basename {} .md \\\\; | sort)",
+      "Bash(grep -n \"links:\" docs/wiki/pages/*.md -A 10 | head -100)",
+      "Bash(grep -n \"\\\\[.*\\\\]\\(\\\\.\\\\/.*\\\\.md\\)\" docs/wiki/pages/*.md)",
+      "Bash(grep -n -i \"function\\\\|method\\\\|class\\\\|module path\\\\|file\\\\|directory\\\\|query\\\\|table\\\\|column\\\\|SQL\\\\|endpoint\" docs/wiki/pages/*.md | grep -v \"^docs/wiki/pages/architecture.md\" | grep -v \"^docs/wiki/pages/data-model.md\")",
+      "Bash(grep -n \"ratings\\\\|reviews\\\\|tagging\\\\|tags\\\\|annotations\" docs/wiki/pages/*.md | head -30)",
+      "Bash(grep -n \"^---\" docs/wiki/pages/*.md)",
+      "Bash(find . -name \"*.md\" -type f -exec wc -l {})",
+      "Bash(go test:*)",
+      "Bash(npx playwright:*)",
+      "Bash(./node_modules/.bin/tsc --noEmit --strict --target ES2020 --moduleResolution bundler --module ESNext e2e/helpers/auth.ts 2>&1)",
+      "Bash(./node_modules/.bin/tsc --noEmit --strict --target ES2020 --moduleResolution bundler --module ESNext e2e/helpers/auth.ts e2e/spec/login.spec.ts playwright.config.ts 2>&1)",
+      "Read(//Users/shmoopy/.claude/skills/**)",
+      "Read(//Users/shmoopy/.claude/**)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "Bash(python3 -c \"\ncontent = open\\('/Users/shmoopy/Documents/code/repos/wax/src/internal/library/adapters/dashboard.templ'\\).read\\(\\)\nold = '\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\tif !album.InLibrary {\\\\n\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t<div class=\\\\\"absolute -bottom-1 -right-1 tooltip tooltip-left\\\\\" data-tip=\\\\\"Not in library\\\\\">\\\\n\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t<div class=\\\\\"badge badge-xs badge-warning font-bold\\\\\">!</div>\\\\n\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t</div>\\\\n\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t}'\nnew = '\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\tif !album.InLibrary {\\\\n\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t<div class=\\\\\"absolute -bottom-1 -right-1 tooltip tooltip-left\\\\\" data-tip=\\\\\"Open in Spotify\\\\\">\\\\n\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t<svg xmlns=\\\\\"http://www.w3.org/2000/svg\\\\\" width=\\\\\"12\\\\\" height=\\\\\"12\\\\\" fill=\\\\\"currentColor\\\\\" viewBox=\\\\\"0 0 16 16\\\\\" class=\\\\\"text-base-content/50\\\\\">\\\\n\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t<path fill-rule=\\\\\"evenodd\\\\\" d=\\\\\"M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5\\\\\"></path>\\\\n\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t<path fill-rule=\\\\\"evenodd\\\\\" d=\\\\\"M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z\\\\\"></path>\\\\n\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t</svg>\\\\n\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t</div>\\\\n\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t\\\\t}'\nif old in content:\n    print\\('FOUND'\\)\n    open\\('/Users/shmoopy/Documents/code/repos/wax/src/internal/library/adapters/dashboard.templ', 'w'\\).write\\(content.replace\\(old, new, 1\\)\\)\n    print\\('REPLACED'\\)\nelse:\n    print\\('NOT FOUND'\\)\n    print\\(repr\\(content[content.find\\('Not in library'\\)-200:content.find\\('Not in library'\\)+100]\\)\\)\n\")",
+      "Bash(go build:*)",
+      "mcp__claude_ai_Gmail__gmail_read_message",
+      "Bash(curl:*)",
+      "mcp__plugin_playwright_playwright__browser_type",
+      "mcp__plugin_playwright_playwright__browser_click"
+    ]
+  }
+}
