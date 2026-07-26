@@ -19,8 +19,8 @@ Streaming platforms reduce your opinion to a binary like. Ratings give you a liv
 
 ## Headline rules
 
-- Scores are 0.0–10.0 to one decimal place.
-- The questionnaire has six statements (three hard, three soft) answered on a Likert scale. Hard questions carry more weight — they're near-pass/fail signals. Soft questions measure degree of quality. Unanswered questions are excluded from the score.
+- Scores are stored as 0.0–10.0 floats; displayed as whole numbers (floor).
+- The questionnaire has six statements (three hard, three soft) answered on a continuous slider (1–5). Hard questions carry more weight — they're near-pass/fail signals. Soft questions measure degree of quality.
 - The target score is directionally accurate, not surgically precise. The questionnaire is guidance, not a formula.
 - **Save** always lands the album in `provisional` — even if it was finalized before. **Save & finalize** always lands it in `finalized` — from any prior state.
 - Every save or finalize writes a new rating-log entry. The history is preserved; the current state depends only on which action was last taken.

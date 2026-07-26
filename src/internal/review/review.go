@@ -3,6 +3,7 @@ package review
 import (
 	"errors"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/alecdray/wax/src/internal/core/utils"
@@ -72,22 +73,15 @@ const (
 	QuestionShelfTest          BaseQuestionKey = "shelf_test"
 )
 
-// QuestionOption is a single selectable answer for a base question.
-type QuestionOption struct {
-	Value int
-	Label string
-}
-
 // BaseQuestion is a single base question in the rating questionnaire.
 type BaseQuestion struct {
 	Key      BaseQuestionKey
 	Question string
-	Options  []QuestionOption
 	Weight   float64
-	Value    int // 0 = unanswered
+	Value    float64 // 0 = unanswered; slider range 1–5
 }
 
-func (q BaseQuestion) WithValue(v int) BaseQuestion {
+func (q BaseQuestion) WithValue(v float64) BaseQuestion {
 	q.Value = v
 	return q
 }
@@ -100,10 +94,10 @@ type BaseQuestions []BaseQuestion
 func (qs BaseQuestions) Score() float64 {
 	var weightedSum, totalWeight float64
 	for _, q := range qs {
-		if q.Value == 0 {
+		if q.Value == 0.0 {
 			continue
 		}
-		weightedSum += float64(q.Value) * q.Weight
+		weightedSum += q.Value * q.Weight
 		totalWeight += q.Weight
 	}
 	if totalWeight == 0 {
@@ -116,51 +110,13 @@ func (qs BaseQuestions) Score() float64 {
 }
 
 // AllBaseQuestions is the canonical ordered list of base questions.
-var likertOptions = []QuestionOption{
-	{1, "Strongly disagree"},
-	{2, "Disagree"},
-	{3, "Neutral"},
-	{4, "Agree"},
-	{5, "Strongly agree"},
-}
-
 var AllBaseQuestions = BaseQuestions{
-	{
-		Key:      QuestionReturnRate,
-		Question: "I will keep coming back to this record",
-		Options:  likertOptions,
-		Weight:   RatingWeightHard,
-	},
-	{
-		Key:      QuestionTrackQuality,
-		Question: "Most tracks on this record are great",
-		Options:  likertOptions,
-		Weight:   RatingWeightSoft,
-	},
-	{
-		Key:      QuestionCohesion,
-		Question: "This record is more than the sum of its parts",
-		Options:  likertOptions,
-		Weight:   RatingWeightSoft,
-	},
-	{
-		Key:      QuestionEmotionalResonance,
-		Question: "This record makes me feel something",
-		Options:  likertOptions,
-		Weight:   RatingWeightSoft,
-	},
-	{
-		Key:      QuestionSonicPleasure,
-		Question: "I enjoy listening to this record",
-		Options:  likertOptions,
-		Weight:   RatingWeightHard,
-	},
-	{
-		Key:      QuestionShelfTest,
-		Question: "I would care if I had to permanently delete this record",
-		Options:  likertOptions,
-		Weight:   RatingWeightHard,
-	},
+	{Key: QuestionReturnRate, Question: "I will keep coming back to this record", Weight: RatingWeightHard},
+	{Key: QuestionTrackQuality, Question: "Most tracks on this record are great", Weight: RatingWeightSoft},
+	{Key: QuestionCohesion, Question: "This record is more than the sum of its parts", Weight: RatingWeightSoft},
+	{Key: QuestionEmotionalResonance, Question: "This record makes me feel something", Weight: RatingWeightSoft},
+	{Key: QuestionSonicPleasure, Question: "I enjoy listening to this record", Weight: RatingWeightHard},
+	{Key: QuestionShelfTest, Question: "I would care if I had to permanently delete this record", Weight: RatingWeightHard},
 }
 
 // FinalScore clamps and rounds the score to one decimal place.
@@ -174,7 +130,7 @@ func DetectContradictions(qs BaseQuestions, mode RatingMode) bool {
 	if mode != RatingModeFinalized {
 		return false
 	}
-	qByKey := make(map[BaseQuestionKey]int, len(qs))
+	qByKey := make(map[BaseQuestionKey]float64, len(qs))
 	for _, q := range qs {
 		qByKey[q.Key] = q.Value
 	}
@@ -213,6 +169,10 @@ var RatingKey = []RatingKeyEntry{
 	{8.0, 8.9, RatingLabelEssential},
 	{9.0, 9.9, RatingLabelInstantClassic},
 	{10.0, 10.0, RatingLabelMasterpiece},
+}
+
+func FormatDisplayRating(r float64) string {
+	return strconv.Itoa(int(math.Floor(r)))
 }
 
 func GetRatingLabel(rating float64) RatingLabel {

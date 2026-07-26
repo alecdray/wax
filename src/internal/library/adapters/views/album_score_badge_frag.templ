@@ -39,7 +39,7 @@ templ AlbumScoreBadgeFrag(album library.AlbumDTO, isOOB bool) {
 				hx-swap-oob="true"
 			}
 		>
-			{ fmt.Sprintf("%.1f", *album.Rating.Rating) } - { string(review.GetRatingLabel(*album.Rating.Rating)) }
+			{ review.FormatDisplayRating(*album.Rating.Rating) } - { string(review.GetRatingLabel(*album.Rating.Rating)) }
 			if isProvisional(album) {
 				<span class="ml-1 text-sm leading-none" data-testid="album-score-badge-state-icon" data-icon-name="pen">
 					@templates.Icon(templates.IconProps{Name: "pen"})

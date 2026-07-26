@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/library"
+	"github.com/alecdray/wax/src/internal/review"
 )
 
 type CarouselView string
@@ -76,7 +77,7 @@ templ carouselCardInner(album library.AlbumSummaryDTO) {
 					data-testid="carousel-strip-card-rating"
 				>
 					if album.Rating != nil {
-						{ fmt.Sprintf("%.1f", *album.Rating) }
+						{ review.FormatDisplayRating(*album.Rating) }
 					} else {
 						--
 					}
@@ -124,7 +125,7 @@ templ provisionalCarouselStrip(albums []library.ProvisionalAlbumDTO) {
 									data-testid="carousel-strip-card-rating"
 								>
 									if album.Rating != nil {
-										{ fmt.Sprintf("%.1f", *album.Rating) }
+										{ review.FormatDisplayRating(*album.Rating) }
 									} else {
 										--
 									}

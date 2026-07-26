@@ -25,13 +25,13 @@ async function openModal(page: any) {
   await expect(dialog.getByTestId('rating-confirm-form')).toBeVisible();
 }
 
-// Pick the first ("Strongly disagree") option for every question. All-1s
-// answers produce a 0.0 score and avoid the finalized-mode contradiction check.
+// Set every slider to 1 (minimum). All-1s answers produce a 0.0 score and
+// avoid the finalized-mode contradiction check.
 async function answerQuestionnaire(page: any) {
-  const fieldsets = page.locator('dialog[open] [data-testid="base-question-fieldset"]');
-  const count = await fieldsets.count();
+  const sliders = page.locator('dialog[open] [data-testid="base-question-slider"]');
+  const count = await sliders.count();
   for (let i = 0; i < count; i++) {
-    await fieldsets.nth(i).getByTestId('base-question-radio').first().click();
+    await sliders.nth(i).fill('1');
   }
 }
 
@@ -175,8 +175,8 @@ test("Opening the questionnaire from the score-entry form pre-fills the score af
   await dialog.getByTestId('base-questions-form-submit').click();
 
   await expect(dialog.getByTestId('rating-confirm-form')).toBeVisible();
-  // Computed score is now in the input (some non-empty value).
-  await expect(dialog.getByTestId('rating-confirm-form-input')).not.toHaveValue('');
+  // All-1s answers → score 0.0; the input shows it as "0.0" (%.1f format).
+  await expect(dialog.getByTestId('rating-confirm-form-input')).toHaveValue('0.0');
 });
 
 test('Dismissing the questionnaire preserves the prior pre-fill', async ({ context, page }) => {
