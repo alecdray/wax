@@ -102,7 +102,7 @@ func (h *HttpHandler) GetRatingRecommenderQuestions(w http.ResponseWriter, r *ht
 
 	priorRating := optionalFloatParam(r.URL.Query().Get("priorRating"))
 
-	if err := views.BaseQuestionsFormFrag(albumID, mode, review.AllBaseQuestions, priorRating).Render(ctx, w); err != nil {
+	if err := views.RatingQuestionsModalFrag(albumID, mode, priorRating).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }
@@ -149,7 +149,7 @@ func (h *HttpHandler) SubmitRatingRecommenderQuestions(w http.ResponseWriter, r 
 	if review.DetectContradictions(questions, mode) {
 		questionValues["mode"] = string(mode)
 		questionValues["final_score"] = strconv.FormatFloat(finalScore, 'f', 2, 64)
-		if err := views.ConfidenceInterstitialFrag(albumID, mode, finalScore, questionValues).Render(ctx, w); err != nil {
+		if err := views.RatingConfidenceModalFrag(albumID, mode, finalScore, questionValues).Render(ctx, w); err != nil {
 			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 		}
 		return
@@ -166,7 +166,7 @@ func (h *HttpHandler) SubmitRatingRecommenderQuestions(w http.ResponseWriter, r 
 		return
 	}
 
-	if err := views.RatingConfirmFormFrag(*album, mode, &finalScore).Render(ctx, w); err != nil {
+	if err := views.RatingScoreEntryModalFrag(*album, mode, &finalScore).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }
@@ -211,7 +211,7 @@ func (h *HttpHandler) GetRatingConfirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := views.RatingConfirmFormFrag(*album, mode, ratingPtr).Render(ctx, w); err != nil {
+	if err := views.RatingScoreEntryModalFrag(*album, mode, ratingPtr).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusInternalServerError, Err: err})
 	}
 }

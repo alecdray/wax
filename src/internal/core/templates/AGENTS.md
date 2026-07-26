@@ -8,6 +8,7 @@ This directory is the home of UI **primitives** — reusable visual building blo
 - Do **not** import any domain module (`library`, `review`, `tags`, `notes`, etc.). A primitive that needs a domain type isn't a primitive — it belongs in the owning module's `adapters/`.
 - Do **not** import `core/db/sqlc`.
 - The root and shared-layout primitives are loaded by every page templ via `templates.PageLayoutComponent`. Anything that should appear on every page — chrome, fonts, scripts, modal container — lives here and is pulled in through the layout, not duplicated in pages.
+- When a primitive here covers a use case, callers must use it — not write bespoke HTML. See the **Core primitives over bespoke HTML** principle in [`docs/design/principles.md`](../../../../docs/design/principles.md).
 
 ## The bottom nav
 

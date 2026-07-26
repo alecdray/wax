@@ -2,7 +2,6 @@ package views
 
 import (
 	"fmt"
-	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/review"
 )
 
@@ -49,23 +48,10 @@ templ BaseQuestionsFormFrag(albumId string, mode review.RatingMode, questions re
 	<form
 		data-testid="base-questions-form"
 		hx-post={ fmt.Sprintf("/app/review/rating-recommender/questions?albumId=%s&mode=%s", albumId, string(mode)) }
-		hx-swap="outerHTML"
+		hx-swap="none"
 		class="flex flex-col gap-8"
 		hx-disabled-elt="find button[type='submit']"
 	>
-		<div class="flex items-center pr-8">
-			<button
-				data-testid="base-questions-form-dismiss"
-				class="btn btn-ghost btn-sm btn-square text-base"
-				type="button"
-				title="Back to score entry"
-				hx-get={ dismissQuestionnaireHref(albumId, mode, priorRating) }
-				hx-target="closest form"
-				hx-swap="outerHTML"
-			>
-				@templates.Icon(templates.IconProps{Name: "arrow-left"})
-			</button>
-		</div>
 		for _, q := range questions {
 			@baseQuestionSlider(q)
 		}
