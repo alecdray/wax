@@ -11,9 +11,10 @@ import (
 )
 
 const getAlbumTracksByAlbumId = `-- name: GetAlbumTracksByAlbumId :many
-SELECT album_tracks.album_id, tracks.id, tracks.spotify_id, tracks.title, tracks.created_at, tracks.deleted_at FROM album_tracks
+SELECT album_tracks.album_id, tracks.id, tracks.spotify_id, tracks.title, tracks.created_at, tracks.deleted_at, tracks.disc_number, tracks.track_number FROM album_tracks
 JOIN tracks ON album_tracks.track_id = tracks.id
 WHERE album_id = ?
+ORDER BY tracks.disc_number ASC, tracks.track_number ASC
 `
 
 type GetAlbumTracksByAlbumIdRow struct {
@@ -37,6 +38,8 @@ func (q *Queries) GetAlbumTracksByAlbumId(ctx context.Context, albumID string) (
 			&i.Track.Title,
 			&i.Track.CreatedAt,
 			&i.Track.DeletedAt,
+			&i.Track.DiscNumber,
+			&i.Track.TrackNumber,
 		); err != nil {
 			return nil, err
 		}
@@ -52,9 +55,10 @@ func (q *Queries) GetAlbumTracksByAlbumId(ctx context.Context, albumID string) (
 }
 
 const getAlbumTracksByAlbumIds = `-- name: GetAlbumTracksByAlbumIds :many
-SELECT album_tracks.album_id, tracks.id, tracks.spotify_id, tracks.title, tracks.created_at, tracks.deleted_at FROM album_tracks
+SELECT album_tracks.album_id, tracks.id, tracks.spotify_id, tracks.title, tracks.created_at, tracks.deleted_at, tracks.disc_number, tracks.track_number FROM album_tracks
 JOIN tracks ON album_tracks.track_id = tracks.id
 WHERE album_id IN (/*SLICE:album_ids*/?)
+ORDER BY tracks.disc_number ASC, tracks.track_number ASC
 `
 
 type GetAlbumTracksByAlbumIdsRow struct {
@@ -88,6 +92,8 @@ func (q *Queries) GetAlbumTracksByAlbumIds(ctx context.Context, albumIds []strin
 			&i.Track.Title,
 			&i.Track.CreatedAt,
 			&i.Track.DeletedAt,
+			&i.Track.DiscNumber,
+			&i.Track.TrackNumber,
 		); err != nil {
 			return nil, err
 		}

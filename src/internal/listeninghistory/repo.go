@@ -71,9 +71,11 @@ func (r *Repo) GetOrCreateAlbum(ctx context.Context, in AlbumInput) (string, err
 // GetOrCreateTrack upserts the track by spotify_id and returns its row ID.
 func (r *Repo) GetOrCreateTrack(ctx context.Context, in TrackInput) (string, error) {
 	model, err := r.q.GetOrCreateTrack(ctx, sqlc.GetOrCreateTrackParams{
-		ID:        in.ID,
-		SpotifyID: in.SpotifyID,
-		Title:     in.Title,
+		ID:          in.ID,
+		SpotifyID:   in.SpotifyID,
+		Title:       in.Title,
+		DiscNumber:  0,
+		TrackNumber: 0,
 	})
 	if err != nil {
 		return "", err

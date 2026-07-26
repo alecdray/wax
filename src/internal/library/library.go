@@ -51,9 +51,11 @@ type ArtistDTO struct {
 }
 
 type TrackDTO struct {
-	ID        string
-	SpotifyID string
-	Title     string
+	ID          string
+	SpotifyID   string
+	Title       string
+	DiscNumber  int
+	TrackNumber int
 }
 
 type AlbumDTO struct {

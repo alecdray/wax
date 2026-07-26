@@ -71,9 +71,11 @@ func albumFormatDTOFromRelease(r sqlc.Release, ur *sqlc.UserRelease) AlbumFormat
 
 func trackDTOFromModel(model sqlc.Track) TrackDTO {
 	return TrackDTO{
-		ID:        model.ID,
-		SpotifyID: model.SpotifyID,
-		Title:     model.Title,
+		ID:          model.ID,
+		SpotifyID:   model.SpotifyID,
+		Title:       model.Title,
+		DiscNumber:  int(model.DiscNumber),
+		TrackNumber: int(model.TrackNumber),
 	}
 }
 
@@ -407,9 +409,11 @@ func (r *Repo) EnsureAlbumWithMetadata(ctx context.Context, album AlbumDTO) (Alb
 
 	for i, track := range album.Tracks {
 		trackModel, err := r.q.GetOrCreateTrack(ctx, sqlc.GetOrCreateTrackParams{
-			ID:        track.ID,
-			SpotifyID: track.SpotifyID,
-			Title:     track.Title,
+			ID:          track.ID,
+			SpotifyID:   track.SpotifyID,
+			Title:       track.Title,
+			DiscNumber:  int64(track.DiscNumber),
+			TrackNumber: int64(track.TrackNumber),
 		})
 		if err != nil {
 			return album, err
