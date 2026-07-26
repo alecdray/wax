@@ -2,7 +2,6 @@ package views
 
 import (
 	"fmt"
-	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/library"
 	"github.com/alecdray/wax/src/internal/review"
 )
@@ -10,8 +9,6 @@ import (
 func GetAlbumRowTagsSectionID(albumId string) string {
 	return fmt.Sprintf("album-row-tags-section-%s", albumId)
 }
-
-const maxRowTags = 2
 
 func ratingLabelTagClass(album library.AlbumDTO) string {
 	if album.RatingState != nil && album.RatingState.State == "finalized" {
@@ -30,33 +27,9 @@ templ AlbumRowTagsSectionFrag(album library.AlbumDTO, isOOB bool) {
 		}
 	>
 		<div class="flex flex-wrap items-center gap-1">
-			<button
-				class={ "btn btn-ghost btn-xs text-base" }
-				hx-get={ fmt.Sprintf("/app/tags/album?albumId=%s", album.ID) }
-				hx-trigger="click"
-				hx-swap="none"
-			>
-				@templates.Icon(templates.IconProps{Name: "tag"})
-			</button>
 			if album.Rating != nil && album.Rating.Rating != nil {
 				// Score label tag: non-interactive label-only display in the metadata row
 				<span class={ ratingLabelTagClass(album) }>{ string(review.GetRatingLabel(*album.Rating.Rating)) }</span>
-			}
-			if album.SleeveNote != nil && album.SleeveNote.Content != "" {
-				<span class="badge badge-sm badge-ghost text-xs text-muted" data-testid="album-row-tags-section-notes-icon">
-					@templates.Icon(templates.IconProps{Name: "pen"})
-				</span>
-			}
-			for _, primary := range album.Primaries {
-				<span class="badge badge-sm badge-outline text-xs text-nowrap capitalize text-muted" data-testid="album-row-primary-genre">{ primary.Label }</span>
-			}
-			for i, tag := range album.Tags {
-				if i < maxRowTags {
-					<span class="badge badge-sm badge-ghost text-xs text-nowrap text-muted">{ tag.Name }</span>
-				}
-			}
-			if len(album.Tags) > maxRowTags {
-				<span class="badge badge-sm badge-ghost text-xs text-nowrap text-subtle">+{ fmt.Sprintf("%d", len(album.Tags)-maxRowTags) }</span>
 			}
 		</div>
 	</div>

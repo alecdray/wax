@@ -157,7 +157,7 @@ func sortLabel(sortBy string) string {
 //     album rows must not surface Spotify outlinks per design. Declared here
 //     so spec assertions of zero count reference a known testid.
 templ albumListRow(album library.AlbumDTO) {
-	<li class="list-row items-center" data-testid="album-list-row">
+	<li class="list-row items-center px-0" data-testid="album-list-row">
 		<button
 			class="flex flex-col gap-2 cursor-pointer hover-fade-out"
 			hx-get={ fmt.Sprintf("/app/library/albums/%s/formats", album.ID) }
@@ -365,383 +365,297 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 				hx-swap="outerHTML"
 				hx-push-url="true"
 			/>
-		// Sort popover
-		<div x-data="{ open: false }" class="relative">
-			<button
-				type="button"
-				class="btn btn-sm btn-outline"
-				data-testid="unified-search-bar-sort-toggle"
-				@click="open = !open"
-			>
-				Sort: { sortLabel(sortBy) }
-				if sortDir == "asc" {
-					↑
-				} else {
-					↓
-				}
-			</button>
-			<div
-				x-show="open"
-				x-cloak
-				@click.outside="open = false"
-				data-testid="unified-search-bar-sort-popover"
-				class="absolute z-50 mt-2 right-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-56"
-			>
-				<form
-					hx-get="/app/library/dashboard/albums-table"
-					hx-target="#album-list"
-					hx-indicator="#album-list-results"
-					hx-swap="outerHTML"
-					hx-push-url="true"
-					@submit="open = false"
-				>
-					if fp.Q != "" {
-						<input type="hidden" name="q" value={ fp.Q }/>
-					}
-					if fp.MinRating != nil {
-						<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
-					}
-					if fp.MaxRating != nil {
-						<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
-					}
-					if fp.Rated != "" {
-						<input type="hidden" name="rated" value={ fp.Rated }/>
-					}
-					for _, format := range fp.Formats {
-						<input type="hidden" name="format" value={ string(format) }/>
-					}
-					for _, artistID := range fp.ArtistIDs {
-						<input type="hidden" name="artist" value={ artistID }/>
-					}
-					for _, primaryID := range fp.PrimaryIDs {
-						<input type="hidden" name="primary" value={ primaryID }/>
-					}
-					<div class="flex flex-col gap-1 mb-3">
-						for _, opt := range []struct{ value, label string }{
-							{"date", "Date Added"},
-							{"rating", "Rating"},
-							{"album", "Album"},
-							{"artist", "Artist"},
-							{"lastPlayed", "Last Played"},
-						} {
-							<label class="flex items-center gap-2 cursor-pointer">
-								<input
-									type="radio"
-									name="sortBy"
-									value={ opt.value }
-									class="radio radio-sm"
-									checked?={ sortBy == opt.value || (sortBy == "" && opt.value == "date") }
-								/>
-								<span class="text-sm">{ opt.label }</span>
-							</label>
-						}
-					</div>
-					<div class="flex gap-3 mb-3">
-						<label class="flex items-center gap-2 cursor-pointer">
-							<input type="radio" name="dir" value="desc" class="radio radio-sm" checked?={ sortDir != "asc" }/>
-							<span class="text-sm">Desc</span>
-						</label>
-						<label class="flex items-center gap-2 cursor-pointer">
-							<input type="radio" name="dir" value="asc" class="radio radio-sm" checked?={ sortDir == "asc" }/>
-							<span class="text-sm">Asc</span>
-						</label>
-					</div>
-					<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
-				</form>
-			</div>
-		</div>
-		// Rating popover
-		<div x-data="{ open: false }" class="relative">
-			<button
-				type="button"
-				class={ templ.KV("btn btn-sm btn-soft btn-primary", fp.MinRating != nil || fp.MaxRating != nil || fp.Rated != ""), templ.KV("btn btn-sm btn-outline", fp.MinRating == nil && fp.MaxRating == nil && fp.Rated == "") }
-				data-testid="unified-search-bar-rating-toggle"
-				@click="open = !open"
-			>
-				if fp.Rated == "unrated" {
-					Unrated
-				} else if fp.MinRating != nil && fp.MaxRating != nil {
-					Rating: { fmt.Sprintf("%g", *fp.MinRating) }–{ fmt.Sprintf("%g", *fp.MaxRating) }
-				} else if fp.MinRating != nil {
-					Rating ≥ { fmt.Sprintf("%g", *fp.MinRating) }
-				} else if fp.MaxRating != nil {
-					Rating ≤ { fmt.Sprintf("%g", *fp.MaxRating) }
-				} else if fp.Rated == "only" {
-					Rated only
-				} else {
-					Rating
-				}
-			</button>
-			<div
-				x-show="open"
-				x-cloak
-				@click.outside="open = false"
-				data-testid="unified-search-bar-rating-popover"
-				class="absolute z-50 mt-2 right-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-64"
-			>
-				<form
-					hx-get="/app/library/dashboard/albums-table"
-					hx-target="#album-list"
-					hx-indicator="#album-list-results"
-					hx-swap="outerHTML"
-					hx-push-url="true"
-					@submit="open = false"
-				>
-					if fp.Q != "" {
-						<input type="hidden" name="q" value={ fp.Q }/>
-					}
-					if sortBy != "" {
-						<input type="hidden" name="sortBy" value={ sortBy }/>
-					}
-					if sortDir != "" {
-						<input type="hidden" name="dir" value={ sortDir }/>
-					}
-					for _, format := range fp.Formats {
-						<input type="hidden" name="format" value={ string(format) }/>
-					}
-					for _, artistID := range fp.ArtistIDs {
-						<input type="hidden" name="artist" value={ artistID }/>
-					}
-					for _, primaryID := range fp.PrimaryIDs {
-						<input type="hidden" name="primary" value={ primaryID }/>
-					}
-					<div class="flex gap-3 mb-3">
-						<label class="flex flex-col gap-1 flex-1">
-							<span class="text-xs text-muted">Min</span>
-							<input
-								type="number"
-								name="minRating"
-								class="input input-sm input-bordered w-full"
-								min="0"
-								max="10"
-								step="0.5"
-								if fp.MinRating != nil {
-									value={ fmt.Sprintf("%g", *fp.MinRating) }
-								}
-								placeholder="0"
-							/>
-						</label>
-						<label class="flex flex-col gap-1 flex-1">
-							<span class="text-xs text-muted">Max</span>
-							<input
-								type="number"
-								name="maxRating"
-								class="input input-sm input-bordered w-full"
-								min="0"
-								max="10"
-								step="0.5"
-								if fp.MaxRating != nil {
-									value={ fmt.Sprintf("%g", *fp.MaxRating) }
-								}
-								placeholder="10"
-							/>
-						</label>
-					</div>
-					<div class="flex flex-col gap-1 mb-3">
-						<label class="flex items-center gap-2 cursor-pointer">
-							<input type="radio" name="rated" value="" class="radio radio-sm" checked?={ fp.Rated == "" }/>
-							<span class="text-sm">All albums</span>
-						</label>
-						<label class="flex items-center gap-2 cursor-pointer">
-							<input type="radio" name="rated" value="only" class="radio radio-sm" checked?={ fp.Rated == "only" }/>
-							<span class="text-sm">Rated only</span>
-						</label>
-						<label class="flex items-center gap-2 cursor-pointer">
-							<input type="radio" name="rated" value="unrated" class="radio radio-sm" checked?={ fp.Rated == "unrated" }/>
-							<span class="text-sm">Unrated only</span>
-						</label>
-					</div>
-					<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
-				</form>
-			</div>
-		</div>
-		// Format popover (multi-select)
-		<div x-data="{ open: false }" class="relative">
-			<button
-				type="button"
-				class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.Formats) > 0), templ.KV("btn btn-sm btn-outline", len(fp.Formats) == 0) }
-				data-testid="unified-search-bar-format-toggle"
-				@click="open = !open"
-			>
-				if len(fp.Formats) == 1 {
-					<span class="capitalize">{ string(fp.Formats[0]) }</span>
-				} else if len(fp.Formats) > 1 {
-					{ fmt.Sprintf("%d Formats", len(fp.Formats)) }
-				} else {
-					Format
-				}
-			</button>
-			<div
-				x-show="open"
-				x-cloak
-				@click.outside="open = false"
-				data-testid="unified-search-bar-format-popover"
-				class="absolute z-50 mt-2 right-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-56"
-			>
-				<form
-					hx-get="/app/library/dashboard/albums-table"
-					hx-target="#album-list"
-					hx-indicator="#album-list-results"
-					hx-swap="outerHTML"
-					hx-push-url="true"
-					@submit="open = false"
-				>
-					if fp.Q != "" {
-						<input type="hidden" name="q" value={ fp.Q }/>
-					}
-					if sortBy != "" {
-						<input type="hidden" name="sortBy" value={ sortBy }/>
-					}
-					if sortDir != "" {
-						<input type="hidden" name="dir" value={ sortDir }/>
-					}
-					if fp.MinRating != nil {
-						<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
-					}
-					if fp.MaxRating != nil {
-						<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
-					}
-					if fp.Rated != "" {
-						<input type="hidden" name="rated" value={ fp.Rated }/>
-					}
-					for _, artistID := range fp.ArtistIDs {
-						<input type="hidden" name="artist" value={ artistID }/>
-					}
-					for _, primaryID := range fp.PrimaryIDs {
-						<input type="hidden" name="primary" value={ primaryID }/>
-					}
-					<div class="flex flex-col gap-1 mb-3">
-						for _, opt := range []struct{ value, label string }{
-							{"digital", "Digital"},
-							{"vinyl", "Vinyl"},
-							{"cd", "CD"},
-							{"cassette", "Cassette"},
-						} {
-							<label class="flex items-center gap-2 cursor-pointer">
-								<input
-									data-testid="unified-search-bar-format-checkbox"
-									type="checkbox"
-									name="format"
-									value={ opt.value }
-									class="checkbox checkbox-sm"
-									checked?={ slices.Contains(formatStrings(fp.Formats), opt.value) }
-								/>
-								<span class="text-sm">{ opt.label }</span>
-							</label>
-						}
-					</div>
-					<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
-				</form>
-			</div>
-		</div>
-		// Primary genre popover (multi-select)
-		<div x-data="{ open: false }" class="relative">
-			<button
-				type="button"
-				class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.PrimaryIDs) > 0), templ.KV("btn btn-sm btn-outline", len(fp.PrimaryIDs) == 0) }
-				data-testid="unified-search-bar-genre-toggle"
-				@click="open = !open"
-			>
-				if len(fp.PrimaryIDs) == 1 {
-					<span class="capitalize">{ primaryFilterLabel(fp.PrimaryIDs[0]) }</span>
-				} else if len(fp.PrimaryIDs) > 1 {
-					{ fmt.Sprintf("%d Genres", len(fp.PrimaryIDs)) }
-				} else {
-					Genre
-				}
-			</button>
-			<div
-				x-show="open"
-				x-cloak
-				@click.outside="open = false"
-				data-testid="unified-search-bar-genre-popover"
-				class="absolute z-50 mt-2 right-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-56"
-			>
-				<form
-					hx-get="/app/library/dashboard/albums-table"
-					hx-target="#album-list"
-					hx-indicator="#album-list-results"
-					hx-swap="outerHTML"
-					hx-push-url="true"
-					@submit="open = false"
-				>
-					if fp.Q != "" {
-						<input type="hidden" name="q" value={ fp.Q }/>
-					}
-					if sortBy != "" {
-						<input type="hidden" name="sortBy" value={ sortBy }/>
-					}
-					if sortDir != "" {
-						<input type="hidden" name="dir" value={ sortDir }/>
-					}
-					if fp.MinRating != nil {
-						<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
-					}
-					if fp.MaxRating != nil {
-						<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
-					}
-					if fp.Rated != "" {
-						<input type="hidden" name="rated" value={ fp.Rated }/>
-					}
-					for _, format := range fp.Formats {
-						<input type="hidden" name="format" value={ string(format) }/>
-					}
-					for _, artistID := range fp.ArtistIDs {
-						<input type="hidden" name="artist" value={ artistID }/>
-					}
-					<div class="max-h-56 overflow-y-auto flex flex-col gap-1 mb-3">
-						for _, primary := range genregraph.PrimaryGenres() {
-							<label class="flex items-center gap-2 cursor-pointer">
-								<input
-									data-testid="unified-search-bar-genre-checkbox"
-									type="checkbox"
-									name="primary"
-									value={ primary.ID }
-									class="checkbox checkbox-sm"
-									checked?={ slices.Contains(fp.PrimaryIDs, primary.ID) }
-								/>
-								<span class="text-sm capitalize">{ primary.Label }</span>
-							</label>
-						}
-						<label class="flex items-center gap-2 cursor-pointer">
-							<input
-								data-testid="unified-search-bar-genre-checkbox"
-								type="checkbox"
-								name="primary"
-								value={ library.UncategorizedPrimaryID }
-								class="checkbox checkbox-sm"
-								checked?={ slices.Contains(fp.PrimaryIDs, library.UncategorizedPrimaryID) }
-							/>
-							<span class="text-sm">Uncategorized</span>
-						</label>
-					</div>
-					<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
-				</form>
-			</div>
-		</div>
-		// Artist popover (multi-select, with in-popover search)
-		if len(artists) > 0 {
+			// Sort popover
 			<div x-data="{ open: false }" class="relative">
 				<button
 					type="button"
-					class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.ArtistIDs) > 0), templ.KV("btn btn-sm btn-outline", len(fp.ArtistIDs) == 0) }
-					data-testid="unified-search-bar-artist-toggle"
+					class="btn btn-sm btn-outline"
+					data-testid="unified-search-bar-sort-toggle"
 					@click="open = !open"
 				>
-					if len(fp.ArtistIDs) == 1 {
-						1 Artist
-					} else if len(fp.ArtistIDs) > 1 {
-						{ fmt.Sprintf("%d Artists", len(fp.ArtistIDs)) }
+					Sort: { sortLabel(sortBy) }
+					if sortDir == "asc" {
+						↑
 					} else {
-						Artist
+						↓
 					}
 				</button>
 				<div
 					x-show="open"
 					x-cloak
 					@click.outside="open = false"
-					data-testid="unified-search-bar-artist-popover"
-					class="absolute z-50 mt-2 right-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-72"
+					data-testid="unified-search-bar-sort-popover"
+					class="absolute z-50 mt-2 right-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-56"
+				>
+					<form
+						hx-get="/app/library/dashboard/albums-table"
+						hx-target="#album-list"
+						hx-indicator="#album-list-results"
+						hx-swap="outerHTML"
+						hx-push-url="true"
+						@submit="open = false"
+					>
+						if fp.Q != "" {
+							<input type="hidden" name="q" value={ fp.Q }/>
+						}
+						if fp.MinRating != nil {
+							<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
+						}
+						if fp.MaxRating != nil {
+							<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
+						}
+						if fp.Rated != "" {
+							<input type="hidden" name="rated" value={ fp.Rated }/>
+						}
+						for _, format := range fp.Formats {
+							<input type="hidden" name="format" value={ string(format) }/>
+						}
+						for _, artistID := range fp.ArtistIDs {
+							<input type="hidden" name="artist" value={ artistID }/>
+						}
+						for _, primaryID := range fp.PrimaryIDs {
+							<input type="hidden" name="primary" value={ primaryID }/>
+						}
+						<div class="flex flex-col gap-1 mb-3">
+							for _, opt := range []struct{ value, label string }{
+							{"date", "Date Added"},
+							{"rating", "Rating"},
+							{"album", "Album"},
+							{"artist", "Artist"},
+							{"lastPlayed", "Last Played"},
+						} {
+								<label class="flex items-center gap-2 cursor-pointer">
+									<input
+										type="radio"
+										name="sortBy"
+										value={ opt.value }
+										class="radio radio-sm"
+										checked?={ sortBy == opt.value || (sortBy == "" && opt.value == "date") }
+									/>
+									<span class="text-sm">{ opt.label }</span>
+								</label>
+							}
+						</div>
+						<div class="flex gap-3 mb-3">
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input type="radio" name="dir" value="desc" class="radio radio-sm" checked?={ sortDir != "asc" }/>
+								<span class="text-sm">Desc</span>
+							</label>
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input type="radio" name="dir" value="asc" class="radio radio-sm" checked?={ sortDir == "asc" }/>
+								<span class="text-sm">Asc</span>
+							</label>
+						</div>
+						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
+					</form>
+				</div>
+			</div>
+			// Rating popover
+			<div x-data="{ open: false }" class="relative">
+				<button
+					type="button"
+					class={ templ.KV("btn btn-sm btn-soft btn-primary", fp.MinRating != nil || fp.MaxRating != nil || fp.Rated != ""), templ.KV("btn btn-sm btn-outline", fp.MinRating == nil && fp.MaxRating == nil && fp.Rated == "") }
+					data-testid="unified-search-bar-rating-toggle"
+					@click="open = !open"
+				>
+					if fp.Rated == "unrated" {
+						Unrated
+					} else if fp.MinRating != nil && fp.MaxRating != nil {
+						Rating: { fmt.Sprintf("%g", *fp.MinRating) }–{ fmt.Sprintf("%g", *fp.MaxRating) }
+					} else if fp.MinRating != nil {
+						Rating ≥ { fmt.Sprintf("%g", *fp.MinRating) }
+					} else if fp.MaxRating != nil {
+						Rating ≤ { fmt.Sprintf("%g", *fp.MaxRating) }
+					} else if fp.Rated == "only" {
+						Rated only
+					} else {
+						Rating
+					}
+				</button>
+				<div
+					x-show="open"
+					x-cloak
+					@click.outside="open = false"
+					data-testid="unified-search-bar-rating-popover"
+					class="absolute z-50 mt-2 right-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-64"
+				>
+					<form
+						hx-get="/app/library/dashboard/albums-table"
+						hx-target="#album-list"
+						hx-indicator="#album-list-results"
+						hx-swap="outerHTML"
+						hx-push-url="true"
+						@submit="open = false"
+					>
+						if fp.Q != "" {
+							<input type="hidden" name="q" value={ fp.Q }/>
+						}
+						if sortBy != "" {
+							<input type="hidden" name="sortBy" value={ sortBy }/>
+						}
+						if sortDir != "" {
+							<input type="hidden" name="dir" value={ sortDir }/>
+						}
+						for _, format := range fp.Formats {
+							<input type="hidden" name="format" value={ string(format) }/>
+						}
+						for _, artistID := range fp.ArtistIDs {
+							<input type="hidden" name="artist" value={ artistID }/>
+						}
+						for _, primaryID := range fp.PrimaryIDs {
+							<input type="hidden" name="primary" value={ primaryID }/>
+						}
+						<div class="flex gap-3 mb-3">
+							<label class="flex flex-col gap-1 flex-1">
+								<span class="text-xs text-muted">Min</span>
+								<input
+									type="number"
+									name="minRating"
+									class="input input-sm input-bordered w-full"
+									min="0"
+									max="10"
+									step="0.5"
+									if fp.MinRating != nil {
+										value={ fmt.Sprintf("%g", *fp.MinRating) }
+									}
+									placeholder="0"
+								/>
+							</label>
+							<label class="flex flex-col gap-1 flex-1">
+								<span class="text-xs text-muted">Max</span>
+								<input
+									type="number"
+									name="maxRating"
+									class="input input-sm input-bordered w-full"
+									min="0"
+									max="10"
+									step="0.5"
+									if fp.MaxRating != nil {
+										value={ fmt.Sprintf("%g", *fp.MaxRating) }
+									}
+									placeholder="10"
+								/>
+							</label>
+						</div>
+						<div class="flex flex-col gap-1 mb-3">
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input type="radio" name="rated" value="" class="radio radio-sm" checked?={ fp.Rated == "" }/>
+								<span class="text-sm">All albums</span>
+							</label>
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input type="radio" name="rated" value="only" class="radio radio-sm" checked?={ fp.Rated == "only" }/>
+								<span class="text-sm">Rated only</span>
+							</label>
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input type="radio" name="rated" value="unrated" class="radio radio-sm" checked?={ fp.Rated == "unrated" }/>
+								<span class="text-sm">Unrated only</span>
+							</label>
+						</div>
+						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
+					</form>
+				</div>
+			</div>
+			// Format popover (multi-select)
+			<div x-data="{ open: false }" class="relative">
+				<button
+					type="button"
+					class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.Formats) > 0), templ.KV("btn btn-sm btn-outline", len(fp.Formats) == 0) }
+					data-testid="unified-search-bar-format-toggle"
+					@click="open = !open"
+				>
+					if len(fp.Formats) == 1 {
+						<span class="capitalize">{ string(fp.Formats[0]) }</span>
+					} else if len(fp.Formats) > 1 {
+						{ fmt.Sprintf("%d Formats", len(fp.Formats)) }
+					} else {
+						Format
+					}
+				</button>
+				<div
+					x-show="open"
+					x-cloak
+					@click.outside="open = false"
+					data-testid="unified-search-bar-format-popover"
+					class="absolute z-50 mt-2 right-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-56"
+				>
+					<form
+						hx-get="/app/library/dashboard/albums-table"
+						hx-target="#album-list"
+						hx-indicator="#album-list-results"
+						hx-swap="outerHTML"
+						hx-push-url="true"
+						@submit="open = false"
+					>
+						if fp.Q != "" {
+							<input type="hidden" name="q" value={ fp.Q }/>
+						}
+						if sortBy != "" {
+							<input type="hidden" name="sortBy" value={ sortBy }/>
+						}
+						if sortDir != "" {
+							<input type="hidden" name="dir" value={ sortDir }/>
+						}
+						if fp.MinRating != nil {
+							<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
+						}
+						if fp.MaxRating != nil {
+							<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
+						}
+						if fp.Rated != "" {
+							<input type="hidden" name="rated" value={ fp.Rated }/>
+						}
+						for _, artistID := range fp.ArtistIDs {
+							<input type="hidden" name="artist" value={ artistID }/>
+						}
+						for _, primaryID := range fp.PrimaryIDs {
+							<input type="hidden" name="primary" value={ primaryID }/>
+						}
+						<div class="flex flex-col gap-1 mb-3">
+							for _, opt := range []struct{ value, label string }{
+							{"digital", "Digital"},
+							{"vinyl", "Vinyl"},
+							{"cd", "CD"},
+							{"cassette", "Cassette"},
+						} {
+								<label class="flex items-center gap-2 cursor-pointer">
+									<input
+										data-testid="unified-search-bar-format-checkbox"
+										type="checkbox"
+										name="format"
+										value={ opt.value }
+										class="checkbox checkbox-sm"
+										checked?={ slices.Contains(formatStrings(fp.Formats), opt.value) }
+									/>
+									<span class="text-sm">{ opt.label }</span>
+								</label>
+							}
+						</div>
+						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
+					</form>
+				</div>
+			</div>
+			// Primary genre popover (multi-select)
+			<div x-data="{ open: false }" class="relative">
+				<button
+					type="button"
+					class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.PrimaryIDs) > 0), templ.KV("btn btn-sm btn-outline", len(fp.PrimaryIDs) == 0) }
+					data-testid="unified-search-bar-genre-toggle"
+					@click="open = !open"
+				>
+					if len(fp.PrimaryIDs) == 1 {
+						<span class="capitalize">{ primaryFilterLabel(fp.PrimaryIDs[0]) }</span>
+					} else if len(fp.PrimaryIDs) > 1 {
+						{ fmt.Sprintf("%d Genres", len(fp.PrimaryIDs)) }
+					} else {
+						Genre
+					}
+				</button>
+				<div
+					x-show="open"
+					x-cloak
+					@click.outside="open = false"
+					data-testid="unified-search-bar-genre-popover"
+					class="absolute z-50 mt-2 right-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-56"
 				>
 					<form
 						hx-get="/app/library/dashboard/albums-table"
@@ -772,41 +686,127 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 						for _, format := range fp.Formats {
 							<input type="hidden" name="format" value={ string(format) }/>
 						}
-						for _, primaryID := range fp.PrimaryIDs {
-							<input type="hidden" name="primary" value={ primaryID }/>
+						for _, artistID := range fp.ArtistIDs {
+							<input type="hidden" name="artist" value={ artistID }/>
 						}
-						<div x-data="{ search: '' }">
-							<input
-								x-model="search"
-								type="search"
-								placeholder="Search artists..."
-								class="input input-sm input-bordered w-full mb-3"
-							/>
-							<div class="max-h-56 overflow-y-auto flex flex-col gap-1">
-								for _, artist := range artists {
-									<label
-										class="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-base-200 rounded"
-										x-show="!search || $el.dataset.name.includes(search.toLowerCase())"
-										data-name={ strings.ToLower(artist.Name) }
-									>
-										<input
-											data-testid="unified-search-bar-artist-checkbox"
-											type="checkbox"
-											name="artist"
-											value={ artist.ID }
-											class="checkbox checkbox-sm"
-											checked?={ slices.Contains(fp.ArtistIDs, artist.ID) }
-										/>
-										<span class="text-sm">{ artist.Name }</span>
-									</label>
-								}
-							</div>
+						<div class="max-h-56 overflow-y-auto flex flex-col gap-1 mb-3">
+							for _, primary := range genregraph.PrimaryGenres() {
+								<label class="flex items-center gap-2 cursor-pointer">
+									<input
+										data-testid="unified-search-bar-genre-checkbox"
+										type="checkbox"
+										name="primary"
+										value={ primary.ID }
+										class="checkbox checkbox-sm"
+										checked?={ slices.Contains(fp.PrimaryIDs, primary.ID) }
+									/>
+									<span class="text-sm capitalize">{ primary.Label }</span>
+								</label>
+							}
+							<label class="flex items-center gap-2 cursor-pointer">
+								<input
+									data-testid="unified-search-bar-genre-checkbox"
+									type="checkbox"
+									name="primary"
+									value={ library.UncategorizedPrimaryID }
+									class="checkbox checkbox-sm"
+									checked?={ slices.Contains(fp.PrimaryIDs, library.UncategorizedPrimaryID) }
+								/>
+								<span class="text-sm">Uncategorized</span>
+							</label>
 						</div>
-						<button type="submit" class="btn btn-primary btn-sm w-full mt-3">Apply</button>
+						<button type="submit" class="btn btn-primary btn-sm w-full">Apply</button>
 					</form>
 				</div>
 			</div>
-		}
+			// Artist popover (multi-select, with in-popover search)
+			if len(artists) > 0 {
+				<div x-data="{ open: false }" class="relative">
+					<button
+						type="button"
+						class={ templ.KV("btn btn-sm btn-soft btn-primary", len(fp.ArtistIDs) > 0), templ.KV("btn btn-sm btn-outline", len(fp.ArtistIDs) == 0) }
+						data-testid="unified-search-bar-artist-toggle"
+						@click="open = !open"
+					>
+						if len(fp.ArtistIDs) == 1 {
+							1 Artist
+						} else if len(fp.ArtistIDs) > 1 {
+							{ fmt.Sprintf("%d Artists", len(fp.ArtistIDs)) }
+						} else {
+							Artist
+						}
+					</button>
+					<div
+						x-show="open"
+						x-cloak
+						@click.outside="open = false"
+						data-testid="unified-search-bar-artist-popover"
+						class="absolute z-50 mt-2 right-0 bg-base-100 border border-base-300 rounded-box shadow-lg p-3 w-72"
+					>
+						<form
+							hx-get="/app/library/dashboard/albums-table"
+							hx-target="#album-list"
+							hx-indicator="#album-list-results"
+							hx-swap="outerHTML"
+							hx-push-url="true"
+							@submit="open = false"
+						>
+							if fp.Q != "" {
+								<input type="hidden" name="q" value={ fp.Q }/>
+							}
+							if sortBy != "" {
+								<input type="hidden" name="sortBy" value={ sortBy }/>
+							}
+							if sortDir != "" {
+								<input type="hidden" name="dir" value={ sortDir }/>
+							}
+							if fp.MinRating != nil {
+								<input type="hidden" name="minRating" value={ fmt.Sprintf("%g", *fp.MinRating) }/>
+							}
+							if fp.MaxRating != nil {
+								<input type="hidden" name="maxRating" value={ fmt.Sprintf("%g", *fp.MaxRating) }/>
+							}
+							if fp.Rated != "" {
+								<input type="hidden" name="rated" value={ fp.Rated }/>
+							}
+							for _, format := range fp.Formats {
+								<input type="hidden" name="format" value={ string(format) }/>
+							}
+							for _, primaryID := range fp.PrimaryIDs {
+								<input type="hidden" name="primary" value={ primaryID }/>
+							}
+							<div x-data="{ search: '' }">
+								<input
+									x-model="search"
+									type="search"
+									placeholder="Search artists..."
+									class="input input-sm input-bordered w-full mb-3"
+								/>
+								<div class="max-h-56 overflow-y-auto flex flex-col gap-1">
+									for _, artist := range artists {
+										<label
+											class="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-base-200 rounded"
+											x-show="!search || $el.dataset.name.includes(search.toLowerCase())"
+											data-name={ strings.ToLower(artist.Name) }
+										>
+											<input
+												data-testid="unified-search-bar-artist-checkbox"
+												type="checkbox"
+												name="artist"
+												value={ artist.ID }
+												class="checkbox checkbox-sm"
+												checked?={ slices.Contains(fp.ArtistIDs, artist.ID) }
+											/>
+											<span class="text-sm">{ artist.Name }</span>
+										</label>
+									}
+								</div>
+							</div>
+							<button type="submit" class="btn btn-primary btn-sm w-full mt-3">Apply</button>
+						</form>
+					</div>
+				</div>
+			}
 		</div>
 		// Active-state badges row. Rendered at rest below the controls;
 		// visible without opening any popover. Empty when the view is at

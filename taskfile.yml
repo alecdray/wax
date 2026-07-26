@@ -74,6 +74,7 @@ tasks:
         --build.cmd "go build -v -o ./bin/app ./src/cmd/app.go"
         --build.entrypoint "./bin/app"
         --build.delay "100"
+        --build.kill_delay "500ms"
         --build.exclude_dir "node_modules"
         --build.include_ext "go"
         --build.stop_on_error false
