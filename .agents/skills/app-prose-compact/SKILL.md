@@ -1,5 +1,5 @@
 ---
-name: prose-compact
+name: app-prose-compact
 description: Rewrite written prose artifacts and agent output to be shorter, deduplicated, better structured, and more precise without losing facts, nuance, decisions, constraints, caveats, actions, or fidelity. Use when asked to compact, tighten, shorten, deduplicate, clarify, make concise, reduce verbosity/repetition, or improve prose structure while preserving meaning, especially with compact bullets, tables, or diagrams.
 ---
 

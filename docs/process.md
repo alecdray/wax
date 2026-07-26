@@ -14,7 +14,7 @@ committed — only the deliberate working docs for the chunk go in `docs/spec/`.
 
 ## 1. Spec
 
-Run `/spec <name>` — creates `docs/spec/<timestamp>-<name>/` with a scope doc and surfaces relevant planning
+Run `/app-spec <name>` — creates `docs/spec/<timestamp>-<name>/` with a scope doc and surfaces relevant planning
 skills. See [`docs/spec/README.md`](./spec/README.md) for the folder convention.
 
 Codify the design in the canonical docs (ADRs, module READMEs, data model) on the branch during this
@@ -24,7 +24,7 @@ affected module READMEs — not only the files the feature edits.
 
 ## 2. Implement
 
-Run `/implement` — enforces the canonical-docs-first rule, surfaces relevant build skills, and
+Run `/app-implement` — enforces the canonical-docs-first rule, surfaces relevant build skills, and
 confirms both doc layers are reconciled before handoff.
 
 Gate: `task test` green — unit (`task test/unit`) and e2e (`task test/e2e`, with `task dev` running on
@@ -32,7 +32,7 @@ port 4691). See [testing.md](./testing.md).
 
 ## 3. Audit
 
-Run `/audit` — the pre-merge gate covering both code and docs. Fix what it finds; repeat until clean.
+Run `/app-audit` — the pre-merge gate covering both code and docs. Fix what it finds; repeat until clean.
 
 ## 4. Merge (PR → merge)
 

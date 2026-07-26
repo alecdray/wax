@@ -1,5 +1,5 @@
 ---
-name: audit
+name: app-audit
 description: Pre-merge audit gate — checks both code and docs in a single pass. ALWAYS prompt the user to run this before merging, pushing a PR, or marking a branch as done. Keywords: audit, pre-merge, before merge, before push, before merging, ready to merge, ready to ship, final check, merge check, pre-PR, code audit, docs audit.
 argument-hint: "[optional: 'diff' to scope to changed files vs main, or a path]"
 ---
@@ -10,7 +10,7 @@ Run the project's full pre-merge audit — code and docs in one pass — by disp
 
 Dispatch one `Agent` (subagent_type `Explore`) with this prompt:
 
-> You are running the pre-merge audit for wax. Read `.agents/skills/audit/code-audit.md` and `.agents/skills/audit/docs-audit.md` — those files contain the full checklists for code and docs respectively. Run both checklists in a single pass against this repo. Argument (scope): `<arg-or-none>`. Return only the Pre-Merge Audit block defined in `.agents/skills/audit/SKILL.md`'s Output section.
+> You are running the pre-merge audit for wax. Read `.agents/skills/app-audit/code-audit.md` and `.agents/skills/app-audit/docs-audit.md` — those files contain the full checklists for code and docs respectively. Run both checklists in a single pass against this repo. Argument (scope): `<arg-or-none>`. Return only the Pre-Merge Audit block defined in `.agents/skills/app-audit/SKILL.md`'s Output section.
 
 Wait for the subagent to return, then relay its output verbatim.
 
