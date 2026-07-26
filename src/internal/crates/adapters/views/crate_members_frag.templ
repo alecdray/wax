@@ -1,0 +1,53 @@
+package views
+
+import (
+	"github.com/alecdray/wax/src/internal/core/templates"
+	"github.com/alecdray/wax/src/internal/library"
+)
+
+// crateAlbumRowRating extracts the rating float64 pointer from an AlbumDTO.
+func crateAlbumRowRating(album library.AlbumDTO) *float64 {
+	if album.Rating != nil && album.Rating.Rating != nil {
+		return album.Rating.Rating
+	}
+	return nil
+}
+
+// crateAlbumRowFinalized reports whether the album's rating is finalized.
+func crateAlbumRowFinalized(album library.AlbumDTO) bool {
+	if album.RatingState == nil {
+		return false
+	}
+	return album.RatingState.State == "finalized"
+}
+
+// crateAlbumRowArtistNames extracts artist names from an AlbumDTO.
+func crateAlbumRowArtistNames(album library.AlbumDTO) []string {
+	names := make([]string, len(album.Artists))
+	for i, a := range album.Artists {
+		names[i] = a.Name
+	}
+	return names
+}
+
+templ CrateMembersFrag(albums []library.AlbumDTO, crateID string) {
+	if len(albums) == 0 {
+		<p class="text-sm text-muted px-4 py-8 text-center" data-testid="crate-members-empty-state">No albums in this crate</p>
+	} else {
+		<ul class="list px-4" data-testid="crate-members-list">
+			for _, album := range albums {
+				@templates.AlbumRow(templates.AlbumRowProps{
+					ID:             album.ID,
+					Title:          album.Title,
+					Artists:        crateAlbumRowArtistNames(album),
+					ImageURL:       album.ImageURL,
+					Rating:         crateAlbumRowRating(album),
+					Finalized:      crateAlbumRowFinalized(album),
+					OnRowClick:     nil,
+					OnFormatsClick: nil,
+					OnRatingClick:  nil,
+				})
+			}
+		</ul>
+	}
+}

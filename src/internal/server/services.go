@@ -9,13 +9,14 @@ import (
 	appConfig "github.com/alecdray/wax/src/internal/core/app"
 	"github.com/alecdray/wax/src/internal/core/db"
 	"github.com/alecdray/wax/src/internal/core/task"
+	"github.com/alecdray/wax/src/internal/crates"
 	"github.com/alecdray/wax/src/internal/discogs"
 	"github.com/alecdray/wax/src/internal/feed"
 	"github.com/alecdray/wax/src/internal/genregraph"
+	"github.com/alecdray/wax/src/internal/genres"
 	"github.com/alecdray/wax/src/internal/library"
 	"github.com/alecdray/wax/src/internal/listeninghistory"
 	"github.com/alecdray/wax/src/internal/musicbrainz"
-	"github.com/alecdray/wax/src/internal/genres"
 	"github.com/alecdray/wax/src/internal/notes"
 	"github.com/alecdray/wax/src/internal/review"
 	"github.com/alecdray/wax/src/internal/spotify"
@@ -40,6 +41,7 @@ type services struct {
 	genres           *genres.Service
 	notes            *notes.Service
 	auth             *auth.Service
+	crates           *crates.Service
 }
 
 func NewServices(app appConfig.App, db *db.DB) *services {
@@ -100,6 +102,9 @@ func NewServices(app appConfig.App, db *db.DB) *services {
 	s.feed = feed.NewService(db, s.spotify, s.library)
 
 	s.auth = auth.NewService(s.spotifyAuth, s.user, s.feed)
+
+	cratesRepo := crates.NewRepo(db.Queries())
+	s.crates = crates.NewService(cratesRepo, s.library)
 
 	// Cron tasks poll the Spotify Web API. Every non-prod instance shares the
 	// same Spotify app credentials and therefore the same rate-limit budget, so

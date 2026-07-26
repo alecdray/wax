@@ -13,6 +13,7 @@ import (
 	"github.com/alecdray/wax/src/internal/core/db"
 	"github.com/alecdray/wax/src/internal/core/httpx"
 	"github.com/alecdray/wax/src/internal/core/templates"
+	cratesAdapters "github.com/alecdray/wax/src/internal/crates/adapters"
 	libraryAdapters "github.com/alecdray/wax/src/internal/library/adapters"
 	reviewAdapters "github.com/alecdray/wax/src/internal/review/adapters"
 	tagsAdapters "github.com/alecdray/wax/src/internal/tags/adapters"
@@ -58,6 +59,9 @@ func Start(ctx context.Context, app app.App) {
 
 	reviewHandler := reviewAdapters.NewHttpHandler(services.library, services.review)
 	reviewAdapters.RegisterRoutes(appMux, reviewHandler)
+
+	cratesHandler := cratesAdapters.NewHttpHandler(services.crates)
+	cratesAdapters.RegisterRoutes(appMux, cratesHandler)
 
 	// Not found handler, must be registered after all other handlers
 	rootMux.HandleFunc("/", httpx.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

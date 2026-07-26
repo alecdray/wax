@@ -1,0 +1,111 @@
+package views
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/core/templates"
+	"github.com/alecdray/wax/src/internal/crates"
+	"github.com/alecdray/wax/src/internal/library"
+)
+
+templ editCrateModalHeader(name string) {
+	<span class="font-semibold">{ name }</span>
+}
+
+templ EditCrateModalFrag(crate crates.CrateDetailDTO, crateID string) {
+	@templates.Modal("edit-crate-modal", templates.ModalProps{
+		TestID:        "edit-crate-modal",
+		HeaderActions: editCrateModalHeader(crate.Name),
+		ModalContent:  editCrateModalContent(crate, crateID),
+	})
+}
+
+templ editCrateModalContent(crate crates.CrateDetailDTO, crateID string) {
+	<div class="flex flex-col gap-4 py-2">
+		<div>
+			<h3 class="text-sm font-semibold text-muted mb-2">Members</h3>
+			if len(crate.Albums) == 0 {
+				<p class="text-sm text-muted" data-testid="edit-crate-members-empty">No albums in this crate</p>
+			} else {
+				<ul class="list" data-testid="edit-crate-members-list">
+					for _, album := range crate.Albums {
+						<li class="list-row items-center px-0 py-1" data-testid="edit-crate-member-row">
+							<div class="flex-1 min-w-0">
+								<div class="font-medium truncate text-sm">{ album.Title }</div>
+								if len(album.Artists) > 0 {
+									<div class="text-xs text-muted truncate">
+										for i, artist := range album.Artists {
+											if i > 0 {
+												<span>, </span>
+											}
+											{ artist.Name }
+										}
+									</div>
+								}
+							</div>
+							<button
+								class="btn btn-xs btn-ghost text-error"
+								hx-delete={ fmt.Sprintf("/app/crates/%s/albums/%s", crateID, album.ID) }
+								hx-swap="none"
+								data-testid="remove-album-button"
+							>
+								Remove
+							</button>
+						</li>
+					}
+				</ul>
+			}
+		</div>
+		<div>
+			<h3 class="text-sm font-semibold text-muted mb-2">Add albums</h3>
+			<input
+				type="search"
+				name="q"
+				placeholder="Search your library..."
+				autocomplete="off"
+				class="input input-sm input-bordered w-full mb-2"
+				hx-get={ fmt.Sprintf("/app/crates/%s/edit-modal/search", crateID) }
+				hx-trigger="keyup changed delay:300ms, search"
+				hx-target={ fmt.Sprintf("#non-member-results-%s", crateID) }
+				hx-swap="innerHTML"
+				data-testid="add-album-search-input"
+			/>
+			<div id={ fmt.Sprintf("non-member-results-%s", crateID) } data-testid="non-member-results">
+				@NonMemberSearchResultsFrag([]library.AlbumDTO{}, crateID)
+			</div>
+		</div>
+	</div>
+}
+
+templ NonMemberSearchResultsFrag(albums []library.AlbumDTO, crateID string) {
+	if len(albums) == 0 {
+		<p class="text-xs text-muted" data-testid="non-member-results-empty">No results</p>
+	} else {
+		<ul class="list" data-testid="non-member-results-list">
+			for _, album := range albums {
+				<li class="list-row items-center px-0 py-1" data-testid="non-member-result-row">
+					<div class="flex-1 min-w-0">
+						<div class="font-medium truncate text-sm">{ album.Title }</div>
+						if len(album.Artists) > 0 {
+							<div class="text-xs text-muted truncate">
+								for i, artist := range album.Artists {
+									if i > 0 {
+										<span>, </span>
+									}
+									{ artist.Name }
+								}
+							</div>
+						}
+					</div>
+					<button
+						class="btn btn-xs btn-primary"
+						hx-post={ fmt.Sprintf("/app/crates/%s/albums/%s", crateID, album.ID) }
+						hx-swap="none"
+						data-testid="add-album-button"
+					>
+						Add
+					</button>
+				</li>
+			}
+		</ul>
+	}
+}
