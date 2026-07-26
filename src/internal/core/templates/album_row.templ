@@ -31,8 +31,8 @@ type AlbumRowProps struct {
 	// plain badges. When non-nil, the caller's component controls the full visual
 	// (children are passed but the component may ignore them).
 	OnFormatsClick templ.Component
-	// OnRatingClick wraps the score readout.
-	// The component must render { children... } to place the score.
+	// OnRatingClick replaces the score readout entirely when non-nil.
+	// The caller's component controls the full visual (same semantic as OnFormatsClick).
 	OnRatingClick templ.Component
 }
 
@@ -99,9 +99,7 @@ templ AlbumRow(props AlbumRowProps) {
 		// Score readout column
 		<div class="flex-shrink-0 self-stretch flex items-center">
 			if props.OnRatingClick != nil {
-				@props.OnRatingClick {
-					@albumRowScore(props)
-				}
+				@props.OnRatingClick
 			} else {
 				@albumRowScore(props)
 			}
