@@ -63,4 +63,8 @@ Apply to all five display callsites (format strings → `review.FormatDisplayRat
 
 ### E2E tests (`e2e/spec/reviews.spec.ts`)
 
-`reviews.spec.ts:31–34` locates `base-question-fieldset` and `base-question-radio` to answer each question. These selectors must be updated to interact with the slider instead (fill or set value via `inputValue` / `fill` on the range input).
+`answerQuestionnaire` updated to fill each `base-question-slider` range input with `'1'` instead of clicking `base-question-radio`.
+
+### Additional fix (implementation)
+
+`DetectContradictions` used `map[BaseQuestionKey]int` — updated to `map[BaseQuestionKey]float64` to match the `Value` type change.
