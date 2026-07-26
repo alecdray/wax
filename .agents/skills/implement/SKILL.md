@@ -8,6 +8,8 @@ Phase 2 of the process in [`docs/process.md`](../../../docs/process.md).
 
 ## Steps
 
+0. **Orient.** Read [`docs/product/vision.md`](../../../docs/product/vision.md) — the Deployment context section defines the threat model, scale assumptions, and product philosophy that should inform implementation decisions.
+
 1. **Edit canonical docs first.** Before touching any code, codify the design into the docs the change touches — ADRs, architecture docs, data model, module READMEs. This is the non-negotiable opening move of this phase.
 
 2. **Surface eligible skills.** Look through your available skills and present the ones relevant to building and execution (TDD, subagent-driven development, plan execution, code generation, etc.) as a short list with their one-line descriptions. Ask the user which, if any, they want to use — then proceed with the chosen flow, or freehand if none apply.
