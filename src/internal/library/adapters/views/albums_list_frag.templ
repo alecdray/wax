@@ -11,6 +11,22 @@ import (
 	"strings"
 )
 
+// sortedPrimaryGenres returns the curated primary genre list sorted alphabetically
+// by label for display in the filter modal.
+func sortedPrimaryGenres() []genregraph.Primary {
+	genres := genregraph.PrimaryGenres()
+	slices.SortFunc(genres, func(a, b genregraph.Primary) int {
+		if a.Label < b.Label {
+			return -1
+		}
+		if a.Label > b.Label {
+			return 1
+		}
+		return 0
+	})
+	return genres
+}
+
 // primaryFilterLabel maps a selected primary-genre filter value to its display
 // label — the curated label for a genre id, or "Uncategorized" for the sentinel.
 func primaryFilterLabel(id string) string {
@@ -609,10 +625,10 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 						}
 						<div class="flex flex-col gap-1 mb-3">
 							for _, opt := range []struct{ value, label string }{
+							{"cassette", "Cassette"},
+							{"cd", "CD"},
 							{"digital", "Digital"},
 							{"vinyl", "Vinyl"},
-							{"cd", "CD"},
-							{"cassette", "Cassette"},
 						} {
 								<label class="flex items-center gap-2 cursor-pointer">
 									<input
@@ -685,7 +701,7 @@ templ unifiedSearchBar(sortBy, sortDir string, fp library.FilterParams, artists 
 							<input type="hidden" name="artist" value={ artistID }/>
 						}
 						<div class="max-h-56 overflow-y-auto flex flex-col gap-1 mb-3">
-							for _, primary := range genregraph.PrimaryGenres() {
+							for _, primary := range sortedPrimaryGenres() {
 								<label class="flex items-center gap-2 cursor-pointer">
 									<input
 										data-testid="unified-search-bar-genre-checkbox"
