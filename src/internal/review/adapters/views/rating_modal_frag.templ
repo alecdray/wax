@@ -1,6 +1,7 @@
 package views
 
 import (
+	"fmt"
 	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/library"
 	"github.com/alecdray/wax/src/internal/review"
@@ -18,11 +19,51 @@ type RatingModalProps struct {
 }
 
 templ RatingModalFrag(props RatingModalProps) {
-	@templates.Modal(RatingModalId, templates.ModalProps{
-		ModalContent: RatingConfirmFormFrag(props.Album, props.Mode, props.Rating),
-	})
+	@RatingScoreEntryModalFrag(props.Album, props.Mode, props.Rating)
 }
 
 templ CloseRatingModalFrag() {
 	@templates.ForceCloseModal(RatingModalId)
+}
+
+// RatingScoreEntryModalFrag renders the modal shell for the score-entry step.
+// No back button — this is always the first (and often only) step.
+templ RatingScoreEntryModalFrag(album library.AlbumDTO, mode review.RatingMode, rating *float64) {
+	@templates.Modal(RatingModalId, templates.ModalProps{
+		ModalContent: RatingConfirmFormFrag(album, mode, rating),
+	})
+}
+
+// RatingQuestionsModalFrag renders the modal shell for the questionnaire step.
+// Header carries a back button that returns to the score-entry form.
+templ RatingQuestionsModalFrag(albumID string, mode review.RatingMode, priorRating *float64) {
+	@templates.Modal(RatingModalId, templates.ModalProps{
+		HeaderActions: ratingBackButton(dismissQuestionnaireHref(albumID, mode, priorRating), "base-questions-form-dismiss"),
+		ModalContent:  BaseQuestionsFormFrag(albumID, mode, review.AllBaseQuestions, priorRating),
+	})
+}
+
+// RatingConfidenceModalFrag renders the modal shell for the confidence
+// interstitial step. Header carries a back button that returns to the
+// questionnaire.
+templ RatingConfidenceModalFrag(albumID string, mode review.RatingMode, finalScore float64, formValues map[string]string) {
+	@templates.Modal(RatingModalId, templates.ModalProps{
+		HeaderActions: ratingBackButton(fmt.Sprintf("/app/review/rating-recommender/questions?albumId=%s&mode=%s", albumID, string(mode)), ""),
+		ModalContent:  ConfidenceInterstitialFrag(albumID, mode, finalScore, formValues),
+	})
+}
+
+templ ratingBackButton(href string, testid string) {
+	<button
+		type="button"
+		class="btn btn-sm btn-ghost btn-square"
+		aria-label="Back"
+		if testid != "" {
+			data-testid={ testid }
+		}
+		hx-get={ href }
+		hx-swap="none"
+	>
+		@templates.Icon(templates.IconProps{Name: "arrow-left"})
+	</button>
 }

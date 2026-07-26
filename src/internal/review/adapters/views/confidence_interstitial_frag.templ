@@ -17,14 +17,13 @@ templ ConfidenceInterstitialFrag(albumId string, mode review.RatingMode, finalSc
 			<a
 				class="btn btn-soft btn-sm btn-busy"
 				hx-get={ fmt.Sprintf("/app/review/rating-recommender/questions?albumId=%s&mode=%s", albumId, string(mode)) }
-				hx-swap="outerHTML"
-				hx-target={ "#" + ConfidenceInterstitialID }
+				hx-swap="none"
 				hx-disabled-elt="this"
 				data-testid="confidence-interstitial-review"
 			>Review answers</a>
 			<form
 				hx-post={ fmt.Sprintf("/app/review/rating-recommender/confirm?albumId=%s", albumId) }
-				hx-swap="outerHTML"
+				hx-swap="none"
 				class="contents"
 				hx-disabled-elt="find button[type='submit']"
 			>

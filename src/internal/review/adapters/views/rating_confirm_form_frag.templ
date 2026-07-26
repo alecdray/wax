@@ -96,8 +96,7 @@ templ RatingConfirmFormFrag(album library.AlbumDTO, mode review.RatingMode, rati
 			type="button"
 			hx-get={ questionnaireOptInHref(album.ID, mode, rating) }
 			hx-disabled-elt="this"
-			hx-target="closest form"
-			hx-swap="outerHTML"
+			hx-swap="none"
 		>Not sure? Help me score it</button>
 		<fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-full border px-4">
 			<legend class="fieldset-legend">Note <span class="font-normal text-subtle">(optional)</span></legend>
