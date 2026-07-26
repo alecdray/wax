@@ -33,9 +33,11 @@ type AlbumInput struct {
 
 // TrackInput is the data needed to upsert a track.
 type TrackInput struct {
-	ID        string
-	SpotifyID string
-	Title     string
+	ID          string
+	SpotifyID   string
+	Title       string
+	DiscNumber  int
+	TrackNumber int
 }
 
 // ArtistInput is the data needed to upsert an artist.
@@ -74,8 +76,8 @@ func (r *Repo) GetOrCreateTrack(ctx context.Context, in TrackInput) (string, err
 		ID:          in.ID,
 		SpotifyID:   in.SpotifyID,
 		Title:       in.Title,
-		DiscNumber:  0,
-		TrackNumber: 0,
+		DiscNumber:  int64(in.DiscNumber),
+		TrackNumber: int64(in.TrackNumber),
 	})
 	if err != nil {
 		return "", err
