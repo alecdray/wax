@@ -139,6 +139,85 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 	return albumDTOs, nil
 }
 
+// GetAlbumsByIDs returns fully-hydrated AlbumDTOs for an arbitrary set of
+// album IDs. Unlike GetAlbumsInLibrary, it does not fetch release/ownership
+// data (Releases will be empty) — suited for surfaces like crate detail views
+// that don't need ownership context.
+func (s *Service) GetAlbumsByIDs(ctx contextx.ContextX, albumIDs []string) ([]AlbumDTO, error) {
+	if len(albumIDs) == 0 {
+		return nil, nil
+	}
+
+	userID, err := ctx.UserId()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user id from context: %w", err)
+	}
+
+	albums, err := s.repo.GetAlbumsByIDs(ctx, albumIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get albums: %w", err)
+	}
+
+	artistsByAlbumId, err := s.repo.GetArtistsByAlbumIDs(ctx, albumIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get album artists: %w", err)
+	}
+
+	tracksByAlbumId, err := s.repo.GetTracksByAlbumIDs(ctx, albumIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get album tracks: %w", err)
+	}
+
+	ratingsByAlbumId, err := s.reviewService.GetLatestRatings(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ratings: %w", err)
+	}
+
+	lastPlayedAtByAlbumId, err := s.listeningHistoryService.GetLastPlayedAtByAlbumIds(ctx, userID, albumIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get last played at: %w", err)
+	}
+
+	tagsByAlbumId, err := s.tagsService.GetAlbumTagsByAlbumIds(ctx, userID, albumIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get album tags: %w", err)
+	}
+
+	primariesByAlbumId, err := s.genresService.AlbumPrimaries(ctx, albumIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get album primary genres: %w", err)
+	}
+
+	notesByAlbumId, err := s.notesService.GetAlbumNotesByAlbumIds(ctx, userID, albumIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get album notes: %w", err)
+	}
+
+	ratingStates, err := s.reviewService.GetAllRatingStates(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get rating states: %w", err)
+	}
+
+	var albumDTOs []AlbumDTO
+	for _, album := range albums {
+		dto := album
+		dto.Artists = artistsByAlbumId[album.ID]
+		dto.Tracks = tracksByAlbumId[album.ID]
+		rating := ratingsByAlbumId[album.ID]
+		dto.Rating = utils.NewPointer(rating)
+		if t, ok := lastPlayedAtByAlbumId[album.ID]; ok {
+			dto.LastPlayedAt = &t
+		}
+		dto.Tags = tagsByAlbumId[album.ID]
+		dto.Primaries = primariesByAlbumId[album.ID]
+		dto.SleeveNote = notesByAlbumId[album.ID]
+		dto.RatingState = ratingStates[album.ID]
+		albumDTOs = append(albumDTOs, dto)
+	}
+
+	return albumDTOs, nil
+}
+
 func (s *Service) GetLibrary(ctx context.Context, userId string) (*Library, error) {
 	albums, err := s.GetAlbumsInLibrary(ctx, userId)
 	if err != nil {
