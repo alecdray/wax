@@ -1,6 +1,6 @@
 # review
 
-A personal album rating system that captures your ongoing relationship with a record — not a critical verdict, but a living score that evolves as your listening history does. Scores are 0.0–10.0 to one decimal place.
+A personal album rating system that captures your ongoing relationship with a record — not a critical verdict, but a living score that evolves as your listening history does. Scores are stored as 0.0–10.0 floats and displayed as whole numbers (floor).
 
 ## Core philosophy
 
@@ -8,7 +8,7 @@ The rating system is personal, not critical. It measures your relationship with 
 
 ## Question design
 
-- Questions are statements answered on a standard Likert scale (Strongly Disagree → Strongly Agree).
+- Questions are statements answered on a continuous slider (1–5), where 1 = strongly disagree and 5 = strongly agree.
 - Each statement should measure one thing only and be fast to answer — directional accuracy matters more than precision.
 - Clarity beats personality, but personality is welcome where it doesn't sacrifice clarity.
 
@@ -37,7 +37,7 @@ The canonical question list lives in `AllBaseQuestions`. The rationale for each:
 
 ## Scoring
 
-The score is a weighted average of answered questions, linearly mapped to the 0–10 scale and rounded to one decimal place. Unanswered questions are excluded from both the weighted sum and the total weight, so partial ratings self-adjust without distorting the score.
+The score is a weighted average of answered questions, linearly mapped to the 0–10 scale and stored as a float. Displayed scores are floored to the nearest whole number.
 
 ## Rating lifecycle
 

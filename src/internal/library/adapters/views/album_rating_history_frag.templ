@@ -29,7 +29,7 @@ templ AlbumRatingHistoryFrag(album library.AlbumDTO, isOOB bool) {
 						<div class="flex items-start justify-between py-3 gap-2" data-testid="album-rating-history-entry">
 							<div class="flex flex-col gap-1 min-w-0">
 								<div class="flex items-center gap-2">
-									<span class="badge badge-soft badge-primary text-nowrap" data-testid="album-rating-history-score">{ fmt.Sprintf("%.4g", *entry.Rating) } - { string(review.GetRatingLabel(*entry.Rating)) }</span>
+									<span class="badge badge-soft badge-primary text-nowrap" data-testid="album-rating-history-score">{ review.FormatDisplayRating(*entry.Rating) } - { string(review.GetRatingLabel(*entry.Rating)) }</span>
 									if entry.State != nil {
 										<span class="badge badge-xs badge-ghost text-nowrap">{ review.RatingStateLogLabel(*entry.State) }</span>
 									}

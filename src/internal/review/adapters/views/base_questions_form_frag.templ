@@ -4,28 +4,30 @@ import (
 	"fmt"
 	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/review"
-	"strconv"
 )
 
-templ baseQuestionRadio(q review.BaseQuestion, opt review.QuestionOption) {
-	<label data-testid="base-question-radio" class="flex items-center gap-3 cursor-pointer">
+templ baseQuestionSlider(q review.BaseQuestion) {
+	<fieldset data-testid="base-question-fieldset" class="flex flex-col gap-2">
+		<legend class="text-default font-medium">{ q.Question }</legend>
 		<input
-			type="radio"
+			data-testid="base-question-slider"
+			type="range"
 			name={ string(q.Key) }
-			value={ strconv.Itoa(opt.Value) }
-			class="radio radio-primary radio-sm"
+			min="1"
+			max="5"
+			step="0.01"
+			value="3"
+			class="range range-primary range-sm"
+			list={ "ticks-" + string(q.Key) }
 			required
 		/>
-		<span class="text-muted">{ opt.Label }</span>
-	</label>
-}
-
-templ baseQuestionFieldset(q review.BaseQuestion) {
-	<fieldset data-testid="base-question-fieldset" class="flex flex-col gap-3">
-		<legend class="text-default font-medium mb-2">{ q.Question }</legend>
-		for _, opt := range q.Options {
-			@baseQuestionRadio(q, opt)
-		}
+		<datalist id={ "ticks-" + string(q.Key) }>
+			<option value="1"></option>
+			<option value="2"></option>
+			<option value="3"></option>
+			<option value="4"></option>
+			<option value="5"></option>
+		</datalist>
 	</fieldset>
 }
 
@@ -34,7 +36,7 @@ templ baseQuestionFieldset(q review.BaseQuestion) {
 // score input, no value travels through and the form re-opens empty.
 func dismissQuestionnaireHref(albumId string, mode review.RatingMode, priorRating *float64) string {
 	if priorRating != nil {
-		return fmt.Sprintf("/app/review/rating-recommender/confirm?albumId=%s&mode=%s&final_score=%s", albumId, string(mode), strconv.FormatFloat(*priorRating, 'f', -1, 64))
+		return fmt.Sprintf("/app/review/rating-recommender/confirm?albumId=%s&mode=%s&final_score=%s", albumId, string(mode), fmt.Sprintf("%g", *priorRating))
 	}
 	return fmt.Sprintf("/app/review/rating-recommender/confirm?albumId=%s&mode=%s", albumId, string(mode))
 }
@@ -64,9 +66,8 @@ templ BaseQuestionsFormFrag(albumId string, mode review.RatingMode, questions re
 			</button>
 		</div>
 		for _, q := range questions {
-			@baseQuestionFieldset(q)
+			@baseQuestionSlider(q)
 		}
 		<button class="btn btn-primary btn-sm btn-busy" type="submit" data-testid="base-questions-form-submit">Next</button>
 	</form>
 }
-

@@ -3,6 +3,7 @@ package adapters
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -133,11 +134,12 @@ func (h *HttpHandler) SubmitRatingRecommenderQuestions(w http.ResponseWriter, r 
 			})
 			return
 		}
-		val, err := strconv.Atoi(rawVal)
+		val, err := strconv.ParseFloat(rawVal, 64)
 		if err != nil {
 			httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{Status: http.StatusBadRequest, Err: fmt.Errorf("invalid value for %s: %w", q.Key, err)})
 			return
 		}
+		val = math.Max(1.0, math.Min(5.0, val))
 		questions[i] = q.WithValue(val)
 		questionValues[string(q.Key)] = rawVal
 	}
