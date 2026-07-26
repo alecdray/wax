@@ -489,9 +489,11 @@ func spotifyAlbumToDTO(album *spotifylib.FullAlbum) AlbumDTO {
 	dto.Tracks = make([]TrackDTO, 0, len(album.Tracks.Tracks))
 	for _, t := range album.Tracks.Tracks {
 		dto.Tracks = append(dto.Tracks, TrackDTO{
-			ID:        uuid.NewString(),
-			SpotifyID: t.ID.String(),
-			Title:     t.Name,
+			ID:          uuid.NewString(),
+			SpotifyID:   t.ID.String(),
+			Title:       t.Name,
+			DiscNumber:  int(t.DiscNumber),
+			TrackNumber: int(t.TrackNumber),
 		})
 	}
 	return dto

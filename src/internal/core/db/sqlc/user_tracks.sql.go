@@ -28,7 +28,7 @@ func (q *Queries) GetOrCreateUserTrack(ctx context.Context, arg GetOrCreateUserT
 }
 
 const getUserTracks = `-- name: GetUserTracks :many
-SELECT user_tracks.id, user_tracks.user_id, user_tracks.track_id, user_tracks.added_at, user_tracks.deleted_at, tracks.id, tracks.spotify_id, tracks.title, tracks.created_at, tracks.deleted_at FROM user_tracks
+SELECT user_tracks.id, user_tracks.user_id, user_tracks.track_id, user_tracks.added_at, user_tracks.deleted_at, tracks.id, tracks.spotify_id, tracks.title, tracks.created_at, tracks.deleted_at, tracks.disc_number, tracks.track_number FROM user_tracks
 JOIN tracks ON user_tracks.track_id = tracks.id
 WHERE user_id = ?
 `
@@ -58,6 +58,8 @@ func (q *Queries) GetUserTracks(ctx context.Context, userID string) ([]GetUserTr
 			&i.Track.Title,
 			&i.Track.CreatedAt,
 			&i.Track.DeletedAt,
+			&i.Track.DiscNumber,
+			&i.Track.TrackNumber,
 		); err != nil {
 			return nil, err
 		}

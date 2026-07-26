@@ -42,7 +42,7 @@ test('Filtering the library by a primary genre keeps matching albums', async ({ 
   await page.goto('/app/library/dashboard');
 
   await page.getByTestId('unified-search-bar-genre-toggle').click();
-  const popover = page.getByTestId('unified-search-bar-genre-popover');
+  const popover = page.getByTestId('unified-search-bar-genre-modal');
   await expect(popover).toBeVisible();
   await popover.locator(`input[name="primary"][value="${POP}"]`).check();
   await popover.getByRole('button', { name: 'Apply' }).click();
@@ -59,7 +59,7 @@ test('Filtering by a genre the fixture album lacks excludes it from results', as
   await page.goto('/app/library/dashboard');
 
   await page.getByTestId('unified-search-bar-genre-toggle').click();
-  const popover = page.getByTestId('unified-search-bar-genre-popover');
+  const popover = page.getByTestId('unified-search-bar-genre-modal');
   await expect(popover).toBeVisible();
   await popover.locator(`input[name="primary"][value="${REGGAE}"]`).check();
   await popover.getByRole('button', { name: 'Apply' }).click();

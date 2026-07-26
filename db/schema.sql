@@ -31,7 +31,7 @@ CREATE TABLE tracks (
     title text not null,
     created_at datetime not null default current_timestamp,
     deleted_at datetime
-);
+, disc_number INTEGER NOT NULL DEFAULT 1, track_number INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE releases (
     id text primary key,
     album_id text not null references albums(id) on delete cascade,

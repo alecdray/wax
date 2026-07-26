@@ -154,11 +154,13 @@ type TagGroup struct {
 }
 
 type Track struct {
-	ID        string
-	SpotifyID string
-	Title     string
-	CreatedAt time.Time
-	DeletedAt sql.NullTime
+	ID          string
+	SpotifyID   string
+	Title       string
+	CreatedAt   time.Time
+	DeletedAt   sql.NullTime
+	DiscNumber  int64
+	TrackNumber int64
 }
 
 type TrackPlay struct {

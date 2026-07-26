@@ -51,9 +51,11 @@ type ArtistDTO struct {
 }
 
 type TrackDTO struct {
-	ID        string
-	SpotifyID string
-	Title     string
+	ID          string
+	SpotifyID   string
+	Title       string
+	DiscNumber  int
+	TrackNumber int
 }
 
 type AlbumDTO struct {
@@ -446,6 +448,10 @@ func (l *Library) artists() []ArtistDTO {
 	for _, artist := range artistsSet {
 		artists = append(artists, artist)
 	}
+
+	sort.Slice(artists, func(i, j int) bool {
+		return artists[i].Name < artists[j].Name
+	})
 
 	return artists
 }

@@ -48,9 +48,11 @@ func (s *Service) upsertPlayHistory(ctx context.Context, userID string, items []
 		}
 
 		trackID, err := s.repo.GetOrCreateTrack(ctx, TrackInput{
-			ID:        uuid.NewString(),
-			SpotifyID: track.ID.String(),
-			Title:     track.Name,
+			ID:          uuid.NewString(),
+			SpotifyID:   track.ID.String(),
+			Title:       track.Name,
+			DiscNumber:  int(track.DiscNumber),
+			TrackNumber: int(track.TrackNumber),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to get/create track %s: %w", track.ID, err)
