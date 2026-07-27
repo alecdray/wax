@@ -49,7 +49,7 @@ templ editCrateModalContent(crate crates.CrateDetailDTO, crateID string) {
 								data-testid="remove-album-button"
 								aria-label="Remove from crate"
 							>
-								@templates.Icon(templates.IconProps{Name: "dash-circle"})
+								@templates.Icon(templates.IconProps{Name: "dash-circle", Style: templates.IconStyleFill})
 							</button>
 						</li>
 					}
@@ -104,7 +104,7 @@ templ NonMemberSearchResultsFrag(albums []library.AlbumDTO, crateID string) {
 						data-testid="add-album-button"
 						aria-label="Add to crate"
 					>
-						@templates.Icon(templates.IconProps{Name: "plus-circle"})
+						@templates.Icon(templates.IconProps{Name: "plus-circle", Style: templates.IconStyleFill})
 					</button>
 				</li>
 			}
