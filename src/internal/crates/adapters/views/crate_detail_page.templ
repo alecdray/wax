@@ -12,11 +12,7 @@ templ CrateDetailPage(crate crates.CrateDetailDTO) {
 		ActiveNav: "crates",
 	}) {
 		<div data-testid="crate-detail-page" class="w-full flex flex-col pb-16">
-			<div class="flex items-center justify-between px-4 py-4">
-				<div>
-					<h1 class="text-xl font-bold" data-testid="crate-detail-name">{ crate.Name }</h1>
-					<p class="text-sm text-muted">{ fmt.Sprintf("%d albums", crate.AlbumCount) }</p>
-				</div>
+			@cratesAppHeader() {
 				<div class="flex items-center gap-2">
 					<button
 						class="btn btn-sm btn-ghost btn-square text-default text-xl"
@@ -37,6 +33,10 @@ templ CrateDetailPage(crate crates.CrateDetailDTO) {
 						@templates.Icon(templates.IconProps{Name: "trash"})
 					</button>
 				</div>
+			}
+			<div class="px-4 py-4">
+				<h1 class="text-xl font-bold" data-testid="crate-detail-name">{ crate.Name }</h1>
+				<p class="text-sm text-muted">{ fmt.Sprintf("%d albums", crate.AlbumCount) }</p>
 			</div>
 			<div
 				id={ fmt.Sprintf("crate-members-%s", crate.ID) }

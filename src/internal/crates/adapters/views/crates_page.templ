@@ -37,8 +37,7 @@ templ CratesPage(crateList []crates.CrateDTO) {
 		ActiveNav: "crates",
 	}) {
 		<div data-testid="crates-page" class="w-full flex flex-col pb-16">
-			<div class="flex items-center justify-between px-4 py-4">
-				<h1 class="text-xl font-bold">Crates</h1>
+			@cratesAppHeader() {
 				<button
 					class="btn btn-sm btn-primary"
 					hx-get="/app/crates/new-modal"
@@ -47,8 +46,8 @@ templ CratesPage(crateList []crates.CrateDTO) {
 				>
 					New Crate
 				</button>
-			</div>
-			<div id="crates-list" class="flex flex-col gap-2 px-4" data-testid="crates-list">
+			}
+			<div id="crates-list" class="flex flex-col gap-2 px-4 py-4" data-testid="crates-list">
 				@crateListBody(crateList)
 			</div>
 		</div>
