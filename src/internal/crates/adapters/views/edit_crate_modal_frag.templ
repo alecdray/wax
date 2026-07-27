@@ -43,7 +43,7 @@ templ editCrateModalContent(crate crates.CrateDetailDTO, crateID string) {
 								}
 							</div>
 							<button
-								class="btn btn-xs btn-ghost btn-square text-default"
+								class="btn btn-xs btn-ghost btn-square text-default ml-auto"
 								hx-delete={ fmt.Sprintf("/app/crates/%s/albums/%s", crateID, album.ID) }
 								hx-swap="none"
 								data-testid="remove-album-button"
@@ -98,7 +98,7 @@ templ NonMemberSearchResultsFrag(albums []library.AlbumDTO, crateID string) {
 						}
 					</div>
 					<button
-						class="btn btn-xs btn-ghost btn-square text-default"
+						class="btn btn-xs btn-ghost btn-square text-default ml-auto"
 						hx-post={ fmt.Sprintf("/app/crates/%s/albums/%s", crateID, album.ID) }
 						hx-swap="none"
 						data-testid="add-album-button"
