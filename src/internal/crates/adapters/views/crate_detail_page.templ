@@ -19,12 +19,13 @@ templ CrateDetailPage(crate crates.CrateDetailDTO) {
 				</div>
 				<div class="flex items-center gap-2">
 					<button
-						class="btn btn-sm btn-outline"
+						class="btn btn-sm btn-ghost btn-square text-default text-xl"
 						hx-get={ fmt.Sprintf("/app/crates/%s/edit-modal", crate.ID) }
 						hx-swap="none"
 						data-testid="edit-crate-button"
+						aria-label="Edit crate"
 					>
-						Edit
+						@templates.Icon(templates.IconProps{Name: "pencil"})
 					</button>
 					<button
 						class="btn btn-sm btn-ghost btn-square text-error text-xl"
