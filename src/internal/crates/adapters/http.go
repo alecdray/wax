@@ -144,7 +144,8 @@ func (h *HttpHandler) DeleteCrate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/app/crates", http.StatusSeeOther)
+	w.Header().Set("HX-Redirect", "/app/crates")
+	w.WriteHeader(http.StatusOK)
 }
 
 // GetCrateMembers serves GET /app/crates/{id}/members.

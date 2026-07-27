@@ -49,6 +49,7 @@ func (s *Service) GetCrate(ctx contextx.ContextX, id string) (CrateDetailDTO, er
 	if err != nil {
 		return CrateDetailDTO{}, fmt.Errorf("failed to hydrate crate albums: %w", err)
 	}
+	base.AlbumCount = len(albums)
 	return CrateDetailDTO{
 		CrateDTO: base,
 		Albums:   albums,
