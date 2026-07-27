@@ -102,6 +102,20 @@ type Artist struct {
 	DeletedAt sql.NullTime
 }
 
+type Crate struct {
+	ID        string
+	UserID    string
+	Name      string
+	CreatedAt time.Time
+}
+
+type CrateAlbum struct {
+	ID      string
+	CrateID string
+	AlbumID string
+	AddedAt time.Time
+}
+
 type Feed struct {
 	ID                  string
 	UserID              string

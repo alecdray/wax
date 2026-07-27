@@ -14,6 +14,10 @@ This directory is the home of UI **primitives** — reusable visual building blo
 
 `BottomNav` is the app's primary navigation chrome — a domain-free primitive fixed to the bottom of the viewport on every authenticated page and every screen size ([ADR 0007](../../../../docs/adr/0007-bottom-nav-all-viewports.md)). The shared layout renders it; pages opt in by naming the active top-level destination on `PageLayoutProps` (and opt out by leaving it unset, e.g. login). Being a primitive, it takes a plain active-destination value and knows nothing about feeds, albums, or any module — per-surface controls live in the pages that own them. Because it is `fixed`, scrolling page content reserves trailing space for it; that spacing is a page concern, set at the call site, not here.
 
+## The AlbumRow primitive
+
+`album_row.templ` defines `AlbumRow` — the shared album row used by any module that renders a list of albums (library dashboard, crate detail, etc.). It owns the full row visual: cover art, title, artists, format badges, and score readout. Interactive behaviour is injected by the caller via three `templ.Component` handler props (`OnRowClick`, `OnFormatsClick`, `OnRatingClick`); passing `nil` makes the corresponding element inert. The primitive is domain-free — it takes plain values only, no domain type imports.
+
 ## The Icon primitive
 
 `icons.templ` defines the single `Icon` primitive, which wraps Bootstrap Icons. Pass a BI catalog name (without the `bi-` prefix) and an optional `IconStyle` (Outline | Fill). Sizing and color come from the parent (`text-{size}` for size, parent text color for color). The CSS that powers it is vendored under `static/public/`; the BI catalog lives at https://icons.getbootstrap.com/.
