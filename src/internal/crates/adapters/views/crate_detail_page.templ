@@ -27,7 +27,7 @@ templ CrateDetailPage(crate crates.CrateDetailDTO) {
 						Edit
 					</button>
 					<button
-						class="btn btn-sm btn-ghost btn-square text-error"
+						class="btn btn-sm btn-ghost btn-square text-error text-xl"
 						hx-delete={ fmt.Sprintf("/app/crates/%s", crate.ID) }
 						hx-confirm="Delete this crate?"
 						data-testid="delete-crate-button"
