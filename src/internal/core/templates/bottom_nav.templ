@@ -17,8 +17,8 @@ templ BottomNav(active string) {
 			@bottomNavTab("library", active == "library", templ.SafeURL("/app/library/dashboard"), "collection", "Library", true)
 			// "radar" has no filled glyph in Bootstrap Icons, so it stays outline when active (hasFillVariant=false).
 			@bottomNavTab("radar", active == "radar", templ.SafeURL("/app/library/radar"), "radar", "Radar", false)
-			// "archive" has no filled glyph in Bootstrap Icons, so it stays outline when active (hasFillVariant=false).
-			@bottomNavTab("crates", active == "crates", templ.SafeURL("/app/crates"), "archive", "Crates", false)
+			// "box-seam" has no filled glyph in Bootstrap Icons, so it stays outline when active (hasFillVariant=false).
+			@bottomNavTab("crates", active == "crates", templ.SafeURL("/app/crates"), "box-seam", "Crates", false)
 			@bottomNavProfileTab()
 		</div>
 	</nav>
