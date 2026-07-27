@@ -97,12 +97,13 @@ templ NonMemberSearchResultsFrag(albums []library.AlbumDTO, crateID string) {
 						}
 					</div>
 					<button
-						class="btn btn-xs btn-primary"
+						class="btn btn-xs btn-ghost btn-square text-default"
 						hx-post={ fmt.Sprintf("/app/crates/%s/albums/%s", crateID, album.ID) }
 						hx-swap="none"
 						data-testid="add-album-button"
+						aria-label="Add to crate"
 					>
-						Add
+						@templates.Icon(templates.IconProps{Name: "plus-circle"})
 					</button>
 				</li>
 			}
