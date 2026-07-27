@@ -43,12 +43,13 @@ templ editCrateModalContent(crate crates.CrateDetailDTO, crateID string) {
 								}
 							</div>
 							<button
-								class="btn btn-xs btn-ghost text-error"
+								class="btn btn-xs btn-ghost btn-square text-default"
 								hx-delete={ fmt.Sprintf("/app/crates/%s/albums/%s", crateID, album.ID) }
 								hx-swap="none"
 								data-testid="remove-album-button"
+								aria-label="Remove from crate"
 							>
-								Remove
+								@templates.Icon(templates.IconProps{Name: "dash-circle"})
 							</button>
 						</li>
 					}
