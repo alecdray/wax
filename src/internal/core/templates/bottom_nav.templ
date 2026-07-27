@@ -13,10 +13,12 @@ templ BottomNav(active string) {
 		data-testid="bottom-nav"
 		class="fixed inset-x-0 bottom-0 z-20 bg-base-100 border-t border-base-300 pb-[env(safe-area-inset-bottom)]"
 	>
-		<div class="max-w-md mx-auto grid grid-cols-3 h-14">
+		<div class="max-w-md mx-auto grid grid-cols-4 h-14">
 			@bottomNavTab("library", active == "library", templ.SafeURL("/app/library/dashboard"), "collection", "Library", true)
 			// "radar" has no filled glyph in Bootstrap Icons, so it stays outline when active (hasFillVariant=false).
 			@bottomNavTab("radar", active == "radar", templ.SafeURL("/app/library/radar"), "radar", "Radar", false)
+			// "archive" has no filled glyph in Bootstrap Icons, so it stays outline when active (hasFillVariant=false).
+			@bottomNavTab("crates", active == "crates", templ.SafeURL("/app/crates"), "archive", "Crates", false)
 			@bottomNavProfileTab()
 		</div>
 	</nav>
