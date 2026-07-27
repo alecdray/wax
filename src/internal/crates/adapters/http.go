@@ -229,29 +229,7 @@ func (h *HttpHandler) AddAlbum(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	crate, err := h.cratesService.GetCrate(ctx, id)
-	if err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    fmt.Errorf("failed to get crate after add: %w", err),
-		})
-		return
-	}
-
-	if err := httpx.SetHXTrigger(w, "crateUpdated", nil); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    err,
-		})
-		return
-	}
-
-	if err := views.EditCrateModalFrag(crate, id).Render(ctx, w); err != nil {
-		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
-			Err:    fmt.Errorf("failed to render edit crate modal: %w", err),
-		})
-	}
+	h.renderMembershipUpdate(ctx, w, r, id)
 }
 
 // RemoveAlbum serves DELETE /app/crates/{id}/albums/{albumId}.
@@ -268,13 +246,26 @@ func (h *HttpHandler) RemoveAlbum(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	crate, err := h.cratesService.GetCrate(ctx, id)
+	h.renderMembershipUpdate(ctx, w, r, id)
+}
+
+// renderMembershipUpdate is shared by AddAlbum and RemoveAlbum. It dispatches
+// crateUpdated and OOB-swaps only the members list and search results, leaving
+// the search input untouched so its value is preserved across add/remove actions.
+func (h *HttpHandler) renderMembershipUpdate(ctx contextx.ContextX, w http.ResponseWriter, r *http.Request, crateID string) {
+	crate, err := h.cratesService.GetCrate(ctx, crateID)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
-			Err:    fmt.Errorf("failed to get crate after remove: %w", err),
+			Err:    fmt.Errorf("failed to get crate after membership change: %w", err),
 		})
 		return
+	}
+
+	q := r.FormValue("q")
+	searchResults, err := h.cratesService.SearchNonMembers(ctx, crateID, q)
+	if err != nil {
+		searchResults = nil
 	}
 
 	if err := httpx.SetHXTrigger(w, "crateUpdated", nil); err != nil {
@@ -285,10 +276,18 @@ func (h *HttpHandler) RemoveAlbum(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := views.EditCrateModalFrag(crate, id).Render(ctx, w); err != nil {
+	if err := views.EditCrateMembersOOBFrag(crate.Albums, crateID).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
-			Err:    fmt.Errorf("failed to render edit crate modal: %w", err),
+			Err:    fmt.Errorf("failed to render members OOB: %w", err),
+		})
+		return
+	}
+
+	if err := views.NonMemberSearchResultsOOBFrag(searchResults, crateID).Render(ctx, w); err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to render search results OOB: %w", err),
 		})
 	}
 }
