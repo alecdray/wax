@@ -86,29 +86,47 @@ func (s *Service) DeleteCrate(ctx contextx.ContextX, id string) error {
 	return nil
 }
 
-// AddAlbum adds an album to a crate. Idempotent — duplicate adds are silently ignored.
+// AddAlbum adds an album to a crate owned by the authenticated user.
+// Idempotent — duplicate adds are silently ignored.
 func (s *Service) AddAlbum(ctx contextx.ContextX, crateID, albumID string) error {
+	userID, err := ctx.UserId()
+	if err != nil {
+		return fmt.Errorf("failed to get user id: %w", err)
+	}
+	if _, err := s.repo.GetCrate(ctx, crateID, userID); err != nil {
+		return fmt.Errorf("crate not found or not owned by user: %w", err)
+	}
 	if err := s.repo.InsertCrateAlbum(ctx, uuid.NewString(), crateID, albumID); err != nil {
 		return fmt.Errorf("failed to add album to crate: %w", err)
 	}
 	return nil
 }
 
-// RemoveAlbum removes an album from a crate.
+// RemoveAlbum removes an album from a crate owned by the authenticated user.
 func (s *Service) RemoveAlbum(ctx contextx.ContextX, crateID, albumID string) error {
+	userID, err := ctx.UserId()
+	if err != nil {
+		return fmt.Errorf("failed to get user id: %w", err)
+	}
+	if _, err := s.repo.GetCrate(ctx, crateID, userID); err != nil {
+		return fmt.Errorf("crate not found or not owned by user: %w", err)
+	}
 	if err := s.repo.DeleteCrateAlbum(ctx, crateID, albumID); err != nil {
 		return fmt.Errorf("failed to remove album from crate: %w", err)
 	}
 	return nil
 }
 
-// SearchNonMembers returns library albums that are not already in the crate,
-// filtered by q (case-insensitive substring match against title or artist names).
-// An empty q returns all non-members.
+// SearchNonMembers returns library albums not already in a crate owned by the
+// authenticated user, filtered by q (case-insensitive substring match against
+// title or artist names). An empty q returns all non-members.
 func (s *Service) SearchNonMembers(ctx contextx.ContextX, crateID, q string) ([]library.AlbumDTO, error) {
 	userID, err := ctx.UserId()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user id: %w", err)
+	}
+	if _, err := s.repo.GetCrate(ctx, crateID, userID); err != nil {
+		return nil, fmt.Errorf("crate not found or not owned by user: %w", err)
 	}
 	memberIDs, err := s.repo.GetCrateAlbumIDs(ctx, crateID)
 	if err != nil {
