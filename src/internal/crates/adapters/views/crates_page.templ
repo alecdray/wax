@@ -6,24 +6,28 @@ import (
 	"github.com/alecdray/wax/src/internal/crates"
 )
 
+templ crateListBody(crateList []crates.CrateDTO) {
+	if len(crateList) == 0 {
+		<p class="text-sm text-muted py-8 text-center" data-testid="crates-empty-state">No crates yet</p>
+	} else {
+		for _, crate := range crateList {
+			<a
+				href={ templ.URL(fmt.Sprintf("/app/crates/%s", crate.ID)) }
+				class="card bg-base-200 p-4 flex flex-row items-center justify-between hover:bg-base-300 transition-colors"
+				data-testid="crate-card"
+			>
+				<span class="font-medium">{ crate.Name }</span>
+				<span class="text-sm text-muted">{ fmt.Sprintf("%d albums", crate.AlbumCount) }</span>
+			</a>
+		}
+	}
+}
+
 // CratesListOOBFrag renders the crates list region as an OOB swap targeting
 // #crates-list. Used after CreateCrate to refresh the list in-place.
 templ CratesListOOBFrag(crateList []crates.CrateDTO) {
 	<div id="crates-list" class="flex flex-col gap-2 px-4" data-testid="crates-list" hx-swap-oob="true">
-		if len(crateList) == 0 {
-			<p class="text-sm text-muted py-8 text-center" data-testid="crates-empty-state">No crates yet</p>
-		} else {
-			for _, crate := range crateList {
-				<a
-					href={ templ.URL(fmt.Sprintf("/app/crates/%s", crate.ID)) }
-					class="card bg-base-200 p-4 flex flex-row items-center justify-between hover:bg-base-300 transition-colors"
-					data-testid="crate-card"
-				>
-					<span class="font-medium">{ crate.Name }</span>
-					<span class="text-sm text-muted">{ fmt.Sprintf("%d albums", crate.AlbumCount) }</span>
-				</a>
-			}
-		}
+		@crateListBody(crateList)
 	</div>
 }
 
@@ -45,20 +49,7 @@ templ CratesPage(crateList []crates.CrateDTO) {
 				</button>
 			</div>
 			<div id="crates-list" class="flex flex-col gap-2 px-4" data-testid="crates-list">
-				if len(crateList) == 0 {
-					<p class="text-sm text-muted py-8 text-center" data-testid="crates-empty-state">No crates yet</p>
-				} else {
-					for _, crate := range crateList {
-						<a
-							href={ templ.URL(fmt.Sprintf("/app/crates/%s", crate.ID)) }
-							class="card bg-base-200 p-4 flex flex-row items-center justify-between hover:bg-base-300 transition-colors"
-							data-testid="crate-card"
-						>
-							<span class="font-medium">{ crate.Name }</span>
-							<span class="text-sm text-muted">{ fmt.Sprintf("%d albums", crate.AlbumCount) }</span>
-						</a>
-					}
-				}
+				@crateListBody(crateList)
 			</div>
 		</div>
 	}

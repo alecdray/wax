@@ -3,6 +3,7 @@ package views
 import (
 	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/library"
+	"github.com/alecdray/wax/src/internal/review"
 )
 
 // crateAlbumRowRating extracts the rating float64 pointer from an AlbumDTO.
@@ -18,7 +19,7 @@ func crateAlbumRowFinalized(album library.AlbumDTO) bool {
 	if album.RatingState == nil {
 		return false
 	}
-	return album.RatingState.State == "finalized"
+	return album.RatingState.State == review.RatingStateFinalized
 }
 
 // crateAlbumRowArtistNames extracts artist names from an AlbumDTO.

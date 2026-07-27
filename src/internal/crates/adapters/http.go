@@ -1,6 +1,7 @@
 package adapters
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -89,7 +90,10 @@ func (h *HttpHandler) CreateCrate(w http.ResponseWriter, r *http.Request) {
 
 	name := strings.TrimSpace(r.FormValue("name"))
 	if name == "" {
-		w.WriteHeader(http.StatusUnprocessableEntity)
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusUnprocessableEntity,
+			Err:    errors.New("crate name cannot be empty"),
+		})
 		return
 	}
 
@@ -151,7 +155,7 @@ func (h *HttpHandler) GetCrateMembers(w http.ResponseWriter, r *http.Request) {
 	crate, err := h.cratesService.GetCrate(ctx, id)
 	if err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
-			Status: http.StatusInternalServerError,
+			Status: http.StatusNotFound,
 			Err:    fmt.Errorf("failed to get crate: %w", err),
 		})
 		return
