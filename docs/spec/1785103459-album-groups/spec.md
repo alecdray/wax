@@ -178,11 +178,11 @@ templ AlbumRow(props AlbumRowProps)
 + <div class="max-w-md mx-auto grid grid-cols-4 h-14">
   @bottomNavTab("library", ...)
   @bottomNavTab("radar", ...)
-+ @bottomNavTab("crates", active == "crates", "/app/crates", "archive", "Crates", false)
++ @bottomNavTab("crates", active == "crates", "/app/crates", "box-seam", "Crates", false)
   @bottomNavProfileTab()
 ```
 
-Icon: `archive` (Bootstrap Icons — no fill variant, stays outline when active).
+Icon: `box-seam` (Bootstrap Icons — no fill variant, stays outline when active).
 
 ---
 
