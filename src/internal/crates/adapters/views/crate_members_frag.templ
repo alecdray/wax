@@ -44,7 +44,7 @@ templ CrateMembersFrag(albums []library.AlbumDTO, crateID string) {
 					ImageURL:       album.ImageURL,
 					Rating:         crateAlbumRowRating(album),
 					Finalized:      crateAlbumRowFinalized(album),
-					OnRowClick:     nil,
+					OnRowClick:     crateMemberRowClick(crateID, album.ID),
 					OnFormatsClick: nil,
 					OnRatingClick:  nil,
 				})

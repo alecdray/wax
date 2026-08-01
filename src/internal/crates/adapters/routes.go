@@ -15,6 +15,7 @@ func RegisterRoutes(mux *httpx.Mux, h *HttpHandler) {
 	mux.Handle("GET /app/crates/{id}/members", httpx.HandlerFunc(h.GetCrateMembers))
 	mux.Handle("GET /app/crates/{id}/edit-modal", httpx.HandlerFunc(h.GetEditCrateModal))
 	mux.Handle("GET /app/crates/{id}/edit-modal/search", httpx.HandlerFunc(h.SearchNonMembers))
+	mux.Handle("GET /app/crates/{id}/albums/{albumId}/actions-modal", httpx.HandlerFunc(h.GetCrateMemberActionsModal))
 	mux.Handle("POST /app/crates/{id}/albums/{albumId}", httpx.HandlerFunc(h.AddAlbum))
 	mux.Handle("DELETE /app/crates/{id}/albums/{albumId}", httpx.HandlerFunc(h.RemoveAlbum))
 }

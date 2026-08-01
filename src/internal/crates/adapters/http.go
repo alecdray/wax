@@ -177,6 +177,39 @@ func (h *HttpHandler) DeleteCrate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// GetCrateMemberActionsModal serves GET /app/crates/{id}/albums/{albumId}/actions-modal.
+func (h *HttpHandler) GetCrateMemberActionsModal(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+	crateID := r.PathValue("id")
+	albumID := r.PathValue("albumId")
+
+	crate, err := h.cratesService.GetCrate(ctx, crateID)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusNotFound,
+			Err:    fmt.Errorf("failed to get crate: %w", err),
+		})
+		return
+	}
+
+	for _, album := range crate.Albums {
+		if album.ID == albumID {
+			if err := views.CrateMemberActionsModalFrag(album, crateID).Render(ctx, w); err != nil {
+				httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+					Status: http.StatusInternalServerError,
+					Err:    fmt.Errorf("failed to render member actions modal: %w", err),
+				})
+			}
+			return
+		}
+	}
+
+	httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+		Status: http.StatusNotFound,
+		Err:    fmt.Errorf("album %s not found in crate %s", albumID, crateID),
+	})
+}
+
 // GetCrateMembers serves GET /app/crates/{id}/members.
 func (h *HttpHandler) GetCrateMembers(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())
