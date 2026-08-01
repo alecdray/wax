@@ -22,6 +22,12 @@ This directory is the home of UI **primitives** — reusable visual building blo
 
 `icons.templ` defines the single `Icon` primitive, which wraps Bootstrap Icons. Pass a BI catalog name (without the `bi-` prefix) and an optional `IconStyle` (Outline | Fill). Sizing and color come from the parent (`text-{size}` for size, parent text color for color). The CSS that powers it is vendored under `static/public/`; the BI catalog lives at https://icons.getbootstrap.com/.
 
+## The AppHeaderFrag primitive
+
+`app_header.templ` defines `AppHeaderFrag` — the sticky top bar shared by all authenticated pages (library, radar, crates, …). It renders the wax wordmark left and the feeds sync-status control right. Callers inject page-specific content (e.g. library's `AlbumSurfaceListenerFrag`) via the children slot.
+
+`AppHeaderFeed` is the plain-value DTO accepted by `AppHeaderFrag` and the exported `FeedsDropdownButtonFrag`/`FeedsDropdownContentFrag` sub-components. Callers convert from their domain type before passing here to keep this package domain-free.
+
 ## After editing
 
 - Run `task build/templ` after modifying any `.templ` file.

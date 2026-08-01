@@ -31,13 +31,15 @@ templ CratesListOOBFrag(crateList []crates.CrateDTO) {
 	</div>
 }
 
-templ CratesPage(crateList []crates.CrateDTO) {
+templ CratesPage(crateList []crates.CrateDTO, feeds []templates.AppHeaderFeed) {
 	@templates.PageLayoutComponent(templates.PageLayoutProps{
 		Title:     templates.CreatePageTitle("Crates"),
 		ActiveNav: "crates",
 	}) {
 		<div data-testid="crates-page" class="w-full flex flex-col pb-16">
-			@cratesAppHeader() {
+			@templates.AppHeaderFrag(feeds)
+			<div class="flex items-center justify-between px-4 py-4">
+				<h1 class="text-xl font-bold">Crates</h1>
 				<button
 					class="btn btn-sm btn-primary"
 					hx-get="/app/crates/new-modal"
@@ -46,8 +48,8 @@ templ CratesPage(crateList []crates.CrateDTO) {
 				>
 					New Crate
 				</button>
-			}
-			<div id="crates-list" class="flex flex-col gap-2 px-4 py-4" data-testid="crates-list">
+			</div>
+			<div id="crates-list" class="flex flex-col gap-2 px-4" data-testid="crates-list">
 				@crateListBody(crateList)
 			</div>
 		</div>

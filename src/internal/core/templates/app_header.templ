@@ -1,0 +1,162 @@
+package templates
+
+import "fmt"
+
+// AppHeaderFeed is a plain-value representation of a feed's sync status for
+// use by AppHeaderFrag and its sub-components. Callers convert from their
+// domain type (e.g. feed.FeedDTO) so this package stays domain-free.
+type AppHeaderFeed struct {
+	ID       string
+	Name     string
+	Syncing  bool
+	Failed   bool
+	Unsynced bool
+	Stale    bool
+	Synced   bool
+}
+
+func appHeaderFeedIndicatorColor(feeds []AppHeaderFeed) NeonColor {
+	color := NeonColorSuccess
+	for _, f := range feeds {
+		if f.Failed {
+			return NeonColorError
+		}
+		if f.Syncing || f.Unsynced || f.Stale {
+			color = NeonColorWarning
+		}
+	}
+	return color
+}
+
+func anyAppHeaderFeedSyncing(feeds []AppHeaderFeed) bool {
+	for _, f := range feeds {
+		if f.Syncing {
+			return true
+		}
+	}
+	return false
+}
+
+// FeedsDropdownButtonFrag renders the feeds status indicator button.
+// oob=true adds hx-swap-oob morph so it can be used as an OOB swap target.
+templ FeedsDropdownButtonFrag(feeds []AppHeaderFeed, oob bool) {
+	<div
+		id="feeds-dropdown-button"
+		data-testid="feeds-dropdown-button"
+		tabindex="0"
+		role="button"
+		class="btn btn-ghost btn-xs gap-1.5 text-base"
+		if oob {
+			hx-swap-oob="true"
+			hx-swap="morph"
+		}
+	>
+		@Icon(IconProps{Name: "database"})
+		<span class="text-xs">Feeds</span>
+		if len(feeds) > 0 {
+			@NeonEffect(appHeaderFeedIndicatorColor(feeds), NeonHoverEffectNone, "rounded-full") {
+				<div class="w-2 h-2 rounded-full"></div>
+			}
+		}
+	</div>
+}
+
+templ FeedsDropdownContentFrag(feeds []AppHeaderFeed) {
+	<div
+		id="feeds-dropdown-content"
+		data-testid="feeds-dropdown-content"
+		tabindex="0"
+		class="menu menu-compact w-56 p-2"
+		hx-on:htmx:after-swap="this.focus()"
+		hx-get="/app/library/dashboard/feeds-dropdown-content"
+		if appHeaderFeedIndicatorColor(feeds) == NeonColorSuccess {
+			hx-trigger="every 30s, feedsChanged from:body"
+		} else {
+			hx-trigger="every 5s, feedsChanged from:body"
+		}
+		hx-vals={ fmt.Sprintf(`{"wasSyncing": "%v"}`, anyAppHeaderFeedSyncing(feeds)) }
+		hx-swap="morph"
+	>
+		<div class="menu-title px-2 py-1">
+			<span class="text-xs font-semibold text-muted">Feed Status</span>
+		</div>
+		if len(feeds) == 0 {
+			<div class="px-2 py-3 text-xs text-subtle">No feeds configured</div>
+		} else {
+			for _, f := range feeds {
+				<li class={ templ.KV("menu-disabled", f.Syncing) }>
+					<button
+						data-testid="feeds-dropdown-sync-button"
+						class="flex justify-between"
+						hx-post={ fmt.Sprintf("/app/library/dashboard/feeds/sync?feedId=%s", f.ID) }
+						hx-target="#feeds-dropdown-content"
+						hx-swap="morph"
+						if f.Syncing {
+							disabled
+						} else {
+							title="Click to sync"
+						}
+					>
+						<div class="flex items-center gap-2">
+							if f.Unsynced {
+								<div class="text-warning text-base">
+									@Icon(IconProps{Name: "exclamation-triangle"})
+								</div>
+							} else if f.Syncing {
+								<div data-testid="feeds-dropdown-sync-indicator" class="text-info text-base">
+									<span class="animate-spin inline-block">
+										@Icon(IconProps{Name: "arrow-repeat"})
+									</span>
+								</div>
+							} else if f.Failed {
+								<div class="text-error text-base">
+									@Icon(IconProps{Name: "x-circle"})
+								</div>
+							} else if f.Synced {
+								<div class={ "text-base", templ.KV("text-success", !f.Stale), templ.KV("text-warning", f.Stale) }>
+									@Icon(IconProps{Name: "check-circle"})
+								</div>
+							}
+							<span class="text-sm font-medium">{ f.Name }</span>
+						</div>
+						<div class="text-xs text-muted">
+							if f.Unsynced {
+								Never synced
+							} else if f.Syncing {
+								Syncing...
+							} else if f.Failed {
+								Failed
+							} else if f.Stale {
+								Stale
+							} else {
+								Synced
+							}
+						</div>
+					</button>
+				</li>
+			}
+		}
+	</div>
+}
+
+templ appHeaderFeedsDropdown(feeds []AppHeaderFeed) {
+	<div data-testid="feeds-dropdown" class="dropdown dropdown-end" hx-ext="morph">
+		@FeedsDropdownButtonFrag(feeds, false)
+		<div tabindex="0" class="dropdown-content z-[1] card card-compact bg-base-100 shadow-xl border border-base-300 mt-1">
+			@FeedsDropdownContentFrag(feeds)
+		</div>
+	</div>
+}
+
+// AppHeaderFrag is the sticky top bar shown on authenticated pages.
+// Wordmark on the left, feeds control on the right. Children are injected
+// inside the <header> element — e.g. library passes AlbumSurfaceListenerFrag.
+templ AppHeaderFrag(feeds []AppHeaderFeed) {
+	<header data-testid="app-header" class="bg-base-100 border-b border-base-300 h-11 w-full flex-shrink-0 sticky top-0 z-10">
+		{ children... }
+		<div class="h-full flex items-center justify-between px-4">
+			<a href="/" class="text-lg text-primary font-brand" data-testid="app-header-wordmark">wax</a>
+			@appHeaderFeedsDropdown(feeds)
+		</div>
+	</header>
+}

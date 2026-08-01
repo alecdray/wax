@@ -1,6 +1,27 @@
 package views
 
-import "github.com/alecdray/wax/src/internal/feed"
+import (
+	"github.com/alecdray/wax/src/internal/core/templates"
+	"github.com/alecdray/wax/src/internal/feed"
+)
+
+// FeedsToAppHeaderFeeds converts feed.FeedDTO slice to the plain-value type
+// accepted by core/templates components. Used by both views and the HTTP handler.
+func FeedsToAppHeaderFeeds(feeds []feed.FeedDTO) []templates.AppHeaderFeed {
+	out := make([]templates.AppHeaderFeed, len(feeds))
+	for i, f := range feeds {
+		out[i] = templates.AppHeaderFeed{
+			ID:       f.ID,
+			Name:     string(f.Kind),
+			Syncing:  f.LastSyncStatus.IsSyncing(),
+			Failed:   f.LastSyncStatus.IsSyncFailed(),
+			Unsynced: f.LastSyncStatus.IsUnsyned(),
+			Stale:    f.IsSyncStale(),
+			Synced:   f.LastSyncStatus.IsSynced(),
+		}
+	}
+	return out
+}
 
 // LibraryAppHeaderFrag is the slim top app bar shown on every authenticated
 // library page: the wax wordmark (brand identity) on the left and the feeds
@@ -10,11 +31,7 @@ import "github.com/alecdray/wax/src/internal/feed"
 // It also hosts the hidden album-surface listener, so peer-module album
 // mutations refresh the affected surfaces in place on any library page.
 templ LibraryAppHeaderFrag(feeds []feed.FeedDTO) {
-	<header data-testid="library-app-header" class="bg-base-100 border-b border-base-300 h-11 w-full flex-shrink-0 sticky top-0 z-10">
+	@templates.AppHeaderFrag(FeedsToAppHeaderFeeds(feeds)) {
 		@AlbumSurfaceListenerFrag()
-		<div class="h-full flex items-center justify-between px-4">
-			<a href="/" class="text-lg text-primary font-brand" data-testid="library-app-header-wordmark">wax</a>
-			@feedsDropdown(feeds)
-		</div>
-	</header>
+	}
 }

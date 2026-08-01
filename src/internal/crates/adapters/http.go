@@ -11,14 +11,43 @@ import (
 	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/crates"
 	"github.com/alecdray/wax/src/internal/crates/adapters/views"
+	"github.com/alecdray/wax/src/internal/feed"
 )
 
 type HttpHandler struct {
 	cratesService *crates.Service
+	feedService   *feed.Service
 }
 
-func NewHttpHandler(cratesService *crates.Service) *HttpHandler {
-	return &HttpHandler{cratesService: cratesService}
+func NewHttpHandler(cratesService *crates.Service, feedService *feed.Service) *HttpHandler {
+	return &HttpHandler{cratesService: cratesService, feedService: feedService}
+}
+
+// getFeeds fetches the user's feeds and converts them to the plain-value type
+// used by core/templates header components. Returns empty slice on error so
+// pages still render without a feed indicator.
+func (h *HttpHandler) getFeeds(ctx contextx.ContextX) []templates.AppHeaderFeed {
+	userID, err := ctx.UserId()
+	if err != nil {
+		return nil
+	}
+	feeds, err := h.feedService.GetUsersFeeds(ctx, userID)
+	if err != nil {
+		return nil
+	}
+	out := make([]templates.AppHeaderFeed, len(feeds))
+	for i, f := range feeds {
+		out[i] = templates.AppHeaderFeed{
+			ID:       f.ID,
+			Name:     string(f.Kind),
+			Syncing:  f.LastSyncStatus.IsSyncing(),
+			Failed:   f.LastSyncStatus.IsSyncFailed(),
+			Unsynced: f.LastSyncStatus.IsUnsyned(),
+			Stale:    f.IsSyncStale(),
+			Synced:   f.LastSyncStatus.IsSynced(),
+		}
+	}
+	return out
 }
 
 // GetCratesPage serves GET /app/crates.
@@ -34,7 +63,7 @@ func (h *HttpHandler) GetCratesPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := views.CratesPage(crateList).Render(ctx, w); err != nil {
+	if err := views.CratesPage(crateList, h.getFeeds(ctx)).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
 			Err:    fmt.Errorf("failed to render crates page: %w", err),
@@ -68,7 +97,7 @@ func (h *HttpHandler) GetCrateDetailPage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := views.CrateDetailPage(crate).Render(ctx, w); err != nil {
+	if err := views.CrateDetailPage(crate, h.getFeeds(ctx)).Render(ctx, w); err != nil {
 		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
 			Status: http.StatusInternalServerError,
 			Err:    fmt.Errorf("failed to render crate detail page: %w", err),

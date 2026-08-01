@@ -60,7 +60,7 @@ func Start(ctx context.Context, app app.App) {
 	reviewHandler := reviewAdapters.NewHttpHandler(services.library, services.review)
 	reviewAdapters.RegisterRoutes(appMux, reviewHandler)
 
-	cratesHandler := cratesAdapters.NewHttpHandler(services.crates)
+	cratesHandler := cratesAdapters.NewHttpHandler(services.crates, services.feed)
 	cratesAdapters.RegisterRoutes(appMux, cratesHandler)
 
 	// Not found handler, must be registered after all other handlers
