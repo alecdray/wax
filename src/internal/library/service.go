@@ -140,9 +140,7 @@ func (s *Service) GetAlbumsInLibrary(ctx context.Context, userId string) ([]Albu
 }
 
 // GetAlbumsByIDs returns fully-hydrated AlbumDTOs for an arbitrary set of
-// album IDs. Unlike GetAlbumsInLibrary, it does not fetch release/ownership
-// data (Releases will be empty) — suited for surfaces like crate detail views
-// that don't need ownership context.
+// album IDs, including release/ownership data.
 func (s *Service) GetAlbumsByIDs(ctx contextx.ContextX, albumIDs []string) ([]AlbumDTO, error) {
 	if len(albumIDs) == 0 {
 		return nil, nil
@@ -198,11 +196,21 @@ func (s *Service) GetAlbumsByIDs(ctx contextx.ContextX, albumIDs []string) ([]Al
 		return nil, fmt.Errorf("failed to get rating states: %w", err)
 	}
 
+	releases, err := s.GetReleasesInLibrary(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get releases: %w", err)
+	}
+	releasesByAlbumId := make(map[string][]ReleaseDTO, len(releases))
+	for _, r := range releases {
+		releasesByAlbumId[r.AlbumID] = append(releasesByAlbumId[r.AlbumID], r)
+	}
+
 	var albumDTOs []AlbumDTO
 	for _, album := range albums {
 		dto := album
 		dto.Artists = artistsByAlbumId[album.ID]
 		dto.Tracks = tracksByAlbumId[album.ID]
+		dto.Releases = releasesByAlbumId[album.ID]
 		rating := ratingsByAlbumId[album.ID]
 		dto.Rating = utils.NewPointer(rating)
 		if t, ok := lastPlayedAtByAlbumId[album.ID]; ok {
