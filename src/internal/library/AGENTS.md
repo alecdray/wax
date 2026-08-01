@@ -5,6 +5,8 @@ Rules: ../../../docs/architecture/archetypes/domain-module.md
 Module-specific notes:
 - `library.Library` is the central aggregate of the package: a user's albums plus derived artist/track sets used for dashboard filters. The package-name repetition is intentional — same pattern as `time.Time`, `context.Context`.
 - Library owns the album view UI. Inline content from peer modules (e.g. sleeve notes from `notes`) is rendered by library's adapters using the peer module's `*Service`. Peer adapters never import `library/adapters` and library's adapters never import peer adapters.
+- `GetAlbumsByIDs(ctx, albumIDs []string) ([]AlbumDTO, error)` — public service method for retrieving a specific set of albums with full hydration (ratings, tags, genres, notes). Used by the `crates` module to populate crate detail views.
+- `albumListRow` in `adapters/views/albums_list_frag.templ` uses the `templates.AlbumRow` primitive — passing `OnRowClick`, `OnFormatsClick`, and `OnRatingClick` as HTMX-wired components.
 
 ## Domain docs
 

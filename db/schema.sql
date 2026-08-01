@@ -179,3 +179,16 @@ CREATE TABLE album_genre_enrichment (
     album_id    TEXT PRIMARY KEY REFERENCES albums(id) ON DELETE CASCADE,
     enriched_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE crates (
+    id         TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name       TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE crate_albums (
+    id         TEXT PRIMARY KEY,
+    crate_id   TEXT NOT NULL REFERENCES crates(id) ON DELETE CASCADE,
+    album_id   TEXT NOT NULL REFERENCES albums(id) ON DELETE CASCADE,
+    added_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(crate_id, album_id)
+);

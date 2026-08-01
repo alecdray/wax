@@ -6,7 +6,7 @@ Candidate features and improvements. Priority column: **high** / **mid** / **low
 
 | Priority | Feature | Summary |
 |---|---|---|
-| high | **Album Groups** | Named, unordered collections — "jazz," "road trip music," "gifts for friends." Membership is the point, not position. Distinct from tags: groups are first-class objects with their own pages; tags are lightweight inline labels. |
+| high | **Crates** *(shipped)* | Named, unordered collections — "jazz," "road trip music," "gifts for friends." Membership is the point, not position. Distinct from tags: crates are first-class objects with their own pages; tags are lightweight inline labels. Spec: `docs/spec/1785103459-album-groups/`. |
 | high | **Wishlist surfaces** | Physical media wishlist — mark an album as "I want to buy this on vinyl/CD" and view those albums in a dedicated list. |
 | mid | **Ranked Lists** | User-curated ordered lists where position is the point — "my top 10 of the year," "albums to hear before you die." Order is explicit and meaningful. |
 | mid | **Hidden Albums** | Soft-remove albums from the main library view without deleting them (e.g., podcasts or junk synced from Spotify) |

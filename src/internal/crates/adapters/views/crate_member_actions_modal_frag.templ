@@ -1,0 +1,82 @@
+package views
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/core/templates"
+	"github.com/alecdray/wax/src/internal/library"
+)
+
+const CrateMemberActionsModalID = "crate-member-actions-modal"
+
+templ CrateMemberActionsModalFrag(album library.AlbumDTO, crateID string) {
+	@templates.Modal(CrateMemberActionsModalID, templates.ModalProps{
+		ModalContent: crateMemberActionsContent(album, crateID),
+	})
+}
+
+templ crateMemberActionsContent(album library.AlbumDTO, crateID string) {
+	<div data-testid="crate-member-actions-modal-content" class="flex flex-col gap-4">
+		<div class="flex items-center gap-3 min-w-0">
+			if album.ImageURL != "" {
+				<div class="avatar">
+					<div class="mask mask-squircle size-24 flex-shrink-0">
+						<img src={ album.ImageURL } alt={ album.Title }/>
+					</div>
+				</div>
+			} else {
+				<div class="avatar avatar-placeholder">
+					<div class="mask mask-squircle size-24 flex-shrink-0 bg-base-300"></div>
+				</div>
+			}
+			<div class="min-w-0">
+				<h3 class="font-semibold text-lg truncate">{ album.Title }</h3>
+				if len(album.Artists) > 0 {
+					<div class="text-sm text-muted truncate">
+						for i, artist := range album.Artists {
+							if i > 0 {
+								<span>, </span>
+							}
+							{ artist.Name }
+						}
+					</div>
+				}
+			</div>
+		</div>
+		<div class="flex flex-col gap-2">
+			<a
+				href={ templ.URL(fmt.Sprintf("https://open.spotify.com/album/%s", album.SpotifyID)) }
+				target="_blank"
+				rel="noopener noreferrer"
+				class="btn btn-sm btn-soft"
+				data-testid="crate-member-actions-open-spotify"
+			>
+				Open in Spotify
+				@templates.Icon(templates.IconProps{Name: "box-arrow-up-right"})
+			</a>
+			<button
+				type="button"
+				class="btn btn-sm btn-soft btn-error btn-busy"
+				hx-delete={ fmt.Sprintf("/app/crates/%s/albums/%s", crateID, album.ID) }
+				hx-swap="none"
+				hx-disabled-elt="this"
+				hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
+				data-testid="crate-member-actions-remove"
+			>
+				Remove from crate
+			</button>
+		</div>
+	</div>
+}
+
+// crateMemberRowClick is the OnRowClick handler for crate member rows — clicking
+// the cover or title fetches and opens the member actions modal.
+templ crateMemberRowClick(crateID, albumID string) {
+	<button
+		type="button"
+		class="cursor-pointer text-left"
+		hx-get={ fmt.Sprintf("/app/crates/%s/albums/%s/actions-modal", crateID, albumID) }
+		hx-swap="none"
+	>
+		{ children... }
+	</button>
+}

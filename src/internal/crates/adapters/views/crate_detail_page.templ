@@ -1,0 +1,52 @@
+package views
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/core/templates"
+	"github.com/alecdray/wax/src/internal/crates"
+)
+
+templ CrateDetailPage(crate crates.CrateDetailDTO, feeds []templates.AppHeaderFeed) {
+	@templates.PageLayoutComponent(templates.PageLayoutProps{
+		Title:     templates.CreatePageTitle(crate.Name),
+		ActiveNav: "crates",
+	}) {
+		<div data-testid="crate-detail-page" class="w-full flex flex-col pb-16">
+			@templates.AppHeaderFrag(feeds)
+			<div class="flex items-center justify-between px-4 py-4">
+				<div>
+					<h1 class="text-xl font-bold" data-testid="crate-detail-name">{ crate.Name }</h1>
+					<p class="text-sm text-muted">{ fmt.Sprintf("%d albums", crate.AlbumCount) }</p>
+				</div>
+				<div class="flex items-center gap-2">
+					<button
+						class="btn btn-sm btn-ghost btn-square text-default text-xl"
+						hx-get={ fmt.Sprintf("/app/crates/%s/edit-modal", crate.ID) }
+						hx-swap="none"
+						data-testid="edit-crate-button"
+						aria-label="Edit crate"
+					>
+						@templates.Icon(templates.IconProps{Name: "pencil"})
+					</button>
+					<button
+						class="btn btn-sm btn-ghost btn-square text-error text-xl"
+						hx-delete={ fmt.Sprintf("/app/crates/%s", crate.ID) }
+						hx-confirm="Delete this crate?"
+						data-testid="delete-crate-button"
+						aria-label="Delete crate"
+					>
+						@templates.Icon(templates.IconProps{Name: "trash"})
+					</button>
+				</div>
+			</div>
+			<div
+				id={ fmt.Sprintf("crate-members-%s", crate.ID) }
+				hx-get={ fmt.Sprintf("/app/crates/%s/members", crate.ID) }
+				hx-trigger="load, crateUpdated from:body"
+				hx-swap="innerHTML"
+				data-testid="crate-members-region"
+			>
+			</div>
+		</div>
+	}
+}

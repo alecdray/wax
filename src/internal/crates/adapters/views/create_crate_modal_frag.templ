@@ -1,0 +1,42 @@
+package views
+
+import (
+	"github.com/alecdray/wax/src/internal/core/templates"
+)
+
+templ createCrateModalHeader() {
+	<span class="font-semibold">New Crate</span>
+}
+
+templ createCrateModalContent() {
+	<form
+		hx-post="/app/crates"
+		hx-swap="none"
+		class="flex flex-col gap-3 py-2"
+		data-testid="create-crate-form"
+	>
+		<div class="flex flex-col gap-1">
+			<label class="text-sm font-medium" for="crate-name-input">Name</label>
+			<input
+				id="crate-name-input"
+				type="text"
+				name="name"
+				placeholder="Crate name"
+				autocomplete="off"
+				class="input input-bordered w-full"
+				data-testid="crate-name-input"
+			/>
+		</div>
+		<button type="submit" class="btn btn-primary w-full" data-testid="create-crate-submit">
+			Create
+		</button>
+	</form>
+}
+
+templ CreateCrateModalFrag() {
+	@templates.Modal("create-crate-modal", templates.ModalProps{
+		TestID:        "create-crate-modal",
+		HeaderActions: createCrateModalHeader(),
+		ModalContent:  createCrateModalContent(),
+	})
+}

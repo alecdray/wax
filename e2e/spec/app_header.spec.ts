@@ -20,8 +20,8 @@ test('The app header appears on every authenticated page', async ({ context, pag
 
   for (const path of paths) {
     await page.goto(path);
-    await expect(page.getByTestId('library-app-header'), `header on ${path}`).toBeVisible();
-    await expect(page.getByTestId('library-app-header-wordmark'), `wordmark on ${path}`).toBeVisible();
+    await expect(page.getByTestId('app-header'), `header on ${path}`).toBeVisible();
+    await expect(page.getByTestId('app-header-wordmark'), `wordmark on ${path}`).toBeVisible();
     await expect(page.getByTestId('feeds-dropdown-button'), `feeds control on ${path}`).toBeVisible();
   }
 });

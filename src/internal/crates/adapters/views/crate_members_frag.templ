@@ -1,0 +1,144 @@
+package views
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/core/db/models"
+	"github.com/alecdray/wax/src/internal/core/templates"
+	"github.com/alecdray/wax/src/internal/library"
+	"github.com/alecdray/wax/src/internal/review"
+)
+
+// crateAlbumRowRating extracts the rating float64 pointer from an AlbumDTO.
+func crateAlbumRowRating(album library.AlbumDTO) *float64 {
+	if album.Rating != nil && album.Rating.Rating != nil {
+		return album.Rating.Rating
+	}
+	return nil
+}
+
+// crateAlbumRowFinalized reports whether the album's rating is finalized.
+func crateAlbumRowFinalized(album library.AlbumDTO) bool {
+	if album.RatingState == nil {
+		return false
+	}
+	return album.RatingState.State == review.RatingStateFinalized
+}
+
+// crateAlbumRowArtistNames extracts artist names from an AlbumDTO.
+func crateAlbumRowArtistNames(album library.AlbumDTO) []string {
+	names := make([]string, len(album.Artists))
+	for i, a := range album.Artists {
+		names[i] = a.Name
+	}
+	return names
+}
+
+func crateRatingStateClass(album library.AlbumDTO) string {
+	if album.RatingState == nil {
+		return "text-default hover-fade-in"
+	}
+	switch album.RatingState.State {
+	case "finalized":
+		return "text-primary hover-fade-out"
+	case "provisional":
+		return "text-muted hover-fade-out"
+	default:
+		return "text-primary"
+	}
+}
+
+// crateAlbumRowFormatsClick is the OnFormatsClick handler for crate member rows.
+// Opens the formats modal and uses the same dashboard-releases-{id} div ID so
+// FormatsReleasesOOBFrag updates it after a save.
+templ crateAlbumRowFormatsClick(album library.AlbumDTO) {
+	<button
+		class="flex flex-col gap-2 cursor-pointer hover-fade-out"
+		hx-get={ fmt.Sprintf("/app/library/albums/%s/formats", album.ID) }
+		hx-trigger="click"
+		hx-swap="none"
+	>
+		<div id={ fmt.Sprintf("dashboard-releases-%s", album.ID) } class="flex flex-col gap-1">
+			@crateFormatIconsRow(album.Releases)
+		</div>
+	</button>
+}
+
+templ crateFormatIconsRow(releases library.ReleaseDTOs) {
+	@crateFormatIcon(releases, models.ReleaseFormatDigital)
+	@crateFormatIcon(releases, models.ReleaseFormatVinyl)
+	@crateFormatIcon(releases, models.ReleaseFormatCD)
+	@crateFormatIcon(releases, models.ReleaseFormatCassette)
+}
+
+templ crateFormatIcon(releases library.ReleaseDTOs, format models.ReleaseFormat) {
+	if release := releases.FindFormat(format); release != nil && release.AddedAt != nil {
+		<div class="text-muted text-base">
+			@crateReleaseFormatIcon(format)
+		</div>
+	} else {
+		<div class="text-ghost text-base">
+			@crateReleaseFormatIcon(format)
+		</div>
+	}
+}
+
+templ crateReleaseFormatIcon(format models.ReleaseFormat) {
+	switch format {
+		case models.ReleaseFormatVinyl:
+			@templates.Icon(templates.IconProps{Name: "vinyl"})
+		case models.ReleaseFormatCD:
+			@templates.Icon(templates.IconProps{Name: "disc"})
+		case models.ReleaseFormatCassette:
+			@templates.Icon(templates.IconProps{Name: "cassette"})
+		case models.ReleaseFormatDigital:
+			@templates.Icon(templates.IconProps{Name: "file-music"})
+	}
+}
+
+// crateAlbumRowRatingClick is the OnRatingClick handler for crate member rows.
+// Uses the same id as AlbumScoreReadoutFrag so OOB rating updates work after saves.
+templ crateAlbumRowRatingClick(album library.AlbumDTO) {
+	if album.Rating != nil && album.Rating.Rating != nil {
+		<div
+			id={ fmt.Sprintf("album-score-readout-%s", album.ID) }
+			class={ "min-w-14 h-fit flex items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none transition-colors", crateRatingStateClass(album) }
+			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
+			hx-trigger="click"
+			hx-swap="none"
+		>
+			{ review.FormatDisplayRating(*album.Rating.Rating) }
+		</div>
+	} else {
+		<div
+			id={ fmt.Sprintf("album-score-readout-%s", album.ID) }
+			class="min-w-14 h-fit flex items-center justify-center text-4xl font-bold tabular-nums cursor-pointer select-none text-muted hover-fade-in transition-colors"
+			hx-get={ fmt.Sprintf("/app/review/rating-recommender?albumId=%s", album.ID) }
+			hx-trigger="click"
+			hx-swap="none"
+		>
+			--
+		</div>
+	}
+}
+
+templ CrateMembersFrag(albums []library.AlbumDTO, crateID string) {
+	if len(albums) == 0 {
+		<p class="text-sm text-muted px-4 py-8 text-center" data-testid="crate-members-empty-state">No albums in this crate</p>
+	} else {
+		<ul class="list px-4" data-testid="crate-members-list">
+			for _, album := range albums {
+				@templates.AlbumRow(templates.AlbumRowProps{
+					ID:             album.ID,
+					Title:          album.Title,
+					Artists:        crateAlbumRowArtistNames(album),
+					ImageURL:       album.ImageURL,
+					Rating:         crateAlbumRowRating(album),
+					Finalized:      crateAlbumRowFinalized(album),
+					OnRowClick:     crateMemberRowClick(crateID, album.ID),
+					OnFormatsClick: crateAlbumRowFormatsClick(album),
+					OnRatingClick:  crateAlbumRowRatingClick(album),
+				})
+			}
+		</ul>
+	}
+}

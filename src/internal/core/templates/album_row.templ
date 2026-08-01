@@ -1,0 +1,152 @@
+package templates
+
+import (
+	"math"
+	"strconv"
+)
+
+// AlbumRowProps parameterizes the shared album row primitive.
+// All fields are plain values — no domain types.
+type AlbumRowProps struct {
+	ID      string
+	Title   string
+	Artists []string
+	// ImageURL is the album cover URL; empty renders a placeholder.
+	ImageURL string
+	// Formats are the release format strings (e.g. "vinyl", "cd").
+	// Shown as outline badges when OnFormatsClick is nil; otherwise the
+	// caller's OnFormatsClick component controls the formats visual entirely.
+	Formats []string
+	// Rating is the display rating value; nil renders "--".
+	Rating *float64
+	// Finalized distinguishes a locked score (primary colour) from a provisional
+	// or unrated one (muted).
+	Finalized bool
+
+	// Handler props — when nil the corresponding element is inert (no link/button wrapper).
+	// OnRowClick wraps the cover art column and the title/artists block independently.
+	// The component must render { children... } to place the wrapped content.
+	OnRowClick templ.Component
+	// OnFormatsClick wraps the formats column. When nil, Formats are rendered as
+	// plain badges. When non-nil, the caller's component controls the full visual
+	// (children are passed but the component may ignore them).
+	OnFormatsClick templ.Component
+	// OnRatingClick replaces the score readout entirely when non-nil.
+	// The caller's component controls the full visual (same semantic as OnFormatsClick).
+	OnRatingClick templ.Component
+}
+
+func albumRowScoreClass(props AlbumRowProps) string {
+	if props.Finalized {
+		return "text-primary"
+	}
+	if props.Rating != nil {
+		return "text-muted"
+	}
+	return "text-muted hover-fade-in"
+}
+
+func albumRowFormatRating(rating *float64) string {
+	if rating == nil {
+		return "--"
+	}
+	// Floor to integer, matching the review package's FormatDisplayRating display convention.
+	return strconv.Itoa(int(math.Floor(*rating)))
+}
+
+// AlbumRow is the shared album-list row primitive. It owns the full row visual:
+// cover art, title, artists, format badges, and score readout. Interactive
+// behaviour is injected by the caller via OnRowClick, OnFormatsClick, and
+// OnRatingClick; nil makes the element inert.
+//
+// Additional row content (e.g. library-specific tag chips) can be placed inside
+// list-col-grow via the children slot — rendered below the title/artists block
+// and above the format column.
+templ AlbumRow(props AlbumRowProps) {
+	<li class="list-row items-center px-0" data-testid="album-list-row">
+		// Formats column — rendered first (left-most) matching library layout.
+		// OnFormatsClick controls the full visual when set; otherwise Formats
+		// strings are shown as plain badges.
+		if props.OnFormatsClick != nil {
+			@props.OnFormatsClick {
+				@albumRowFormatBadges(props)
+			}
+		} else if len(props.Formats) > 0 {
+			@albumRowFormatBadges(props)
+		}
+		// Cover art column
+		if props.OnRowClick != nil {
+			@props.OnRowClick {
+				@albumRowCover(props)
+			}
+		} else {
+			<div class="flex-shrink-0">
+				@albumRowCover(props)
+			</div>
+		}
+		// Title / artist block — grow to fill remaining space
+		<div class="list-col-grow flex flex-col justify-between min-w-0 h-full pt-2 gap-2">
+			if props.OnRowClick != nil {
+				@props.OnRowClick {
+					@albumRowTitleBlock(props)
+				}
+			} else {
+				@albumRowTitleBlock(props)
+			}
+			// Slot for caller-provided extra content (e.g. tag chips)
+			{ children... }
+		</div>
+		// Score readout column
+		<div class="flex-shrink-0 self-stretch flex items-center">
+			if props.OnRatingClick != nil {
+				@props.OnRatingClick
+			} else {
+				@albumRowScore(props)
+			}
+		</div>
+	</li>
+}
+
+templ albumRowCover(props AlbumRowProps) {
+	if props.ImageURL != "" {
+		<div class="avatar">
+			<div class="mask mask-squircle size-24 flex-shrink-0">
+				<img src={ props.ImageURL } alt={ props.Title }/>
+			</div>
+		</div>
+	} else {
+		<div class="avatar avatar-placeholder">
+			<div class="mask mask-squircle size-24 flex-shrink-0 bg-base-300"></div>
+		</div>
+	}
+}
+
+templ albumRowTitleBlock(props AlbumRowProps) {
+	<div class="block min-w-0">
+		<div class="font-medium truncate" data-testid="album-list-row-title-link">{ props.Title }</div>
+		if len(props.Artists) > 0 {
+			<div class="text-sm text-muted truncate">
+				for i, name := range props.Artists {
+					if i > 0 {
+						<span>, </span>
+					}
+					{ name }
+				}
+			</div>
+		}
+	</div>
+}
+
+templ albumRowFormatBadges(props AlbumRowProps) {
+	<div class="flex flex-wrap gap-1">
+		for _, f := range props.Formats {
+			<span class="badge badge-sm badge-outline capitalize">{ f }</span>
+		}
+	</div>
+}
+
+templ albumRowScore(props AlbumRowProps) {
+	<div class={ "min-w-14 h-fit flex items-center justify-center text-4xl font-bold tabular-nums select-none", albumRowScoreClass(props) }>
+		{ albumRowFormatRating(props.Rating) }
+	</div>
+}

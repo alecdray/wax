@@ -11,6 +11,7 @@ import (
 	"github.com/alecdray/wax/src/internal/core/db/models"
 	"github.com/alecdray/wax/src/internal/core/httpx"
 	"github.com/alecdray/wax/src/internal/core/task"
+	"github.com/alecdray/wax/src/internal/core/templates"
 	"github.com/alecdray/wax/src/internal/discogs"
 	"github.com/alecdray/wax/src/internal/feed"
 	"github.com/alecdray/wax/src/internal/library"
@@ -267,11 +268,9 @@ func (h *HttpHandler) TriggerFeedSync(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	contentComponent := views.FeedsDropdownContentFrag(feeds)
-	contentComponent.Render(r.Context(), w)
-
-	buttonComponent := views.FeedsDropdownButtonFrag(feeds, true)
-	buttonComponent.Render(r.Context(), w)
+	converted := views.FeedsToAppHeaderFeeds(feeds)
+	templates.FeedsDropdownContentFrag(converted).Render(r.Context(), w)
+	templates.FeedsDropdownButtonFrag(converted, true).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetAlbumsPage(w http.ResponseWriter, r *http.Request) {
@@ -404,13 +403,9 @@ func (h *HttpHandler) GetFeedsDropdown(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("HX-Trigger", "libraryUpdated")
 	}
 
-	// Render content first
-	contentComponent := views.FeedsDropdownContentFrag(feeds)
-	contentComponent.Render(r.Context(), w)
-
-	// Render button as OOB swap
-	buttonComponent := views.FeedsDropdownButtonFrag(feeds, true)
-	buttonComponent.Render(r.Context(), w)
+	converted := views.FeedsToAppHeaderFeeds(feeds)
+	templates.FeedsDropdownContentFrag(converted).Render(r.Context(), w)
+	templates.FeedsDropdownButtonFrag(converted, true).Render(r.Context(), w)
 }
 
 func (h *HttpHandler) GetLibraryStats(w http.ResponseWriter, r *http.Request) {
