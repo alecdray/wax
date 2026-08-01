@@ -132,7 +132,7 @@ FROM crates c
 LEFT JOIN crate_albums ca ON ca.crate_id = c.id
 WHERE c.user_id = ?
 GROUP BY c.id
-ORDER BY c.created_at DESC
+ORDER BY c.name COLLATE NOCASE ASC
 `
 
 type ListCratesRow struct {
