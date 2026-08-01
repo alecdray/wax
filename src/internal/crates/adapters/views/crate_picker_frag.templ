@@ -1,0 +1,37 @@
+package views
+
+import (
+	"fmt"
+	"github.com/alecdray/wax/src/internal/core/templates"
+	"github.com/alecdray/wax/src/internal/crates"
+)
+
+const AddToCrateModalID = "add-to-crate-modal"
+
+// CratePickerModalFrag renders the add-to-crate modal. It OOB-swaps the global
+// modal container, replacing whatever modal is currently open.
+templ CratePickerModalFrag(crateList []crates.CrateDTO, albumID string) {
+	@templates.Modal(AddToCrateModalID, templates.ModalProps{
+		ModalContent: cratePickerContent(crateList, albumID),
+	})
+}
+
+templ cratePickerContent(crateList []crates.CrateDTO, albumID string) {
+	if len(crateList) == 0 {
+		<p class="text-sm text-muted text-center py-4" data-testid="crate-picker-empty">No crates yet</p>
+	} else {
+		<div class="flex flex-col gap-2" data-testid="crate-picker">
+			for _, c := range crateList {
+				<button
+					type="button"
+					class="btn btn-sm btn-soft btn-busy"
+					hx-post={ fmt.Sprintf("/app/crates/%s/albums/%s", c.ID, albumID) }
+					hx-swap="none"
+					hx-disabled-elt="this"
+					hx-on::after-request="if (event.detail.successful) { this.closest('dialog').close() }"
+					data-testid="crate-picker-add-button"
+				>{ c.Name }</button>
+			}
+		</div>
+	}
+}

@@ -9,6 +9,7 @@ import (
 func RegisterRoutes(mux *httpx.Mux, h *HttpHandler) {
 	mux.Handle("GET /app/crates", httpx.HandlerFunc(h.GetCratesPage))
 	mux.Handle("GET /app/crates/new-modal", httpx.HandlerFunc(h.GetNewCrateModal))
+	mux.Handle("GET /app/crates/picker", httpx.HandlerFunc(h.GetCratePicker))
 	mux.Handle("GET /app/crates/{id}", httpx.HandlerFunc(h.GetCrateDetailPage))
 	mux.Handle("POST /app/crates", httpx.HandlerFunc(h.CreateCrate))
 	mux.Handle("DELETE /app/crates/{id}", httpx.HandlerFunc(h.DeleteCrate))

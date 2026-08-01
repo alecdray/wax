@@ -71,6 +71,33 @@ func (h *HttpHandler) GetCratesPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetCratePicker serves GET /app/crates/picker?albumId={albumId}. It returns
+// the crate selection list loaded lazily inside the library album actions modal.
+func (h *HttpHandler) GetCratePicker(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+	albumID := r.URL.Query().Get("albumId")
+	if albumID == "" {
+		http.Error(w, "missing albumId", http.StatusBadRequest)
+		return
+	}
+
+	crateList, err := h.cratesService.ListCrates(ctx)
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to list crates: %w", err),
+		})
+		return
+	}
+
+	if err := views.CratePickerModalFrag(crateList, albumID).Render(ctx, w); err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to render crate picker: %w", err),
+		})
+	}
+}
+
 // GetNewCrateModal serves GET /app/crates/new-modal.
 func (h *HttpHandler) GetNewCrateModal(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())

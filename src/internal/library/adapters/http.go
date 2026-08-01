@@ -821,6 +821,32 @@ func (h *HttpHandler) GetRadarGrid(w http.ResponseWriter, r *http.Request) {
 	views.RadarGridFrag(radar, false).Render(r.Context(), w)
 }
 
+func (h *HttpHandler) GetLibraryAlbumActionsModal(w http.ResponseWriter, r *http.Request) {
+	ctx := contextx.NewContextX(r.Context())
+	userId, err := ctx.UserId()
+	if err != nil {
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusBadRequest,
+			Err:    fmt.Errorf("failed to get user ID: %w", err),
+		})
+		return
+	}
+	albumId := r.PathValue("albumId")
+	album, err := h.libraryService.GetAlbumInLibrary(ctx, userId, albumId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) || err.Error() == "album not in library" {
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
+		httpx.HandleErrorResponse(ctx, w, httpx.HandleErrorResponseProps{
+			Status: http.StatusInternalServerError,
+			Err:    fmt.Errorf("failed to get album: %w", err),
+		})
+		return
+	}
+	views.LibraryAlbumActionsModalFrag(*album).Render(r.Context(), w)
+}
+
 func (h *HttpHandler) GetAlbumActionsModal(w http.ResponseWriter, r *http.Request) {
 	ctx := contextx.NewContextX(r.Context())
 	userId, err := ctx.UserId()

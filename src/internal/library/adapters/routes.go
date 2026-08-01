@@ -26,6 +26,7 @@ func RegisterRoutes(mux *httpx.Mux, h *HttpHandler) {
 	mux.Handle("GET /app/library/album-surfaces", httpx.HandlerFunc(h.GetAlbumSurfaces))
 
 	mux.Handle("GET /app/library/albums/{albumId}", httpx.HandlerFunc(h.GetAlbumDetailPage))
+	mux.Handle("GET /app/library/albums/{albumId}/actions-modal", httpx.HandlerFunc(h.GetLibraryAlbumActionsModal))
 	mux.Handle("DELETE /app/library/albums/{albumId}", httpx.HandlerFunc(h.DeleteAlbum))
 	mux.Handle("DELETE /app/library/albums/{albumId}/radar", httpx.HandlerFunc(h.DeleteAlbumRadar))
 	mux.Handle("POST /app/library/albums/{albumId}/library", httpx.HandlerFunc(h.PostAlbumLibrary))

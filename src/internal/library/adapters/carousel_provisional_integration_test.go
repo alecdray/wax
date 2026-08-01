@@ -270,7 +270,7 @@ type provisionalCardAttrs struct {
 }
 
 // parseProvisionalCards extracts the per-card attributes from the rendered
-// carousel HTML, keyed by data-album-id. The rendered card is a single <a>
+// carousel HTML, keyed by data-album-id. The rendered card is a single <button>
 // element with data-testid="provisional-carousel-strip-album-card", always
 // carrying data-album-id and optionally data-rating.
 func parseProvisionalCards(t *testing.T, body string) map[string]provisionalCardAttrs {
@@ -279,7 +279,7 @@ func parseProvisionalCards(t *testing.T, body string) map[string]provisionalCard
 	// Anchor on the card's testid, then capture the full opening tag so we
 	// can pick out data-album-id and (optionally) data-rating regardless of
 	// attribute order.
-	cardRe := regexp.MustCompile(`<a [^>]*data-testid="provisional-carousel-strip-album-card"[^>]*>`)
+	cardRe := regexp.MustCompile(`<button [^>]*data-testid="provisional-carousel-strip-album-card"[^>]*>`)
 	idRe := regexp.MustCompile(`data-album-id="([^"]*)"`)
 	ratingRe := regexp.MustCompile(`data-rating="([^"]*)"`)
 
