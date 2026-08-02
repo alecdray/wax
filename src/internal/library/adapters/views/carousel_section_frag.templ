@@ -29,13 +29,15 @@ templ carouselStrip(albums []library.AlbumSummaryDTO, emptyMsg string) {
 			for _, album := range albums {
 				<div class="carousel-item">
 					if album.InLibrary {
-						<a
-							href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) }
-							class="flex flex-col items-center gap-1 hover-fade-out w-26"
+						<button
+							type="button"
+							hx-get={ fmt.Sprintf("/app/library/albums/%s/actions-modal", album.ID) }
+							hx-swap="none"
+							class="flex flex-col items-center gap-1 hover-fade-out w-26 cursor-pointer"
 							data-testid="carousel-strip-album-card"
 						>
 							@carouselCardInner(album)
-						</a>
+						</button>
 					} else {
 						<button
 							type="button"
@@ -107,9 +109,11 @@ templ provisionalCarouselStrip(albums []library.ProvisionalAlbumDTO) {
 		<div data-testid="provisional-carousel-strip-populated" class="carousel carousel-end gap-3 px-4 py-2 w-full overscroll-x-none">
 			for _, album := range albums {
 				<div class="carousel-item">
-					<a
-						href={ templ.URL(fmt.Sprintf("/app/library/albums/%s", album.ID)) }
-						class="flex flex-col items-center gap-1 hover-fade-out w-26"
+					<button
+						type="button"
+						hx-get={ fmt.Sprintf("/app/library/albums/%s/actions-modal", album.ID) }
+						hx-swap="none"
+						class="flex flex-col items-center gap-1 hover-fade-out w-26 cursor-pointer"
 						data-testid="provisional-carousel-strip-album-card"
 						data-album-id={ album.ID }
 						if album.Rating != nil {
@@ -141,7 +145,7 @@ templ provisionalCarouselStrip(albums []library.ProvisionalAlbumDTO) {
 						if album.Artists != "" {
 							<span class="text-xs text-nowrap truncate w-full text-left text-muted">{ album.Artists }</span>
 						}
-					</a>
+					</button>
 				</div>
 			}
 		</div>

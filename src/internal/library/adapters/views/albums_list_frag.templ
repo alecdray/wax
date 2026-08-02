@@ -230,7 +230,7 @@ templ albumListRow(album library.AlbumDTO) {
 		ImageURL:       album.ImageURL,
 		Rating:         albumRowRating(album),
 		Finalized:      albumRowFinalized(album),
-		OnRowClick:     albumRowDetailLink(album.ID),
+		OnRowClick:     libraryAlbumRowClick(album.ID),
 		OnFormatsClick: albumRowFormatsClick(album),
 		OnRatingClick:  albumRowRatingClick(album),
 	}) {
