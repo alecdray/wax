@@ -12,6 +12,7 @@ const AddToCrateModalID = "add-to-crate-modal"
 // modal container, replacing whatever modal is currently open.
 templ CratePickerModalFrag(crateList []crates.CrateDTO, albumID string) {
 	@templates.Modal(AddToCrateModalID, templates.ModalProps{
+		TestID:       "add-to-crate-modal",
 		ModalContent: cratePickerContent(crateList, albumID),
 	})
 }

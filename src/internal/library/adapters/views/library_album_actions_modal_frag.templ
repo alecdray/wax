@@ -10,6 +10,7 @@ const LibraryAlbumActionsModalID = "library-album-actions-modal"
 
 templ LibraryAlbumActionsModalFrag(album library.AlbumDTO) {
 	@templates.Modal(LibraryAlbumActionsModalID, templates.ModalProps{
+		TestID:       "library-album-actions-modal",
 		ModalContent: libraryAlbumActionsModalContent(album),
 	})
 }
