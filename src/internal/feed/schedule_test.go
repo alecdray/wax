@@ -55,6 +55,48 @@ func TestSetSyncFailedBacksOffAndCounts(t *testing.T) {
 	}
 }
 
+func TestIsSyncStuck(t *testing.T) {
+	cases := []struct {
+		name    string
+		feed    FeedDTO
+		wantStk bool
+	}{
+		{
+			name:    "not syncing",
+			feed:    FeedDTO{LastSyncStatus: models.FeedSyncStatusSuccess},
+			wantStk: false,
+		},
+		{
+			name: "pending, started recently",
+			feed: FeedDTO{
+				LastSyncStatus:    models.FeedSyncStatusPending,
+				LastSyncStartedAt: utils.NewPointer(time.Now().Add(-time.Minute)),
+			},
+			wantStk: false,
+		},
+		{
+			name: "pending, started past MaxSyncDuration ago",
+			feed: FeedDTO{
+				LastSyncStatus:    models.FeedSyncStatusPending,
+				LastSyncStartedAt: utils.NewPointer(time.Now().Add(-2 * MaxSyncDuration)),
+			},
+			wantStk: true,
+		},
+		{
+			name:    "pending with no LastSyncStartedAt",
+			feed:    FeedDTO{LastSyncStatus: models.FeedSyncStatusPending},
+			wantStk: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := c.feed.IsSyncStuck(); got != c.wantStk {
+				t.Errorf("IsSyncStuck() = %v, want %v", got, c.wantStk)
+			}
+		})
+	}
+}
+
 func TestSetSyncSuccessResetsAndSchedulesNormalCadence(t *testing.T) {
 	f := &FeedDTO{
 		Kind:                models.FeedKindSpotify,
