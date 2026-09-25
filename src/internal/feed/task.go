@@ -50,7 +50,10 @@ func (t SyncStaleSpotifyFeedsTask) Run(ctx contextx.ContextX) error {
 
 	for _, feed := range dueFeeds {
 		if feed.LastSyncStatus.IsSyncing() {
-			continue
+			if !feed.IsSyncStuck() {
+				continue
+			}
+			slog.Warn("retrying spotify feed stuck pending", "id", feed.ID)
 		}
 
 		_, err := t.feedService.SyncSpotifyFeed(ctx, feed)
@@ -94,7 +97,10 @@ func (t SyncStaleSpotifyRadarFeedsTask) Run(ctx contextx.ContextX) error {
 
 	for _, feed := range feeds {
 		if feed.LastSyncStatus.IsSyncing() {
-			continue
+			if !feed.IsSyncStuck() {
+				continue
+			}
+			slog.Warn("retrying radar inbox feed stuck pending", "id", feed.ID)
 		}
 		// One user's failure (e.g. a revoked token) must not block the others.
 		if _, err := t.feedService.SyncSpotifyRadarFeed(ctx, feed); err != nil {

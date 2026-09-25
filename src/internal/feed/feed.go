@@ -18,6 +18,12 @@ const (
 	// to, so a persistently-broken feed retries at most this often. See ADR 0006.
 	SyncInterval   = 10 * time.Minute
 	MaxSyncBackoff = 1 * time.Hour
+
+	// MaxSyncDuration is the longest a sync is ever expected to take. A feed
+	// still marked pending past this long was orphaned by a worker that died
+	// mid-sync (crash, kill, panic) rather than one genuinely in flight, so the
+	// cron loop treats it as eligible for retry instead of skipping it forever.
+	MaxSyncDuration = 5 * time.Minute
 )
 
 type FeedDTO struct {
@@ -46,6 +52,19 @@ func (f FeedDTO) IsSyncStale() bool {
 	}
 	minStaleTime := time.Now().Add(-MinStaleDuration)
 	return f.LastSyncCompletedAt.Before(minStaleTime)
+}
+
+// IsSyncStuck reports whether a feed marked pending has been syncing for
+// longer than any real sync should take, meaning the worker that started it
+// almost certainly died before recording success or failure.
+func (f FeedDTO) IsSyncStuck() bool {
+	if !f.LastSyncStatus.IsSyncing() {
+		return false
+	}
+	if f.LastSyncStartedAt == nil {
+		return true
+	}
+	return f.LastSyncStartedAt.Before(time.Now().Add(-MaxSyncDuration))
 }
 
 func (f *FeedDTO) SetSyncFailed() {
