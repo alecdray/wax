@@ -4,7 +4,9 @@ Known bugs, regressions, and operational tech debt. Include repro steps or a poi
 
 ## Active
 
-_(none)_
+### Rating question form requires submitting twice
+
+Submitting the rating question form doesn't register on the first click/submit — the user has to hit submit a second time before it takes effect. Likely in the review module's form handling (`src/internal/review/adapters/views/rating_confirm_form_frag.templ` / `base_questions_form_frag.templ`) or its HTMX swap target.
 
 ## Tech debt
 

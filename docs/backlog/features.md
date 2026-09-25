@@ -8,6 +8,8 @@ Candidate features and improvements. Priority column: **high** / **mid** / **low
 |---|---|---|
 | high | **Crates** *(shipped)* | Named, unordered collections — "jazz," "road trip music," "gifts for friends." Membership is the point, not position. Distinct from tags: crates are first-class objects with their own pages; tags are lightweight inline labels. Spec: `docs/spec/1785103459-album-groups/`. |
 | high | **Wishlist surfaces** | Physical media wishlist — mark an album as "I want to buy this on vinyl/CD" and view those albums in a dedicated list. |
+| high | **Crate picker: show current membership** | The crate picker modal (`src/internal/crates/adapters/views/crate_picker_frag.templ`) lets users add an album to crates but doesn't indicate which crates it's already in — users can't tell membership at a glance. |
+| high | **Sort library by release date** | `AlbumDTOs.SortByDate` (`src/internal/library/library.go`) sorts by date-added, not the album's original release date. Add a release-date sort option so users can browse chronologically by when albums actually came out. |
 | mid | **Ranked Lists** | User-curated ordered lists where position is the point — "my top 10 of the year," "albums to hear before you die." Order is explicit and meaningful. |
 | mid | **Hidden Albums** | Soft-remove albums from the main library view without deleting them (e.g., podcasts or junk synced from Spotify) |
 | mid | **Scroll position restore on back navigation** | Navigating from the library to an artist detail page and pressing back returns to the top of the library instead of the previous scroll position. |
